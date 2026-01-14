@@ -17,7 +17,8 @@ logger = logging.getLogger(__name__)
 class MissionSummarizer:
     """Generates mission summaries and analyses from recorded data."""
 
-    def __init__(self, mission_id: str, mission_name: str = "", llm_model: str = None):
+    def __init__(self, mission_id: str, mission_name: str = "", llm_model: str = None,
+                 bridge_id: str = None):
         """
         Initialize mission summarizer.
 
@@ -25,10 +26,12 @@ class MissionSummarizer:
             mission_id: Unique mission identifier
             mission_name: Human-readable mission name
             llm_model: LLM model to use for summary generation (default from env)
+            bridge_id: Identifier for the recording bridge/station
         """
         import os
         self.mission_id = mission_id
         self.mission_name = mission_name
+        self.bridge_id = bridge_id
         self.llm_model = llm_model or os.getenv('OLLAMA_MODEL', 'qwen2.5:14b')
 
         self.events = []
@@ -372,6 +375,7 @@ class MissionSummarizer:
         report_data = {
             "mission_id": self.mission_id,
             "mission_name": self.mission_name,
+            "bridge_id": self.bridge_id,
             "timeline": self.generate_timeline(),
             "key_moments": self.identify_key_moments(),
             "crew_performance": self.analyze_crew_performance(),
@@ -400,6 +404,8 @@ class MissionSummarizer:
         md = []
         md.append(f"# Mission Report: {data['mission_name']}")
         md.append(f"\n## Mission ID: {data['mission_id']}")
+        if data.get('bridge_id'):
+            md.append(f"\n## Bridge: {data['bridge_id']}")
 
         md.append("\n## Executive Summary")
         summary = data.get("narrative_summary", {})
@@ -717,6 +723,24 @@ class MissionSummarizer:
 
             if report_markdown:
                 logger.info("✓ Hybrid report generated successfully")
+
+                # Validate the generated report against known facts
+                from src.metrics.report_validator import ReportValidator
+                validator = ReportValidator(structured_data)
+                issues = validator.validate_report(report_markdown)
+
+                summary = validator.get_summary()
+                if summary['errors'] > 0:
+                    logger.warning(f"⚠️ Report validation found {summary['errors']} errors, {summary['warnings']} warnings")
+                    logger.warning("The LLM may have invented or miscounted data")
+                    # Log the validation report for debugging
+                    for issue in issues:
+                        if issue.severity.value == 'error':
+                            logger.warning(f"  - {issue.category}: expected {issue.expected}, found {issue.found}")
+                elif summary['warnings'] > 0:
+                    logger.info(f"Report validation: {summary['warnings']} warnings (may be acceptable)")
+                else:
+                    logger.info("✓ Report validation passed - all facts verified")
 
                 # Save to file if specified
                 if output_file:

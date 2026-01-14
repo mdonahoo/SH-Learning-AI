@@ -5,6 +5,7 @@ Records mission events, objectives, AND ship system telemetry.
 Supports extended recording sessions (2-10 minutes).
 """
 
+import os
 import sys
 import time
 import signal
@@ -12,6 +13,9 @@ import argparse
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
+from dotenv import load_dotenv
+
+load_dotenv()
 
 sys.path.append(str(Path(__file__).parent))
 
@@ -26,6 +30,7 @@ game_client = None
 telemetry_client = None
 start_time = None
 max_duration = None
+bridge_id = None
 
 
 def signal_handler(sig, frame):
@@ -139,11 +144,16 @@ def main(duration_minutes: int = 2):
     start_time = datetime.now()
     max_duration = timedelta(minutes=duration_minutes)
 
-    # Initialize event recorder
-    mission_id = f"TELEMETRY_{start_time.strftime('%Y%m%d_%H%M%S')}"
+    # Initialize event recorder with optional bridge_id prefix
+    timestamp = start_time.strftime('%Y%m%d_%H%M%S')
+    if bridge_id:
+        mission_id = f"{bridge_id}_TELEMETRY_{timestamp}"
+    else:
+        mission_id = f"TELEMETRY_{timestamp}"
     event_recorder = EventRecorder(
         mission_id=mission_id,
-        mission_name=f"Complete Telemetry Recording - {duration_minutes} min"
+        mission_name=f"Complete Telemetry Recording - {duration_minutes} min",
+        bridge_id=bridge_id
     )
 
     # 1. Connect to game API
@@ -363,8 +373,14 @@ if __name__ == "__main__":
                        help="Recording duration in minutes (2-10)")
     parser.add_argument("--test", action="store_true",
                        help="Run 30-second test")
+    parser.add_argument(
+        "--bridge-id",
+        default=os.getenv('BRIDGE_ID'),
+        help="Bridge identifier for multi-bridge deployments (default from .env)"
+    )
 
     args = parser.parse_args()
+    bridge_id = args.bridge_id
 
     if args.test:
         test_telemetry()

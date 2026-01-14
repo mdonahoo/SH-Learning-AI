@@ -4,12 +4,16 @@ Live Game Recording Script for Starship Horizons
 Records real game events and generates mission summaries.
 """
 
+import os
 import sys
 import time
 import signal
 import logging
 from datetime import datetime
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Add src to path
 sys.path.append(str(Path(__file__).parent))
@@ -42,7 +46,7 @@ def signal_handler(sig, frame):
     sys.exit(0)
 
 
-def main():
+def main(bridge_id: str = None):
     """Main recording function."""
     global recorder
 
@@ -50,13 +54,15 @@ def main():
     print("STARSHIP HORIZONS - LIVE GAME RECORDER")
     print("=" * 60)
     print(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    if bridge_id:
+        print(f"Bridge: {bridge_id}")
     print("-" * 60)
 
     # Setup signal handler
     signal.signal(signal.SIGINT, signal_handler)
 
     # Create recorder (uses environment variables)
-    recorder = GameRecorder()
+    recorder = GameRecorder(bridge_id=bridge_id)
 
     print(f"Connecting to game at: {recorder.game_host}")
 
@@ -111,15 +117,17 @@ def main():
             recorder.stop_recording()
 
 
-def quick_test():
+def quick_test(bridge_id: str = None):
     """Quick test to record for 30 seconds."""
     global recorder
 
     print("=" * 60)
     print("QUICK TEST - 30 SECOND RECORDING")
     print("=" * 60)
+    if bridge_id:
+        print(f"Bridge: {bridge_id}")
 
-    recorder = GameRecorder()  # Uses environment variables
+    recorder = GameRecorder(bridge_id=bridge_id)  # Uses environment variables
 
     if not recorder.client.test_connection():
         print("❌ Cannot connect to game")
@@ -171,10 +179,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Record Starship Horizons game sessions")
     parser.add_argument("--test", action="store_true", help="Run a 30-second test recording")
     parser.add_argument("--host", help="Game host URL (overrides .env)")
+    parser.add_argument(
+        "--bridge-id",
+        default=os.getenv('BRIDGE_ID'),
+        help="Bridge identifier for multi-bridge deployments (default from .env)"
+    )
 
     args = parser.parse_args()
 
     if args.test:
-        quick_test()
+        quick_test(bridge_id=args.bridge_id)
     else:
-        main()
+        main(bridge_id=args.bridge_id)

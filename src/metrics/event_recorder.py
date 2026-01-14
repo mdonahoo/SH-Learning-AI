@@ -16,7 +16,8 @@ from collections import defaultdict
 class EventRecorder:
     """Records and manages game events during a mission."""
 
-    def __init__(self, mission_id: str, mission_name: str = "", bridge_crew: List[str] = None):
+    def __init__(self, mission_id: str, mission_name: str = "", bridge_crew: List[str] = None,
+                 bridge_id: str = None):
         """
         Initialize the event recorder for a mission.
 
@@ -24,10 +25,12 @@ class EventRecorder:
             mission_id: Unique identifier for the mission
             mission_name: Human-readable mission name
             bridge_crew: List of crew positions
+            bridge_id: Identifier for the recording bridge/station
         """
         self.mission_id = mission_id
         self.mission_name = mission_name
         self.bridge_crew = bridge_crew or []
+        self.bridge_id = bridge_id
         self.start_time = datetime.now()
         self.end_time = None
         self.events = []
@@ -227,6 +230,7 @@ class EventRecorder:
             export_data = {
                 "mission_id": self.mission_id,
                 "mission_name": self.mission_name,
+                "bridge_id": self.bridge_id,
                 "bridge_crew": self.bridge_crew,
                 "start_time": self.start_time.isoformat(),
                 "end_time": self.end_time.isoformat(),

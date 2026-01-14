@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class BrowserMimicWebSocket:
     """WebSocket client that mimics browser behavior exactly."""
 
-    def __init__(self, host: str = "66.68.47.235", port: int = 1865):
+    def __init__(self, host: str = "192.168.68.56", port: int = 1865):
         self.host = host
         self.port = port
         self.ws_url = f"ws://{host}:{port}/"  # Note the trailing slash like browser
@@ -192,6 +192,19 @@ class BrowserMimicWebSocket:
             'controllers': {},
             'event_states': {},
             'game_messages': []
+        }
+
+        # Console Control state (CRITICAL for AI crew capability)
+        self.console_state = {
+            'locked': False,
+            'locked_by': None,
+            'lock_time': None,
+            'current_mode': None,
+            'status': 'unlocked',
+            'header_locked': False,
+            'focus': None,
+            'last_break': None,
+            'stations': {}  # Track per-station console state
         }
 
         # Smart filtering components
@@ -450,6 +463,16 @@ class BrowserMimicWebSocket:
             "ROLES",            # Station role assignments
             "SCREENS",          # Available screen/console list
 
+            # Console Control packets (CRITICAL for AI crew)
+            "CONSOLE-BREAK",    # Console interruption/override
+            "CONSOLE-LOCK",     # Console locking (AI taking control)
+            "CONSOLE-UNLOCK",   # Console unlocking (AI releasing control)
+            "CONSOLE-HEADER-LOCK", # UI header locking
+            "CONSOLE-STATUS",   # Console state information
+            "CONSOLE-RELOAD",   # Console refresh request
+            "CONSOLE-MODE",     # Console mode changes
+            "CONSOLE-FOCUS",    # Console focus events
+
             # Control and heartbeat packets
             "PING",             # Heartbeat request
             "PONG",             # Heartbeat response
@@ -689,6 +712,7 @@ class BrowserMimicWebSocket:
                 self._emit_event({"type": "map", "category": "advanced", "data": value})
             elif cmd == "PRE-FLIGHT":
                 self.advanced_systems['pre_flight'] = value
+                self._handle_pre_flight(value)  # Extract ship health from PRE-FLIGHT
                 self._emit_event({"type": "pre_flight", "category": "advanced", "data": value})
 
             # Enhanced combat
@@ -741,8 +765,9 @@ class BrowserMimicWebSocket:
                 self._emit_event({"type": "callsign", "category": "multiplayer", "data": value})
             elif cmd == "PLAYER-VESSELS":
                 self.multiplayer_data['player_vessels'] = value
+                self._handle_player_vessels(value)
                 self._emit_event({"type": "player_vessels", "category": "multiplayer", "data": value})
-                logger.info(f"🚢 Player vessels: {value}")
+                logger.info(f"🚢 Player vessels: {len(value) if isinstance(value, dict) else 'data'}")
 
             # UI and Media
             elif cmd == "HTMLMEDIA":
@@ -763,6 +788,25 @@ class BrowserMimicWebSocket:
                 self.ui_state['game_messages'].append(value)
                 self._emit_event({"type": "game_message", "category": "ui", "data": value})
                 logger.info(f"📢 Game message: {value}")
+
+            # Console Control packets (CRITICAL for AI crew)
+            elif cmd == "CONSOLE-LOCK":
+                self._handle_console_lock(value)
+            elif cmd == "CONSOLE-UNLOCK":
+                self._handle_console_unlock(value)
+            elif cmd == "CONSOLE-STATUS":
+                self._handle_console_status(value)
+            elif cmd == "CONSOLE-BREAK":
+                self._handle_console_break(value)
+            elif cmd == "CONSOLE-MODE":
+                self._handle_console_mode(value)
+            elif cmd == "CONSOLE-FOCUS":
+                self._handle_console_focus(value)
+            elif cmd == "CONSOLE-HEADER-LOCK":
+                self._handle_console_header_lock(value)
+            elif cmd == "CONSOLE-RELOAD":
+                self._emit_event({"type": "console_reload", "category": "console", "data": value})
+                logger.info(f"🔄 Console reload requested")
 
             # Additional telemetry
             elif cmd == "AUTO-PILOT":
@@ -1619,6 +1663,156 @@ class BrowserMimicWebSocket:
                 "data": {"target_id": value}
             })
 
+    def _handle_pre_flight(self, value):
+        """Handle PRE-FLIGHT packet - extract ship health from Players array.
+
+        PRE-FLIGHT Players array contains vessel objects directly with:
+        - Integrity: hull points
+        - Name, Faction, VesselClass, Location, etc.
+        """
+        if not value or not isinstance(value, dict):
+            return
+
+        players = value.get('Players', [])
+        if not players or not isinstance(players, list):
+            return
+
+        for player in players:
+            if not isinstance(player, dict):
+                continue
+
+            # Check if this is a vessel with integrity data (player ship)
+            if player.get('Type') == 'Vessel' and 'Integrity' in player:
+                # This is a vessel object with health data directly embedded
+                vessel_info = {
+                    'Name': player.get('Name', 'Unknown'),
+                    'Class': player.get('VesselClass', player.get('Class', 'Unknown')),
+                    'Faction': player.get('Faction', 'Unknown'),
+                    'Location': player.get('Location', 'Unknown'),
+                    'Maneuver': player.get('Maneuver', 'Unknown'),
+                    'State': 'Active' if player.get('Loaded') else 'Unknown',
+                    'Integrity': player.get('Integrity', 0),
+                    'MaxIntegrity': player.get('Integrity', 0),  # PRE-FLIGHT shows current = max at start
+                    'Shields': 1.0,  # PRE-FLIGHT doesn't include shields, assume full
+                    'Energy': 2000,  # Default energy
+                    'MaxEnergy': 4000,  # Default max energy
+                    'ID': player.get('ID'),
+                    'IsPlayer': True,
+                    'Position': player.get('Position', {})
+                }
+
+                # Extract components for more detail
+                components = player.get('Components', {})
+                if components:
+                    # Try to find reactor/power info from components
+                    for comp_name, comp_data in components.items():
+                        if isinstance(comp_data, dict) and 'reactor' in comp_name.lower():
+                            vessel_info['MaxEnergy'] = comp_data.get('Power', 4000)
+
+                self._extract_vessel_health(vessel_info)
+                logger.info(f"📦 Extracted ship health from PRE-FLIGHT: {vessel_info.get('Name')}")
+                return
+
+        logger.debug(f"PRE-FLIGHT received but no vessel health data found")
+
+    def _extract_vessel_health(self, vessel_info: dict):
+        """Extract and update vessel health from a vessel info dict."""
+        # Extract hull data
+        integrity = vessel_info.get('Integrity', 0)
+        max_integrity = vessel_info.get('MaxIntegrity', integrity)
+        heal_integrity = vessel_info.get('HealIntegrity', integrity)
+
+        # Calculate hull percentage
+        if max_integrity > 0:
+            hull_percentage = (integrity / max_integrity) * 100
+        else:
+            hull_percentage = 100
+
+        # Extract shield data (0-1 scale)
+        shields_raw = vessel_info.get('Shields', 1)
+        shield_percentage = shields_raw * 100 if shields_raw <= 1 else shields_raw
+
+        # Extract energy data
+        energy = vessel_info.get('Energy', 0)
+        max_energy = vessel_info.get('MaxEnergy', energy)
+        energy_percentage = (energy / max_energy * 100) if max_energy > 0 else 100
+
+        # Track changes
+        old_hull = self.vessel_data.get('hull_percentage')
+        old_shield = self.vessel_data.get('shield_percentage')
+
+        # Update vessel_data
+        self.vessel_data['hull_percentage'] = hull_percentage
+        self.vessel_data['hull_integrity'] = integrity
+        self.vessel_data['hull_max'] = max_integrity
+        self.vessel_data['hull_heal'] = heal_integrity
+        self.vessel_data['shield_percentage'] = shield_percentage
+        self.vessel_data['energy'] = energy
+        self.vessel_data['energy_max'] = max_energy
+        self.vessel_data['energy_percentage'] = energy_percentage
+
+        # Extract other useful fields
+        self.vessel_data['vessel_name'] = vessel_info.get('Name', 'Unknown')
+        self.vessel_data['vessel_class'] = vessel_info.get('Class', 'Unknown')
+        self.vessel_data['vessel_id'] = vessel_info.get('ID')
+        self.vessel_data['faction'] = vessel_info.get('Faction', 'Unknown')
+        self.vessel_data['location'] = vessel_info.get('Location', 'Unknown')
+        self.vessel_data['maneuver'] = vessel_info.get('Maneuver', 'Unknown')
+        self.vessel_data['state'] = vessel_info.get('State', 'Unknown')
+
+        # Navigation data
+        if 'Position' in vessel_info:
+            self.vessel_data['navigation']['position'] = vessel_info['Position']
+        if 'Speed' in vessel_info:
+            self.vessel_data['navigation']['speed'] = vessel_info['Speed']
+
+        # Set vessel_id if not already set
+        if not self.vessel_id and vessel_info.get('IsPlayer'):
+            self.vessel_id = vessel_info.get('ID')
+
+        # Log significant changes
+        if old_hull is not None and old_hull != 100 and abs(old_hull - hull_percentage) > 1:
+            logger.info(f"🛡️ Hull changed: {old_hull:.1f}% → {hull_percentage:.1f}%")
+        if old_shield is not None and old_shield != 100 and abs(old_shield - shield_percentage) > 1:
+            logger.info(f"🛡️ Shields changed: {old_shield:.1f}% → {shield_percentage:.1f}%")
+
+        # Emit health update event
+        self._emit_event({
+            "type": "ship_health_update",
+            "category": "telemetry",
+            "data": {
+                "hull_percentage": hull_percentage,
+                "hull_integrity": integrity,
+                "hull_max": max_integrity,
+                "shield_percentage": shield_percentage,
+                "energy_percentage": energy_percentage,
+                "vessel_name": vessel_info.get('Name'),
+                "location": vessel_info.get('Location'),
+                "maneuver": vessel_info.get('Maneuver')
+            },
+            "priority": "CRITICAL" if hull_percentage < 30 else "HIGH" if hull_percentage < 50 else "MEDIUM"
+        })
+
+        logger.info(f"🚢 Ship Health: Hull {hull_percentage:.1f}% ({integrity}/{max_integrity}) | Shields {shield_percentage:.1f}% | Energy {energy_percentage:.1f}%")
+
+    def _handle_player_vessels(self, value):
+        """Handle PLAYER-VESSELS packet - contains ship health data in VesselInfo JSON string."""
+        if not value or not isinstance(value, dict):
+            return
+
+        for vessel_num, vessel_data in value.items():
+            if not isinstance(vessel_data, dict):
+                continue
+
+            # Parse VesselInfo JSON string - THIS CONTAINS SHIP HEALTH!
+            vessel_info_str = vessel_data.get('VesselInfo', '')
+            if vessel_info_str and isinstance(vessel_info_str, str):
+                try:
+                    vessel_info = json.loads(vessel_info_str)
+                    self._extract_vessel_health(vessel_info)
+                except json.JSONDecodeError as e:
+                    logger.warning(f"Failed to parse VesselInfo JSON: {e}")
+
     def _handle_players(self, value):
         """Handle PLAYERS packet - crew and player information."""
         if value and isinstance(value, list):
@@ -1910,6 +2104,169 @@ class BrowserMimicWebSocket:
             "data": value,
             "priority": "HIGH"
         })
+
+    # ==================== Console Control Handlers ====================
+    # These are CRITICAL for AI crew capability to take/release control
+
+    def _handle_console_lock(self, value):
+        """Handle CONSOLE-LOCK packet - when a console is locked (AI or player taking control)."""
+        logger.info(f"🔒 Console LOCKED: {value}")
+
+        self.console_state['locked'] = True
+        self.console_state['status'] = 'locked'
+        self.console_state['lock_time'] = datetime.now().isoformat()
+
+        if isinstance(value, dict):
+            self.console_state['locked_by'] = value.get('LockedBy', value.get('User', 'Unknown'))
+            station = value.get('Station', value.get('Console', 'Unknown'))
+            self.console_state['stations'][station] = {
+                'locked': True,
+                'locked_by': self.console_state['locked_by'],
+                'lock_time': self.console_state['lock_time']
+            }
+        elif isinstance(value, str):
+            self.console_state['locked_by'] = value
+
+        self._emit_event({
+            "type": "console_locked",
+            "category": "console",
+            "data": {
+                "locked": True,
+                "locked_by": self.console_state['locked_by'],
+                "raw_value": value
+            },
+            "priority": "HIGH"
+        })
+
+    def _handle_console_unlock(self, value):
+        """Handle CONSOLE-UNLOCK packet - when a console is unlocked (control released)."""
+        logger.info(f"🔓 Console UNLOCKED: {value}")
+
+        self.console_state['locked'] = False
+        self.console_state['status'] = 'unlocked'
+        self.console_state['locked_by'] = None
+
+        if isinstance(value, dict):
+            station = value.get('Station', value.get('Console', 'Unknown'))
+            if station in self.console_state['stations']:
+                self.console_state['stations'][station] = {
+                    'locked': False,
+                    'locked_by': None,
+                    'unlock_time': datetime.now().isoformat()
+                }
+
+        self._emit_event({
+            "type": "console_unlocked",
+            "category": "console",
+            "data": {
+                "locked": False,
+                "raw_value": value
+            },
+            "priority": "HIGH"
+        })
+
+    def _handle_console_status(self, value):
+        """Handle CONSOLE-STATUS packet - current console state information."""
+        logger.info(f"📊 Console status: {value}")
+
+        if isinstance(value, dict):
+            # Update console state from status packet
+            self.console_state['locked'] = value.get('Locked', self.console_state['locked'])
+            self.console_state['status'] = value.get('Status', self.console_state['status'])
+            self.console_state['current_mode'] = value.get('Mode', self.console_state['current_mode'])
+
+            # Track station-specific status
+            station = value.get('Station', value.get('Console'))
+            if station:
+                self.console_state['stations'][station] = value
+
+        self._emit_event({
+            "type": "console_status",
+            "category": "console",
+            "data": value
+        })
+
+    def _handle_console_break(self, value):
+        """Handle CONSOLE-BREAK packet - console interruption/override event."""
+        logger.warning(f"⚠️ Console BREAK: {value}")
+
+        self.console_state['last_break'] = datetime.now().isoformat()
+
+        self._emit_event({
+            "type": "console_break",
+            "category": "console",
+            "data": {
+                "break_time": self.console_state['last_break'],
+                "raw_value": value
+            },
+            "priority": "CRITICAL"
+        })
+
+    def _handle_console_mode(self, value):
+        """Handle CONSOLE-MODE packet - console mode changes."""
+        logger.info(f"🖥️ Console mode: {value}")
+
+        old_mode = self.console_state['current_mode']
+        self.console_state['current_mode'] = value
+
+        self._emit_event({
+            "type": "console_mode_changed",
+            "category": "console",
+            "data": {
+                "old_mode": old_mode,
+                "new_mode": value
+            }
+        })
+
+    def _handle_console_focus(self, value):
+        """Handle CONSOLE-FOCUS packet - console focus events."""
+        logger.info(f"🎯 Console focus: {value}")
+
+        self.console_state['focus'] = value
+
+        self._emit_event({
+            "type": "console_focus",
+            "category": "console",
+            "data": value
+        })
+
+    def _handle_console_header_lock(self, value):
+        """Handle CONSOLE-HEADER-LOCK packet - UI header locking."""
+        logger.info(f"🔐 Console header lock: {value}")
+
+        self.console_state['header_locked'] = bool(value) if not isinstance(value, dict) else value.get('Locked', True)
+
+        self._emit_event({
+            "type": "console_header_lock",
+            "category": "console",
+            "data": {
+                "header_locked": self.console_state['header_locked'],
+                "raw_value": value
+            }
+        })
+
+    def get_console_state(self) -> Dict[str, Any]:
+        """Get current console control state."""
+        return self.console_state.copy()
+
+    def is_console_locked(self, station: str = None) -> bool:
+        """Check if a console is locked."""
+        if station and station in self.console_state['stations']:
+            return self.console_state['stations'][station].get('locked', False)
+        return self.console_state['locked']
+
+    # ==================== Console Control Commands ====================
+    # Methods for AI to request console control
+
+    def request_console_lock(self, station: str = "AI-CREW"):
+        """Request to lock a console (AI taking control)."""
+        logger.info(f"🔒 Requesting console lock for: {station}")
+        self._send("CONSOLE-LOCK", {"Station": station, "User": "AI-CREW"})
+
+    def request_console_unlock(self, station: str = "AI-CREW"):
+        """Request to unlock a console (AI releasing control)."""
+        logger.info(f"🔓 Requesting console unlock for: {station}")
+        self._send("CONSOLE-UNLOCK", {"Station": station})
 
     def disconnect(self):
         """Disconnect WebSocket."""

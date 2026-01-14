@@ -3,11 +3,15 @@
 Enhanced Game Recorder - Records Meaningful Game Events Only
 """
 
+import os
 import sys
 import time
 import signal
 from datetime import datetime
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 sys.path.append(str(Path(__file__).parent))
 
@@ -18,6 +22,7 @@ from src.integration.enhanced_game_client import EnhancedGameClient
 # Global for signal handling
 recorder = None
 client = None
+bridge_id = None
 
 
 def signal_handler(sig, frame):
@@ -91,11 +96,16 @@ def main():
 
     print("✅ Connected successfully!\n")
 
-    # Create event recorder
-    mission_id = f"ENHANCED_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    # Create event recorder with optional bridge_id prefix
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    if bridge_id:
+        mission_id = f"{bridge_id}_ENHANCED_{timestamp}"
+    else:
+        mission_id = f"ENHANCED_{timestamp}"
     recorder = EventRecorder(
         mission_id=mission_id,
-        mission_name="Enhanced Recording Session"
+        mission_name="Enhanced Recording Session",
+        bridge_id=bridge_id
     )
 
     # Setup event handler
@@ -278,8 +288,14 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Enhanced Starship Horizons Event Recorder")
     parser.add_argument("--test", action="store_true", help="Run 60-second test")
+    parser.add_argument(
+        "--bridge-id",
+        default=os.getenv('BRIDGE_ID'),
+        help="Bridge identifier for multi-bridge deployments (default from .env)"
+    )
 
     args = parser.parse_args()
+    bridge_id = args.bridge_id
 
     if args.test:
         test_run()

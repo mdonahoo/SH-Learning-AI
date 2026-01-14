@@ -26,13 +26,17 @@ logger = logging.getLogger(__name__)
 class GameRecorder:
     """Records Starship Horizons game sessions using the metrics system."""
 
-    def __init__(self, game_host: str = None):
+    def __init__(self, game_host: str = None, bridge_id: str = None):
         """
         Initialize the game recorder.
 
         Args:
             game_host: Hostname or URL of the Starship Horizons game (defaults to env var GAME_HOST)
+            bridge_id: Unique identifier for this bridge/recording station (defaults to env var BRIDGE_ID)
         """
+        # Get bridge ID from parameter or environment (empty string treated as None)
+        self.bridge_id = bridge_id or os.getenv('BRIDGE_ID') or None
+
         # Get host from environment or use provided host
         if game_host is None:
             host = os.getenv("GAME_HOST", "localhost")
@@ -56,6 +60,9 @@ class GameRecorder:
         # Register event handler
         self.client.add_event_callback(self._handle_game_event)
 
+        if self.bridge_id:
+            logger.info(f"GameRecorder initialized for bridge: {self.bridge_id}")
+
     def start_recording(self, mission_name: str = None) -> str:
         """
         Start recording a game session.
@@ -70,8 +77,12 @@ class GameRecorder:
             logger.warning("Already recording")
             return self.mission_id
 
-        # Generate mission ID
-        self.mission_id = f"GAME_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        # Generate mission ID with optional bridge prefix
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        if self.bridge_id:
+            self.mission_id = f"{self.bridge_id}_GAME_{timestamp}"
+        else:
+            self.mission_id = f"GAME_{timestamp}"
 
         # Get current game status
         status = self.client.get_game_status()
@@ -84,7 +95,8 @@ class GameRecorder:
         self.event_recorder = EventRecorder(
             mission_id=self.mission_id,
             mission_name=mission_name or "Starship Horizons Session",
-            bridge_crew=["Captain", "Helm", "Tactical", "Science", "Engineering", "Communications"]
+            bridge_crew=["Captain", "Helm", "Tactical", "Science", "Engineering", "Communications"],
+            bridge_id=self.bridge_id
         )
 
         # Initialize audio service with auto-transcription
@@ -93,11 +105,15 @@ class GameRecorder:
             mission_id=self.mission_id,
             sample_rate=16000,
             channels=1,
-            auto_transcribe=enable_audio
+            auto_transcribe=enable_audio,
+            bridge_id=self.bridge_id
         )
 
-        # Set storage path for audio recordings
-        export_dir = Path("game_recordings") / self.mission_id
+        # Set storage path for audio recordings (bridge-specific if bridge_id is set)
+        if self.bridge_id:
+            export_dir = Path("game_recordings") / self.bridge_id / self.mission_id
+        else:
+            export_dir = Path("game_recordings") / self.mission_id
         export_dir.mkdir(parents=True, exist_ok=True)
         self.audio_service.set_storage_path(str(export_dir))
 
@@ -128,6 +144,7 @@ class GameRecorder:
             data={
                 "mission_id": self.mission_id,
                 "mission_name": mission_name,
+                "bridge_id": self.bridge_id,
                 "game_host": self.game_host,
                 "timestamp": datetime.now().isoformat()
             }
@@ -170,8 +187,11 @@ class GameRecorder:
         stats = self.event_recorder.get_statistics()
         logger.info("Statistics obtained")
 
-        # Export data
-        export_dir = Path("game_recordings") / self.mission_id
+        # Export data (bridge-specific directory if bridge_id is set)
+        if self.bridge_id:
+            export_dir = Path("game_recordings") / self.bridge_id / self.mission_id
+        else:
+            export_dir = Path("game_recordings") / self.mission_id
         export_dir.mkdir(parents=True, exist_ok=True)
         logger.info(f"Export directory created: {export_dir}")
 
@@ -340,7 +360,8 @@ class GameRecorder:
 
         summarizer = MissionSummarizer(
             mission_id=self.mission_id,
-            mission_name=self.event_recorder.mission_name
+            mission_name=self.event_recorder.mission_name,
+            bridge_id=self.bridge_id
         )
 
         # Load events
@@ -363,6 +384,7 @@ class GameRecorder:
         live_stats = {
             "status": "recording",
             "mission_id": self.mission_id,
+            "bridge_id": self.bridge_id,
             "game_state": status.get("State"),
             "game_mode": status.get("Mode"),
             "events_recorded": stats["total_events"],

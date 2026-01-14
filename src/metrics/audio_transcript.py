@@ -26,7 +26,8 @@ class AudioTranscriptService:
     """Service for recording and transcribing mission audio."""
 
     def __init__(self, mission_id: str, sample_rate: int = 16000, channels: int = 1,
-                 buffer_duration: int = 30, auto_transcribe: bool = False):
+                 buffer_duration: int = 30, auto_transcribe: bool = False,
+                 bridge_id: str = None):
         """
         Initialize audio transcript service.
 
@@ -36,8 +37,10 @@ class AudioTranscriptService:
             channels: Number of audio channels
             buffer_duration: Duration of audio buffers in seconds
             auto_transcribe: Whether to automatically transcribe audio
+            bridge_id: Identifier for the recording bridge/station
         """
         self.mission_id = mission_id
+        self.bridge_id = bridge_id
         self.sample_rate = sample_rate
         self.channels = channels
         self.buffer_duration = buffer_duration
@@ -460,6 +463,7 @@ class AudioTranscriptService:
         with self._lock:
             export_data = {
                 "mission_id": self.mission_id,
+                "bridge_id": self.bridge_id,
                 "recording_start": self.recording_start_time.isoformat() if self.recording_start_time else None,
                 "recording_end": self.recording_end_time.isoformat() if self.recording_end_time else None,
                 "transcripts": []

@@ -28,6 +28,28 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+# Domain-specific vocabulary prompt for Starship Horizons
+# This biases Whisper toward recognizing game-specific terms
+STARSHIP_HORIZONS_PROMPT = (
+    "USS Donahoo, starship bridge simulator, captain's log, stardate. "
+    "Bridge stations: helm, tactical, science, engineering, operations. "
+    "Ship systems: warp drive, warp core, impulse engines, shields, phasers, "
+    "torpedoes, photon torpedoes, phaser banks, forward shields, aft shields, "
+    "sensor array, long-range sensors, short-range sensors, transporter. "
+    "Navigation: waypoint, sector, bearing, mark, coordinates, course plotted, "
+    "course laid in, all stop, full impulse, maximum warp, ETA, "
+    "coming about, closing distance. "
+    "Communications: comm station, hail, channel open, transmitting, "
+    "subspace interference, distress signal, Space Dock. "
+    "Alerts: red alert, yellow alert, battle stations, all hands to stations. "
+    "Combat: fire at will, attack pattern Delta, weapons hot, target locked, "
+    "direct hit, evasive action, intercept course, shields at, shields holding, "
+    "shields down, shields failing, torpedoes away, firing phasers. "
+    "Commands: engage, make it so, on screen, acknowledged, aye sir, aye captain. "
+    "Crew responses: ready captain, standing by, nominal, operational, online, "
+    "maneuvering now, targeting solutions, damage control teams."
+)
+
 
 class WhisperTranscriber:
     """
@@ -71,11 +93,17 @@ class WhisperTranscriber:
             )
 
         # Load configuration
-        self.model_size = model_size or os.getenv('WHISPER_MODEL_SIZE', 'base')
+        self.model_size = model_size or os.getenv('WHISPER_MODEL_SIZE', 'small')
         self.device = device or os.getenv('WHISPER_DEVICE', 'cpu')
         self.compute_type = compute_type or os.getenv('WHISPER_COMPUTE_TYPE', 'int8')
         self.language = language or os.getenv('TRANSCRIBE_LANGUAGE', 'en')
         self.num_workers = num_workers or int(os.getenv('TRANSCRIPTION_WORKERS', '2'))
+
+        # Initial prompt for domain-specific vocabulary
+        self.initial_prompt = os.getenv(
+            'WHISPER_INITIAL_PROMPT',
+            STARSHIP_HORIZONS_PROMPT
+        )
 
         # Model path
         model_path = Path(os.getenv('WHISPER_MODEL_PATH', './data/models/whisper/'))
@@ -102,7 +130,8 @@ class WhisperTranscriber:
             f"WhisperTranscriber initialized: "
             f"model={self.model_size}, device={self.device}, "
             f"compute={self.compute_type}, language={self.language}, "
-            f"workers={self.num_workers}"
+            f"workers={self.num_workers}, "
+            f"prompt_length={len(self.initial_prompt)} chars"
         )
 
     def load_model(self) -> bool:
@@ -294,6 +323,7 @@ class WhisperTranscriber:
             segments, info = self._model.transcribe(
                 audio_data,
                 language=None if self.language == 'auto' else self.language,
+                initial_prompt=self.initial_prompt,  # Domain vocabulary
                 vad_filter=True,  # Use built-in VAD
                 word_timestamps=True
             )
@@ -397,6 +427,7 @@ class WhisperTranscriber:
             segments, info = self._model.transcribe(
                 audio_path,
                 language=None if self.language == 'auto' else self.language,
+                initial_prompt=self.initial_prompt,  # Domain vocabulary
                 vad_filter=True,
                 word_timestamps=True
             )

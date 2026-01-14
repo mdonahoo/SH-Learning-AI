@@ -429,6 +429,8 @@ class LearningEvaluator:
                 for q in top_quotes
             ],
             'evaluations': all_evaluations,
-            'raw_transcripts': self.transcripts,  # For verbatim quote verification
+            # NOTE: raw_transcripts intentionally excluded to prevent LLM from
+            # "recounting" and overriding pre-computed statistics. The LLM should
+            # only format the facts provided, not verify them against raw data.
             'objectives': all_evaluations['mission_specific']['objectives']
         }

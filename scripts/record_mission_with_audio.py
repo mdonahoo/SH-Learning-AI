@@ -110,6 +110,11 @@ def main():
         action='store_true',
         help='Disable audio capture (only record game events)'
     )
+    parser.add_argument(
+        '--bridge-id',
+        default=os.getenv('BRIDGE_ID'),
+        help='Bridge identifier for multi-bridge deployments (default from .env)'
+    )
 
     args = parser.parse_args()
 
@@ -130,7 +135,9 @@ def main():
 
     # Create recorder
     logger.info(f"Connecting to game at: {args.host}")
-    recorder = GameRecorder(game_host=args.host)
+    if args.bridge_id:
+        logger.info(f"Recording for bridge: {args.bridge_id}")
+    recorder = GameRecorder(game_host=args.host, bridge_id=args.bridge_id)
 
     try:
         # Start recording
