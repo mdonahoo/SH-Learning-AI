@@ -46,6 +46,41 @@ class MissionSummarizer:
         """Load transcript data for processing."""
         self.transcripts = transcripts.copy()
 
+    def clean_transcripts(self, transcripts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Remove hallucinated transcripts before LLM analysis.
+
+        This filters out known Whisper hallucinations that may have been
+        recorded before the hallucination filter was updated.
+
+        Args:
+            transcripts: List of transcript dictionaries
+
+        Returns:
+            Cleaned list with hallucinations removed
+        """
+        try:
+            from src.audio.whisper_transcriber import is_hallucination
+        except ImportError:
+            logger.warning("Could not import hallucination filter, skipping cleaning")
+            return transcripts
+
+        cleaned = []
+        removed_count = 0
+
+        for t in transcripts:
+            text = t.get('text', '')
+            if text and not is_hallucination(text):
+                cleaned.append(t)
+            else:
+                removed_count += 1
+                logger.debug(f"Removed hallucination: {text[:50]}...")
+
+        if removed_count > 0:
+            logger.info(f"Cleaned {removed_count} hallucinated transcripts before LLM analysis")
+
+        return cleaned
+
     def generate_timeline(self) -> List[Dict[str, Any]]:
         """
         Generate chronological mission timeline.
@@ -613,13 +648,19 @@ class MissionSummarizer:
 
         return str(end_time - start_time)
 
-    def generate_llm_report(self, style: str = "entertaining", output_file: Optional[Path] = None) -> str:
+    def generate_llm_report(
+        self,
+        style: str = "entertaining",
+        output_file: Optional[Path] = None,
+        show_progress: bool = True
+    ) -> str:
         """
         Generate complete mission report using LLM.
 
         Args:
             style: Report style (entertaining, professional, technical, casual)
             output_file: Optional file path to save the report
+            show_progress: Whether to show progress indicator
 
         Returns:
             Markdown formatted report
@@ -640,18 +681,25 @@ class MissionSummarizer:
                 logger.warning("Ollama server not available")
                 return ""
 
+            # Clean transcripts of hallucinations before LLM analysis
+            cleaned_transcripts = self.clean_transcripts(self.transcripts)
+
             # Prepare complete mission data
             mission_data = {
                 'mission_id': self.mission_id,
                 'mission_name': self.mission_name,
                 'events': self.events,
-                'transcripts': self.transcripts,
+                'transcripts': cleaned_transcripts,
                 'duration': self._calculate_duration()
             }
 
             # Generate full report
             logger.info(f"Generating full LLM report (style={style})...")
-            report_markdown = client.generate_full_report(mission_data, style=style)
+            report_markdown = client.generate_full_report(
+                mission_data,
+                style=style,
+                show_progress=show_progress
+            )
 
             if report_markdown:
                 logger.info("✓ Full report generated successfully")

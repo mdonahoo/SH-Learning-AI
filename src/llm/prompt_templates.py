@@ -794,6 +794,18 @@ def format_transcripts(transcripts: List[Dict[str, Any]]) -> str:
             time_only = timestamp.split('T')[1][:8]
         elif isinstance(timestamp, str):
             time_only = timestamp
+        elif isinstance(timestamp, (int, float)):
+            # Format seconds as MM:SS or HH:MM:SS
+            total_seconds = int(timestamp)
+            if total_seconds >= 3600:
+                hours = total_seconds // 3600
+                minutes = (total_seconds % 3600) // 60
+                seconds = total_seconds % 60
+                time_only = f"{hours}:{minutes:02d}:{seconds:02d}"
+            else:
+                minutes = total_seconds // 60
+                seconds = total_seconds % 60
+                time_only = f"{minutes:02d}:{seconds:02d}"
         else:
             time_only = str(timestamp)
 

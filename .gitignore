@@ -100,3 +100,5 @@ claude_prompt.txt
 /recordings/
 /exports/
 /output/
+# Ollama models (local LLM)
+.ollama/

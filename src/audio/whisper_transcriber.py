@@ -28,59 +28,255 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-# Domain-specific vocabulary prompt for Starship Horizons
+# Domain-specific vocabulary prompt for Starship Horizons and Empty Epsilon
 # This biases Whisper toward recognizing game-specific terms
 STARSHIP_HORIZONS_PROMPT = (
-    "USS Donahoo, starship bridge simulator, captain's log, stardate. "
-    "Bridge stations: helm, tactical, science, engineering, operations. "
-    "Ship systems: warp drive, warp core, impulse engines, shields, phasers, "
-    "torpedoes, photon torpedoes, phaser banks, forward shields, aft shields, "
-    "sensor array, long-range sensors, short-range sensors, transporter. "
-    "Navigation: waypoint, sector, bearing, mark, coordinates, course plotted, "
-    "course laid in, all stop, full impulse, maximum warp, ETA, "
-    "coming about, closing distance. "
-    "Communications: comm station, hail, channel open, transmitting, "
-    "subspace interference, distress signal, Space Dock. "
-    "Alerts: red alert, yellow alert, battle stations, all hands to stations. "
-    "Combat: fire at will, attack pattern Delta, weapons hot, target locked, "
-    "direct hit, evasive action, intercept course, shields at, shields holding, "
-    "shields down, shields failing, torpedoes away, firing phasers. "
-    "Commands: engage, make it so, on screen, acknowledged, aye sir, aye captain. "
-    "Crew responses: ready captain, standing by, nominal, operational, online, "
-    "maneuvering now, targeting solutions, damage control teams."
+    # Starship Horizons specific
+    "Starship Horizons bridge simulator, USS Donahoo, captain's log, stardate. "
+    "Star systems: Paravera, Calavera, Faraday, Parrot Arrow, Starbase Delta. "
+
+    # Bridge stations (both games)
+    "Bridge stations: helm, tactical, science, engineering, operations, communications, "
+    "weapons officer, relay officer, single pilot. "
+
+    # Ship systems
+    "Ship systems: warp drive, warp core, warp engines, impulse engines, impulse drive, "
+    "shields, shield strength, shield frequency, phasers, phaser banks, phaser array, "
+    "torpedoes, photon torpedoes, homing missiles, nukes, EMPs, mines, "
+    "forward shields, aft shields, port shields, starboard shields, "
+    "sensor array, long-range sensors, short-range sensors, scanners, "
+    "transporter, tractor beam, combat maneuver, jump drive, reactor. "
+
+    # Navigation terms
+    "Navigation: waypoint, sector, bearing, mark, coordinates, heading, "
+    "course plotted, course laid in, set course, engage, "
+    "all stop, full stop, full impulse, half impulse, one quarter impulse, "
+    "all back, reverse, maximum warp, warp factor, drop out of warp, de-warp, "
+    "ETA, coming about, closing distance, intercept course, evasive maneuvers. "
+
+    # Communications
+    "Communications: comm station, hail, hailing frequencies, channel open, "
+    "transmitting, receiving, subspace, distress signal, distress call, "
+    "Space Dock, docking permission, undock, undocking, request permission. "
+
+    # Alerts and conditions
+    "Alerts: red alert, condition red, yellow alert, condition yellow, "
+    "battle stations, all hands, shields up, shields down, "
+    "general quarters, action stations, stand down. "
+
+    # Combat terminology
+    "Combat: fire, open fire, cease fire, fire at will, weapons free, "
+    "attack pattern, attack pattern Delta, attack pattern Alpha, "
+    "weapons hot, target locked, lock on, targeting, "
+    "direct hit, hull damage, hull breach, shields failing, shields holding, "
+    "torpedoes away, firing phasers, beam weapons, projectile weapons, "
+    "missile lock, countermeasures, point defense. "
+
+    # Commands and responses
+    "Commands: engage, make it so, on screen, main viewer, acknowledged, "
+    "aye sir, aye captain, aye aye, affirmative, negative, copy that, roger, "
+    "helm responds, ready captain, standing by, awaiting orders. "
+
+    # Status reports
+    "Status: nominal, operational, online, offline, damaged, destroyed, "
+    "critical, stable, maneuvering, in position, on station, "
+    "power levels, energy reserves, coolant levels, heat levels, "
+    "damage control, repair teams, damage report. "
+
+    # Empty Epsilon specific
+    "Empty Epsilon: Artemis, spaceship bridge simulator, "
+    "nebula, asteroid field, black hole, wormhole, "
+    "friendly, hostile, neutral, unknown contact, "
+    "probe, supply drop, artifact, anomaly, "
+    "dock, supply station, defense platform, sentry turret, "
+    "player ship, CPU ship, scenario, mission objective. "
+
+    # Crew coordination
+    "Crew: speak from diaphragm, bridge crew, away team, "
+    "triangulate, scan the planet, scan complete, scan results, "
+    "balance power, power distribution, boost shields, boost weapons, "
+    "route power, divert power, emergency power. "
+)
+
+# Alternative shorter prompt if the full one causes issues
+STARSHIP_HORIZONS_PROMPT_SHORT = (
+    "Starship bridge simulator. Stations: helm, tactical, science, engineering, ops. "
+    "Terms: warp, impulse, shields, phasers, torpedoes, bearing, mark, heading. "
+    "Commands: engage, fire, on screen, aye captain, red alert, shields up. "
+    "Locations: Paravera, Calavera, Faraday, Starbase Delta."
 )
 
 # Known Whisper hallucinations to filter out
-# These appear when Whisper processes silence or unclear audio
+# These appear when Whisper processes silence, unclear audio, or background noise
 WHISPER_HALLUCINATIONS = [
+    # YouTube/video outro hallucinations
     "thank you for watching",
     "thanks for watching",
+    "thank you for listening",
+    "thanks for listening",
     "subscribe",
     "like and subscribe",
+    "hit the like button",
+    "hit the bell",
+    "notification bell",
+    "click here",
+    "link in the description",
+    "don't forget to",
+    "see you next time",
+    "see you in the next",
+    "until next time",
+    "bye bye",
+    "goodbye",
+    "take care",
+
+    # Caption/subtitle service hallucinations
     "caption",
     "captions by",
+    "captions provided",
+    "captioning by",
+    "captioning provided",
     "subtitles by",
+    "subtitles provided",
     "transcribed by",
+    "transcription by",
     "gettranscribed",
     "getcaptioned",
     "captionedthis",
+    "rev.com",
     "amara.org",
+
+    # Copyright/legal text hallucinations
+    "copyright",
+    "©",
+    "all rights reserved",
+    "rights reserved",
+    "trademark",
+    "™",
+    "®",
+    "licensed under",
+    "creative commons",
+    "new thinking allowed",
+    "foundation",
+    "productions",
+    "entertainment",
+    "studios",
+    "broadcasting",
+    "network",
+    "channel",
+
+    # URL and website patterns
     "www.",
     ".com",
     ".org",
     ".net",
-    "click here",
-    "don't forget to",
-    "see you next time",
-    "bye bye",
-    "goodbye",
+    ".edu",
+    ".gov",
+    ".io",
+    "http",
+    "https",
+    "://",
+    "@gmail",
+    "@yahoo",
+    "@hotmail",
+
+    # Music/sound effect markers
     "music",
     "[music]",
     "(music)",
+    "[music playing]",
     "♪",
+    "♫",
     "applause",
     "[applause]",
     "(applause)",
+    "[laughter]",
+    "(laughter)",
+    "[laughing]",
+    "[silence]",
+    "[inaudible]",
+    "[unintelligible]",
+    "[background noise]",
+    "[static]",
+    "[beep]",
+    "[bleep]",
+
+    # Podcast/video intros and outros
+    "welcome back",
+    "hey everyone",
+    "hi everyone",
+    "hello everyone",
+    "hello and welcome",
+    "welcome to the show",
+    "welcome to the podcast",
+    "in this video",
+    "in this episode",
+    "in today's video",
+    "in today's episode",
+    "today we're going to",
+    "today we will",
+    "let's get started",
+    "let's jump right in",
+    "without further ado",
+    "before we begin",
+    "quick reminder",
+
+    # Foreign language artifacts (common Whisper errors)
+    "sous-titres",  # French subtitles
+    "untertitel",   # German subtitles
+    "sottotitoli",  # Italian subtitles
+    "subtítulos",   # Spanish subtitles
+
+    # Repetitive filler (often from silence)
+    "um um um",
+    "uh uh uh",
+    "hmm hmm hmm",
+    "the the the",
+    "a a a a",
+    "i i i i",
+
+    # Sponsor/ad reads
+    "this episode is sponsored",
+    "this video is sponsored",
+    "brought to you by",
+    "special thanks to",
+    "shout out to",
+    "patreon",
+    "ko-fi",
+    "buy me a coffee",
+
+    # Social media
+    "follow me on",
+    "follow us on",
+    "twitter",
+    "instagram",
+    "facebook",
+    "tiktok",
+    "discord server",
+    "join our discord",
+
+    # Common misheard artifacts
+    "you",  # Single word "you" with nothing else is often hallucination
+]
+
+# Patterns that indicate hallucination only if they're the ENTIRE transcription
+# (not just contained within legitimate speech)
+WHISPER_HALLUCINATIONS_EXACT = [
+    "you",
+    "the",
+    "a",
+    "i",
+    "it",
+    "so",
+    "yeah",
+    "okay",
+    "right",
+    "thank you",
+    "thanks",
+    "yes",
+    "no",
+    "hmm",
+    "uh",
+    "um",
 ]
 
 
@@ -94,21 +290,40 @@ def is_hallucination(text: str) -> bool:
     Returns:
         True if text appears to be a hallucination
     """
+    if not text:
+        return True
+
     text_lower = text.lower().strip()
 
-    # Check for known hallucination patterns
+    # Remove punctuation for checking
+    text_clean = ''.join(c for c in text_lower if c.isalnum() or c.isspace()).strip()
+
+    # Check for very short text that's likely noise
+    if len(text_clean) < 3:
+        return True
+
+    # Check for exact match hallucinations (single words/short phrases)
+    if text_clean in WHISPER_HALLUCINATIONS_EXACT:
+        return True
+
+    # Check for known hallucination patterns (substring match)
     for hallucination in WHISPER_HALLUCINATIONS:
         if hallucination in text_lower:
             return True
 
-    # Check for very short text that's likely noise
-    if len(text_lower) < 3:
-        return True
-
     # Check for repeated characters/words (common hallucination)
-    words = text_lower.split()
+    words = text_clean.split()
     if len(words) >= 3 and len(set(words)) == 1:
         return True
+
+    # Check for excessive repetition (e.g., "right right right right")
+    if len(words) >= 4:
+        word_counts = {}
+        for word in words:
+            word_counts[word] = word_counts.get(word, 0) + 1
+        max_count = max(word_counts.values())
+        if max_count >= len(words) * 0.75:  # 75% same word
+            return True
 
     return False
 

@@ -54,16 +54,17 @@
   "containerEnv": {
     "PYTHONPATH": "/workspaces/SH-Learning-AI",
     "PULSE_RUNTIME_PATH": "/mnt/wslg/runtime-dir/pulse",
-    "PULSE_SERVER": "unix:/mnt/wslg/runtime-dir/pulse/native", 
+    "PULSE_SERVER": "unix:/mnt/wslg/runtime-dir/pulse/native",
     "DISPLAY": ":0",
     "WAYLAND_DISPLAY": "wayland-0",
     "XDG_RUNTIME_DIR": "/mnt/wslg/runtime-dir",
     "ALSA_CARD": "0",
-    "SDL_AUDIODRIVER": "pulse", 
+    "SDL_AUDIODRIVER": "pulse",
     "AUDIODEV": "hw:0,0",
     "PULSE_LATENCY_MSEC": "30",
     "NVIDIA_VISIBLE_DEVICES": "all",
-    "NVIDIA_DRIVER_CAPABILITIES": "all"
+    "NVIDIA_DRIVER_CAPABILITIES": "all",
+    "OLLAMA_MODELS": "/workspaces/SH-Learning-AI/.ollama/models"
   },
 
   "remoteUser": "vscode",

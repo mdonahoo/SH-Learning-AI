@@ -72,7 +72,8 @@ def load_mission_data(mission_dir: Path) -> dict:
 
 
 def generate_report(mission_dir: Path, style: str = "entertaining",
-                   output_file: Path = None, force: bool = False) -> bool:
+                   output_file: Path = None, force: bool = False,
+                   show_progress: bool = True) -> bool:
     """
     Generate mission report for a recording.
 
@@ -81,6 +82,7 @@ def generate_report(mission_dir: Path, style: str = "entertaining",
         style: Report style (entertaining, professional, technical, casual)
         output_file: Output file path (default: mission_dir/mission_report_llm.md)
         force: Overwrite existing report
+        show_progress: Whether to show progress indicator
 
     Returns:
         True if successful, False otherwise
@@ -129,7 +131,11 @@ def generate_report(mission_dir: Path, style: str = "entertaining",
     # Generate report
     try:
         logger.info(f"Generating {style} report...")
-        report = summarizer.generate_llm_report(style=style, output_file=output_file)
+        report = summarizer.generate_llm_report(
+            style=style,
+            output_file=output_file,
+            show_progress=show_progress
+        )
 
         if report:
             logger.info(f"✓ Report generated: {output_file}")
@@ -144,7 +150,8 @@ def generate_report(mission_dir: Path, style: str = "entertaining",
 
 
 def batch_process(recordings_dir: Path, style: str = "entertaining",
-                 force: bool = False, limit: int = None) -> dict:
+                 force: bool = False, limit: int = None,
+                 show_progress: bool = True) -> dict:
     """
     Process multiple mission recordings.
 
@@ -153,6 +160,7 @@ def batch_process(recordings_dir: Path, style: str = "entertaining",
         style: Report style
         force: Overwrite existing reports
         limit: Maximum number of missions to process
+        show_progress: Whether to show progress indicator
 
     Returns:
         Dictionary with processing statistics
@@ -180,7 +188,8 @@ def batch_process(recordings_dir: Path, style: str = "entertaining",
 
     for mission_dir in mission_dirs:
         try:
-            if generate_report(mission_dir, style=style, force=force):
+            if generate_report(mission_dir, style=style, force=force,
+                             show_progress=show_progress):
                 stats['success'] += 1
             else:
                 stats['failed'] += 1
@@ -238,6 +247,11 @@ def main():
         action='store_true',
         help='Check Ollama connection and list available models'
     )
+    parser.add_argument(
+        '--no-progress',
+        action='store_true',
+        help='Disable progress indicator during generation'
+    )
 
     args = parser.parse_args()
 
@@ -269,7 +283,8 @@ def main():
             args.recordings_dir,
             style=args.style,
             force=args.force,
-            limit=args.limit
+            limit=args.limit,
+            show_progress=not args.no_progress
         )
 
         logger.info("=" * 70)
@@ -306,7 +321,8 @@ def main():
         mission_path,
         style=args.style,
         output_file=args.output,
-        force=args.force
+        force=args.force,
+        show_progress=not args.no_progress
     )
 
     if success:

@@ -7,13 +7,133 @@ mission summaries, crew performance analysis, and narrative reports.
 
 import logging
 import os
-from typing import Dict, Any, List, Optional
+import sys
+import time
+import threading
+from typing import Dict, Any, List, Optional, Callable
 import requests
 from dotenv import load_dotenv
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+
+class ProgressDisplay:
+    """Real-time progress display for LLM generation."""
+
+    # Time estimation based on empirical measurements
+    # Baseline: 4-min session (55KB) = 220 seconds
+    SECONDS_PER_KB = 4.0  # ~4 seconds per KB of transcript
+
+    def __init__(
+        self,
+        transcript_size_kb: float = 0,
+        show_spinner: bool = True,
+        output_stream=None
+    ):
+        """
+        Initialize progress display.
+
+        Args:
+            transcript_size_kb: Size of transcript in KB for time estimation
+            show_spinner: Whether to show spinner animation
+            output_stream: Output stream (default: sys.stderr)
+        """
+        self.transcript_size_kb = transcript_size_kb
+        self.show_spinner = show_spinner
+        self.output = output_stream or sys.stderr
+        self.start_time = None
+        self.chars_generated = 0
+        self.tokens_generated = 0
+        self._stop_event = threading.Event()
+        self._spinner_thread = None
+        self._spinner_chars = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+        self._spinner_idx = 0
+
+        # Estimate time based on transcript size
+        if transcript_size_kb > 0:
+            self.estimated_seconds = transcript_size_kb * self.SECONDS_PER_KB
+        else:
+            self.estimated_seconds = 60  # Default 1 minute
+
+    def start(self) -> None:
+        """Start progress display."""
+        self.start_time = time.time()
+        self.chars_generated = 0
+        self.tokens_generated = 0
+        self._stop_event.clear()
+
+        if self.show_spinner:
+            self._spinner_thread = threading.Thread(target=self._run_spinner, daemon=True)
+            self._spinner_thread.start()
+
+    def _run_spinner(self) -> None:
+        """Run spinner animation in background thread."""
+        while not self._stop_event.is_set():
+            elapsed = time.time() - self.start_time
+            remaining = max(0, self.estimated_seconds - elapsed)
+
+            # Build status line
+            spinner = self._spinner_chars[self._spinner_idx % len(self._spinner_chars)]
+            self._spinner_idx += 1
+
+            if self.chars_generated > 0:
+                status = (
+                    f"\r{spinner} Generating report... "
+                    f"[{self._format_time(elapsed)} elapsed, "
+                    f"~{self._format_time(remaining)} remaining] "
+                    f"({self.chars_generated:,} chars)"
+                )
+            else:
+                status = (
+                    f"\r{spinner} Generating report... "
+                    f"[{self._format_time(elapsed)} elapsed, "
+                    f"~{self._format_time(remaining)} remaining]"
+                )
+
+            self.output.write(f"{status}    ")
+            self.output.flush()
+
+            self._stop_event.wait(0.1)
+
+    def update(self, chars: int = 0, tokens: int = 0) -> None:
+        """Update progress with new characters/tokens."""
+        self.chars_generated += chars
+        self.tokens_generated += tokens
+
+    def stop(self, success: bool = True) -> None:
+        """Stop progress display."""
+        self._stop_event.set()
+        if self._spinner_thread:
+            self._spinner_thread.join(timeout=0.5)
+
+        elapsed = time.time() - self.start_time if self.start_time else 0
+
+        # Clear line and show final status
+        if success:
+            self.output.write(
+                f"\r✓ Report generated in {self._format_time(elapsed)} "
+                f"({self.chars_generated:,} chars)          \n"
+            )
+        else:
+            self.output.write(
+                f"\r✗ Generation failed after {self._format_time(elapsed)}          \n"
+            )
+        self.output.flush()
+
+    def _format_time(self, seconds: float) -> str:
+        """Format seconds as MM:SS or HH:MM:SS."""
+        seconds = int(seconds)
+        if seconds >= 3600:
+            hours = seconds // 3600
+            minutes = (seconds % 3600) // 60
+            secs = seconds % 60
+            return f"{hours}:{minutes:02d}:{secs:02d}"
+        else:
+            minutes = seconds // 60
+            secs = seconds % 60
+            return f"{minutes}:{secs:02d}"
 
 
 class OllamaClient:
@@ -137,7 +257,7 @@ class OllamaClient:
         prompt: str,
         system: Optional[str] = None,
         temperature: float = 0.7,
-        callback: Optional[callable] = None
+        callback: Optional[Callable[[str], None]] = None
     ) -> Optional[str]:
         """
         Generate text with streaming response.
@@ -193,6 +313,100 @@ class OllamaClient:
             logger.error(f"Streaming generation failed: {e}")
             return None
 
+    def generate_with_progress(
+        self,
+        prompt: str,
+        system: Optional[str] = None,
+        temperature: float = 0.7,
+        max_tokens: Optional[int] = None,
+        transcript_size_kb: float = 0,
+        show_progress: bool = True
+    ) -> Optional[str]:
+        """
+        Generate text with progress display.
+
+        Args:
+            prompt: User prompt
+            system: System prompt (optional)
+            temperature: Sampling temperature (0.0-1.0)
+            max_tokens: Maximum tokens to generate
+            transcript_size_kb: Size of transcript in KB for time estimation
+            show_progress: Whether to show progress indicator
+
+        Returns:
+            Generated text or None if generation failed
+        """
+        progress = None
+        if show_progress:
+            progress = ProgressDisplay(
+                transcript_size_kb=transcript_size_kb,
+                show_spinner=True
+            )
+            progress.start()
+
+        try:
+            payload = {
+                "model": self.model,
+                "prompt": prompt,
+                "stream": True,
+                "options": {
+                    "temperature": temperature
+                }
+            }
+
+            if system:
+                payload["system"] = system
+
+            if max_tokens:
+                payload["options"]["num_predict"] = max_tokens
+
+            logger.info(f"Sending request to Ollama (model={self.model}, temp={temperature})")
+
+            response = requests.post(
+                f"{self.host}/api/generate",
+                json=payload,
+                timeout=self.timeout,
+                stream=True
+            )
+            response.raise_for_status()
+
+            full_response = []
+
+            for line in response.iter_lines():
+                if line:
+                    import json
+                    chunk_data = json.loads(line)
+                    chunk_text = chunk_data.get('response', '')
+
+                    if chunk_text:
+                        full_response.append(chunk_text)
+                        if progress:
+                            progress.update(chars=len(chunk_text))
+
+            complete_text = ''.join(full_response)
+            logger.info(f"✓ Generated {len(complete_text)} characters")
+
+            if progress:
+                progress.stop(success=True)
+
+            return complete_text
+
+        except requests.exceptions.Timeout:
+            logger.error(f"Ollama request timed out after {self.timeout}s")
+            if progress:
+                progress.stop(success=False)
+            return None
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Ollama request failed: {e}")
+            if progress:
+                progress.stop(success=False)
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error during generation: {e}")
+            if progress:
+                progress.stop(success=False)
+            return None
+
     def generate_mission_summary(
         self,
         mission_data: Dict[str, Any],
@@ -240,7 +454,8 @@ class OllamaClient:
     def generate_full_report(
         self,
         mission_data: Dict[str, Any],
-        style: str = "entertaining"
+        style: str = "entertaining",
+        show_progress: bool = True
     ) -> Optional[str]:
         """
         Generate complete mission report in markdown format.
@@ -248,6 +463,7 @@ class OllamaClient:
         Args:
             mission_data: Complete mission data including events and transcripts
             style: Report style
+            show_progress: Whether to show progress indicator
 
         Returns:
             Markdown formatted report or None if failed
@@ -258,11 +474,17 @@ class OllamaClient:
         system_prompt = """You are an expert mission analyst who creates comprehensive,
         entertaining, and insightful mission reports for Starship Horizons bridge simulator sessions."""
 
-        return self.generate(
+        # Calculate transcript size for time estimation
+        import json
+        transcript_size_kb = len(json.dumps(mission_data.get('transcripts', []))) / 1024
+
+        return self.generate_with_progress(
             prompt,
             system=system_prompt,
             temperature=0.7,
-            max_tokens=4096
+            max_tokens=4096,
+            transcript_size_kb=transcript_size_kb,
+            show_progress=show_progress
         )
 
     def generate_hybrid_report(

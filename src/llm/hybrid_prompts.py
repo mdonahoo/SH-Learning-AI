@@ -4,10 +4,18 @@ Hybrid prompt templates for LLM narrative formatting.
 This module contains prompts that take PRE-COMPUTED facts and data,
 asking the LLM ONLY to format them into readable narratives.
 The LLM is NOT allowed to calculate, invent, or modify any facts.
+
+Enhanced version includes integration with:
+- Role inference engine
+- Confidence distribution analysis
+- Mission phase analysis
+- Quality verification
+- Speaker scorecards
+- Communication quality analysis
 """
 
 import json
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 
 
 def build_hybrid_narrative_prompt(structured_data: Dict[str, Any], style: str = "professional") -> str:
@@ -233,6 +241,262 @@ REMEMBER:
 - Every quote must be verbatim from "Available Quotes"
 - Your job is FORMATTING, not CALCULATION
 - Do NOT invent, estimate, or modify ANY data
+"""
+
+    return prompt.strip()
+
+
+def build_enhanced_report_prompt(
+    enhanced_data: Dict[str, Any],
+    mission_name: str = "Mission Debrief",
+    style: str = "professional"
+) -> str:
+    """
+    Build prompt for enhanced mission report using all analysis components.
+
+    This function takes the output from EnhancedReportBuilder and creates
+    a prompt that matches the quality of professional example reports.
+
+    Args:
+        enhanced_data: Complete analysis data from EnhancedReportBuilder
+        mission_name: Name of the mission
+        style: Report style (professional, technical, educational)
+
+    Returns:
+        Formatted prompt string
+    """
+    # Extract all analysis sections
+    statistics = enhanced_data.get('mission_statistics', {})
+    role_analysis = enhanced_data.get('role_analysis', {})
+    confidence_analysis = enhanced_data.get('confidence_analysis', {})
+    phase_analysis = enhanced_data.get('phase_analysis', {})
+    quality_verification = enhanced_data.get('quality_verification', {})
+    communication_quality = enhanced_data.get('communication_quality', {})
+    speaker_scorecards = enhanced_data.get('speaker_scorecards', {})
+    learning_evaluation = enhanced_data.get('learning_evaluation', {})
+
+    # Format mission statistics
+    stats_text = f"""
+**Mission Duration:** {statistics.get('mission_duration', 'Unknown')}
+**Total Voice Communications:** {statistics.get('total_voice_communications', 0)} utterances
+**Unique Speakers Detected:** {statistics.get('unique_speakers', 0)}
+**Total Game Events:** {statistics.get('total_game_events', 0)}
+**Mission Objectives:** {statistics.get('objectives_total', 0)} total, {statistics.get('objectives_completed', 0)} completed ({statistics.get('completion_rate', 0)}%)
+**Mission Grade:** {statistics.get('mission_grade', 'N/A')}
+"""
+
+    # Format role analysis
+    role_table = role_analysis.get('role_table', 'No role analysis available')
+    role_methodology = role_analysis.get('methodology', '')
+
+    # Format confidence distribution
+    confidence_table = confidence_analysis.get('distribution_table', 'No confidence analysis available')
+    confidence_stats = confidence_analysis.get('statistics', {})
+    training_implications = confidence_analysis.get('training_implications', [])
+
+    # Format phase analysis
+    phase_section = phase_analysis.get('phase_analysis_section', 'No phase analysis available')
+
+    # Format communication quality
+    command_control = communication_quality.get('command_control_section', '')
+    effective_examples = communication_quality.get('effective_examples', [])
+    improvement_examples = communication_quality.get('improvement_examples', [])
+
+    # Format speaker scorecards
+    scorecards_section = speaker_scorecards.get('scorecards_section', '')
+
+    # Format quality verification
+    verification_section = quality_verification.get('verification_section', '')
+
+    # Build effective communications table
+    effective_table = "| Timestamp | Speaker | Communication | Assessment |\n| --- | --- | --- | --- |\n"
+    for ex in effective_examples[:5]:
+        text = ex.get('text', '')[:50] + "..." if len(ex.get('text', '')) > 50 else ex.get('text', '')
+        effective_table += f"| {ex.get('timestamp', '')} | {ex.get('speaker', '')} | \"{text}\" | {ex.get('assessment', '')} |\n"
+
+    # Build improvement communications table
+    improvement_table = "| Timestamp | Speaker | Communication | Issue |\n| --- | --- | --- | --- |\n"
+    for ex in improvement_examples[:5]:
+        text = ex.get('text', '')[:50] + "..." if len(ex.get('text', '')) > 50 else ex.get('text', '')
+        improvement_table += f"| {ex.get('timestamp', '')} | {ex.get('speaker', '')} | \"{text}\" | {ex.get('issue', '')} |\n"
+
+    # Format training implications
+    implications_text = "\n".join([f"- {impl}" for impl in training_implications])
+
+    style_instructions = {
+        "professional": "Write in a professional, analytical tone matching Starfleet Academy standards.",
+        "technical": "Write in a technical, metrics-focused style with detailed statistical analysis.",
+        "educational": "Write in an educational tone that explains concepts and provides learning insights."
+    }
+
+    prompt = f"""You are formatting a comprehensive mission debrief report. ALL DATA has been pre-calculated.
+
+🚨 CRITICAL RULES - VIOLATION WILL INVALIDATE THE REPORT:
+1. DO NOT calculate, modify, or invent ANY statistics - use ONLY exact numbers provided
+2. DO NOT create or modify quotes - use ONLY verbatim text from provided examples
+3. DO NOT assign character names to speakers - use speaker_1, speaker_2, etc.
+4. DO NOT claim behaviors occurred unless evidence is provided
+5. If data is missing, state "Data not available" - NEVER guess
+6. Every claim MUST have supporting evidence from the pre-computed data
+
+STYLE: {style_instructions.get(style, style_instructions['professional'])}
+
+---
+
+# PRE-COMPUTED MISSION DATA
+
+## Mission Statistics (USE THESE EXACT VALUES)
+{stats_text}
+
+## Role Analysis (PRE-COMPUTED)
+{role_table}
+
+### Role Assignment Methodology (USE THIS EXPLANATION)
+{role_methodology}
+
+## Transcription Confidence Distribution (PRE-COMPUTED)
+{confidence_table}
+
+**Average Confidence:** {confidence_stats.get('average_confidence', 0):.1%}
+**Quality Assessment:** {confidence_analysis.get('quality_assessment', 'Unknown')}
+
+**Training Implications:**
+{implications_text}
+
+## Mission Phase Analysis (PRE-COMPUTED)
+{phase_section}
+
+## Command and Control Assessment (PRE-COMPUTED)
+
+### Effective Command Examples (USE THESE EXACT QUOTES)
+{effective_table}
+
+### Communications Requiring Improvement (USE THESE EXACT QUOTES)
+{improvement_table}
+
+## Crew Performance Scorecards (PRE-COMPUTED)
+{scorecards_section}
+
+## Quality Verification (PRE-COMPUTED)
+{verification_section}
+
+---
+
+# YOUR TASK
+
+Format the above PRE-COMPUTED data into a professional mission debrief report.
+Use this EXACT structure:
+
+# Mission Debrief: {mission_name}
+
+## Executive Summary
+Write 2-3 paragraphs using the EXACT statistics above. Include:
+- Mission duration and communication volume (use exact numbers)
+- Objectives completed and mission grade (use exact numbers)
+- Key accomplishments and challenges
+- Training priorities based on the implications above
+
+## Mission Statistics
+Create a table with the EXACT values from "Mission Statistics" above.
+
+## Role Analysis
+Include the role table EXACTLY as provided above.
+Include the methodology explanation EXACTLY as provided.
+
+## Command and Control Assessment
+
+### Command Clarity Analysis
+Include the effective examples table EXACTLY as provided.
+Include the improvement examples table EXACTLY as provided.
+
+### Transcription Confidence Distribution
+Include the confidence table EXACTLY as provided.
+Include the training implications EXACTLY as provided.
+
+## Mission Phase Analysis
+Include the phase analysis EXACTLY as provided above.
+
+## Crew Performance Scorecards
+Include the scorecards EXACTLY as provided above.
+
+## Mission Objectives Status
+List completed and incomplete objectives based on the statistics provided.
+
+## Training Recommendations
+
+### Immediate Actions for This Crew
+Based on the improvement examples and training implications, provide 3-5 specific recommendations.
+
+### Protocol Improvements
+Suggest specific protocols to address the issues identified in improvement examples.
+
+### Team Exercises
+Suggest 2-3 drills based on the gaps identified.
+
+## Quality Verification
+Include the verification section EXACTLY as provided above.
+
+---
+
+**Report Generated:** Based on mission data
+**Data Sources:** transcripts.json, game_events.json
+**Analysis Method:** Complete dataset analysis with keyword frequency role inference
+
+---
+
+REMEMBER:
+- ALL numbers must match the pre-computed data EXACTLY
+- ALL quotes must be VERBATIM from the provided examples
+- Your job is FORMATTING and NARRATIVE FLOW only
+- The analysis has already been done - do NOT recalculate anything
+"""
+
+    return prompt.strip()
+
+
+def build_factual_summary_prompt(
+    enhanced_data: Dict[str, Any],
+    mission_name: str = "Mission Summary"
+) -> str:
+    """
+    Build prompt for a purely factual summary with no narrative interpretation.
+
+    Args:
+        enhanced_data: Complete analysis data from EnhancedReportBuilder
+        mission_name: Name of the mission
+
+    Returns:
+        Formatted prompt for factual-only summary
+    """
+    statistics = enhanced_data.get('mission_statistics', {})
+    role_analysis = enhanced_data.get('role_analysis', {})
+    confidence_analysis = enhanced_data.get('confidence_analysis', {})
+    quality_verification = enhanced_data.get('quality_verification', {})
+
+    prompt = f"""Generate a purely FACTUAL mission summary. NO interpretation or narrative.
+
+# {mission_name} - Factual Summary
+
+## Mission Data
+- Duration: {statistics.get('mission_duration', 'Unknown')}
+- Communications: {statistics.get('total_voice_communications', 0)}
+- Speakers: {statistics.get('unique_speakers', 0)}
+- Events: {statistics.get('total_game_events', 0)}
+- Objectives: {statistics.get('objectives_completed', 0)}/{statistics.get('objectives_total', 0)} ({statistics.get('completion_rate', 0)}%)
+- Grade: {statistics.get('mission_grade', 'N/A')}
+
+## Speaker Distribution
+{role_analysis.get('role_table', 'No data')}
+
+## Confidence Distribution
+{confidence_analysis.get('distribution_table', 'No data')}
+Average: {confidence_analysis.get('statistics', {}).get('average_confidence', 0):.1%}
+
+## Data Verification
+{quality_verification.get('verification_table', 'No verification data')}
+
+Output this data in clean markdown format with NO additional interpretation.
+Just present the facts as given.
 """
 
     return prompt.strip()

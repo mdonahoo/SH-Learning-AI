@@ -41,6 +41,22 @@ RUN mkdir -p /workspaces/SH-Learning-AI && \
 RUN echo '#!/bin/bash\nif [ -d "/workspaces/SH-Learning-AI" ]; then\n    sudo chown -R vscode:vscode /workspaces/SH-Learning-AI\n    sudo find /workspaces/SH-Learning-AI -type d -exec chmod 755 {} \\;\n    sudo find /workspaces/SH-Learning-AI -type f -exec chmod 644 {} \\;\nfi' > /usr/local/bin/fix-permissions.sh && \
     chmod +x /usr/local/bin/fix-permissions.sh
 
+# Install Ollama for local LLM inference
+RUN curl -fsSL https://ollama.com/install.sh | sh
+
+# Create Ollama startup script
+RUN echo '#!/bin/bash\n\
+# Start Ollama server in background\n\
+ollama serve > /tmp/ollama.log 2>&1 &\n\
+echo "Ollama server starting... (log: /tmp/ollama.log)"\n\
+sleep 2\n\
+if pgrep -x ollama > /dev/null; then\n\
+    echo "✓ Ollama server running"\n\
+else\n\
+    echo "✗ Ollama failed to start - check /tmp/ollama.log"\n\
+fi' > /usr/local/bin/start-ollama.sh && \
+    chmod +x /usr/local/bin/start-ollama.sh
+
 USER vscode
 
 # Configure ALSA to use PulseAudio (for WSLg/container audio)
