@@ -60,7 +60,11 @@ def load_mission_data(mission_dir: Path) -> dict:
     if transcript_file.exists():
         with open(transcript_file, 'r') as f:
             transcript_data = json.load(f)
-            mission_data['transcripts'] = transcript_data.get('transcripts', [])
+            # Handle both formats: {"transcripts": [...]} or flat [...]
+            if isinstance(transcript_data, list):
+                mission_data['transcripts'] = transcript_data
+            else:
+                mission_data['transcripts'] = transcript_data.get('transcripts', [])
     else:
         logger.info(f"No transcripts file found in {mission_dir}")
 
@@ -98,9 +102,16 @@ def generate_report(mission_dir: Path, style: str = "entertaining",
         logger.error(f"Failed to load mission data: {e}")
         return False
 
-    if not mission_data['events']:
-        logger.warning("No events found - skipping")
+    # Check if we have any data to process
+    has_events = bool(mission_data.get('events'))
+    has_transcripts = bool(mission_data.get('transcripts'))
+
+    if not has_events and not has_transcripts:
+        logger.warning("No events or transcripts found - skipping")
         return False
+
+    if not has_events:
+        logger.info("No game events - generating transcript-only report")
 
     # Create summarizer
     mission_name = mission_data.get('mission_name', mission_dir.name)
@@ -110,8 +121,10 @@ def generate_report(mission_dir: Path, style: str = "entertaining",
     )
 
     # Load data
-    summarizer.load_events(mission_data['events'])
-    summarizer.load_transcripts(mission_data['transcripts'])
+    if has_events:
+        summarizer.load_events(mission_data['events'])
+    if has_transcripts:
+        summarizer.load_transcripts(mission_data['transcripts'])
 
     # Generate report
     try:

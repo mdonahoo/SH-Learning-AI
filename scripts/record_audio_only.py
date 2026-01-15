@@ -6,6 +6,16 @@ This script captures and transcribes audio from the bridge crew
 independently of the game server connection.
 """
 
+# Suppress noisy warnings from pyannote/pytorch before any imports
+import warnings
+warnings.filterwarnings("ignore", message=".*torchcodec.*")
+warnings.filterwarnings("ignore", message=".*ModelCheckpoint.*")
+warnings.filterwarnings("ignore", message=".*Lightning automatically upgraded.*")
+warnings.filterwarnings("ignore", message=".*loss_func.*")
+warnings.filterwarnings("ignore", message=".*task-dependent loss.*")
+warnings.filterwarnings("ignore", category=UserWarning, module="pyannote.*")
+warnings.filterwarnings("ignore", category=UserWarning, module="lightning.*")
+
 import argparse
 import json
 import logging
@@ -25,6 +35,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.audio.capture import AudioCaptureManager
 from src.audio.whisper_transcriber import WhisperTranscriber
 from src.audio.speaker_diarization import SpeakerDiarizer, EngagementAnalyzer, SpeakerSegment
+
+# Conditionally import neural diarization
+try:
+    from src.audio.neural_diarization import NeuralSpeakerDiarizer, PYANNOTE_AVAILABLE
+except ImportError:
+    PYANNOTE_AVAILABLE = False
+    NeuralSpeakerDiarizer = None
 
 load_dotenv()
 
@@ -46,7 +63,8 @@ class AudioOnlyRecorder:
     def __init__(
         self,
         output_dir: Optional[str] = None,
-        session_name: Optional[str] = None
+        session_name: Optional[str] = None,
+        use_neural: Optional[bool] = None
     ):
         """
         Initialize audio recorder.
@@ -54,6 +72,7 @@ class AudioOnlyRecorder:
         Args:
             output_dir: Directory for output files
             session_name: Name for this recording session
+            use_neural: Use neural diarization (default from USE_NEURAL_DIARIZATION env)
         """
         # Generate session ID
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -65,10 +84,21 @@ class AudioOnlyRecorder:
         self.output_dir = Path(base_dir) / self.session_id
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
+        # Determine diarization mode
+        if use_neural is None:
+            use_neural = os.getenv('USE_NEURAL_DIARIZATION', 'false').lower() == 'true'
+        self.use_neural = use_neural and PYANNOTE_AVAILABLE
+
+        if use_neural and not PYANNOTE_AVAILABLE:
+            logger.warning(
+                "Neural diarization requested but pyannote.audio not available. "
+                "Falling back to simple diarization."
+            )
+
         # Initialize components
         self.capture: Optional[AudioCaptureManager] = None
         self.transcriber: Optional[WhisperTranscriber] = None
-        self.diarizer: Optional[SpeakerDiarizer] = None
+        self.diarizer = None  # Will be SpeakerDiarizer or NeuralSpeakerDiarizer
         self.engagement: Optional[EngagementAnalyzer] = None
 
         # Recording state
@@ -78,6 +108,7 @@ class AudioOnlyRecorder:
 
         logger.info(f"AudioOnlyRecorder initialized - Session: {self.session_id}")
         logger.info(f"Output directory: {self.output_dir}")
+        logger.info(f"Diarization mode: {'neural' if self.use_neural else 'simple'}")
 
     def start_recording(self) -> str:
         """
@@ -100,7 +131,12 @@ class AudioOnlyRecorder:
         self.transcriber.start_workers()
 
         # Initialize speaker diarization
-        self.diarizer = SpeakerDiarizer()
+        if self.use_neural:
+            logger.info("Using neural speaker diarization (pyannote.audio)")
+            self.diarizer = NeuralSpeakerDiarizer()
+        else:
+            logger.info("Using simple speaker diarization")
+            self.diarizer = SpeakerDiarizer()
         self.engagement = EngagementAnalyzer()
 
         # Set up audio segment callback
@@ -353,8 +389,26 @@ def main():
         action='store_true',
         help='List available audio devices and exit'
     )
+    parser.add_argument(
+        '--neural',
+        action='store_true',
+        default=None,
+        help='Use neural speaker diarization (better accuracy, more CPU/GPU)'
+    )
+    parser.add_argument(
+        '--no-neural',
+        action='store_true',
+        help='Use simple speaker diarization (faster, less accurate)'
+    )
 
     args = parser.parse_args()
+
+    # Determine neural diarization setting
+    use_neural = None  # Use environment default
+    if args.neural:
+        use_neural = True
+    elif args.no_neural:
+        use_neural = False
 
     # List devices if requested
     if args.list_devices:
@@ -370,7 +424,8 @@ def main():
     # Create recorder
     recorder = AudioOnlyRecorder(
         output_dir=args.output_dir,
-        session_name=args.session_name
+        session_name=args.session_name,
+        use_neural=use_neural
     )
 
     try:

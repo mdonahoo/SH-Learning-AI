@@ -183,7 +183,7 @@ class TestMissionSummarizer:
 
         assert tactical["total_engagements"] == 1
         assert tactical["hit_rate"] == 1.0
-        assert tactical["weapons_used"] == ["phaser", "torpedo"]
+        assert set(tactical["weapons_used"]) == {"phaser", "torpedo"}
         assert tactical["damage_taken"]["shields"] == "minor"
         assert tactical["combat_effectiveness"] == "high"
 

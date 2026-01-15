@@ -177,7 +177,8 @@ def build_full_report_prompt(mission_data: Dict[str, Any], style: str = "enterta
     # Count speakers with detailed stats
     speakers = {}
     for t in transcripts:
-        speaker = t.get('speaker', 'unknown')
+        # Support both 'speaker' (game recordings) and 'speaker_id' (audio-only)
+        speaker = t.get('speaker') or t.get('speaker_id') or 'unknown'
         speakers[speaker] = speakers.get(speaker, 0) + 1
 
     total_utterances = len(transcripts)
@@ -796,7 +797,8 @@ def format_transcripts(transcripts: List[Dict[str, Any]]) -> str:
         else:
             time_only = str(timestamp)
 
-        speaker = t.get('speaker', 'unknown')
+        # Support both 'speaker' (game recordings) and 'speaker_id' (audio-only)
+        speaker = t.get('speaker') or t.get('speaker_id') or 'unknown'
         text = t.get('text', '')
         confidence = t.get('confidence', 0.0)
 

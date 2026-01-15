@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     curl wget git sudo \
     pulseaudio-utils alsa-utils \
     portaudio19-dev libsndfile1 \
+    ffmpeg libavcodec-extra \
     coreutils util-linux procps \
     && rm -rf /var/lib/apt/lists/*
 
@@ -41,6 +42,9 @@ RUN echo '#!/bin/bash\nif [ -d "/workspaces/SH-Learning-AI" ]; then\n    sudo ch
     chmod +x /usr/local/bin/fix-permissions.sh
 
 USER vscode
+
+# Configure ALSA to use PulseAudio (for WSLg/container audio)
+RUN echo 'pcm.!default {\n    type pulse\n}\nctl.!default {\n    type pulse\n}' > /home/vscode/.asoundrc
 
 # Run permission fix script and keep container running
 CMD ["/bin/bash", "-c", "/usr/local/bin/fix-permissions.sh && while true; do /bin/sleep 30; done"]

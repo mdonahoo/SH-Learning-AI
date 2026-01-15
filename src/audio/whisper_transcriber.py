@@ -50,6 +50,68 @@ STARSHIP_HORIZONS_PROMPT = (
     "maneuvering now, targeting solutions, damage control teams."
 )
 
+# Known Whisper hallucinations to filter out
+# These appear when Whisper processes silence or unclear audio
+WHISPER_HALLUCINATIONS = [
+    "thank you for watching",
+    "thanks for watching",
+    "subscribe",
+    "like and subscribe",
+    "caption",
+    "captions by",
+    "subtitles by",
+    "transcribed by",
+    "gettranscribed",
+    "getcaptioned",
+    "captionedthis",
+    "amara.org",
+    "www.",
+    ".com",
+    ".org",
+    ".net",
+    "click here",
+    "don't forget to",
+    "see you next time",
+    "bye bye",
+    "goodbye",
+    "music",
+    "[music]",
+    "(music)",
+    "♪",
+    "applause",
+    "[applause]",
+    "(applause)",
+]
+
+
+def is_hallucination(text: str) -> bool:
+    """
+    Check if transcription text is a known Whisper hallucination.
+
+    Args:
+        text: Transcription text to check
+
+    Returns:
+        True if text appears to be a hallucination
+    """
+    text_lower = text.lower().strip()
+
+    # Check for known hallucination patterns
+    for hallucination in WHISPER_HALLUCINATIONS:
+        if hallucination in text_lower:
+            return True
+
+    # Check for very short text that's likely noise
+    if len(text_lower) < 3:
+        return True
+
+    # Check for repeated characters/words (common hallucination)
+    words = text_lower.split()
+    if len(words) >= 3 and len(set(words)) == 1:
+        return True
+
+    return False
+
 
 class WhisperTranscriber:
     """
@@ -325,7 +387,10 @@ class WhisperTranscriber:
                 language=None if self.language == 'auto' else self.language,
                 initial_prompt=self.initial_prompt,  # Domain vocabulary
                 vad_filter=True,  # Use built-in VAD
-                word_timestamps=True
+                word_timestamps=True,
+                condition_on_previous_text=False,  # Prevent hallucination propagation
+                no_speech_threshold=0.6,  # Higher threshold to avoid hallucinations
+                log_prob_threshold=-1.0,  # Filter low-confidence output
             )
 
             # Extract text and words
@@ -349,6 +414,11 @@ class WhisperTranscriber:
 
             # Skip empty transcriptions
             if not full_text:
+                return None
+
+            # Filter out known Whisper hallucinations
+            if is_hallucination(full_text):
+                logger.debug(f"Filtered hallucination: {full_text[:50]}...")
                 return None
 
             transcription_time = time.time() - start_time
