@@ -85,7 +85,7 @@ class SimpleVAD:
             os.getenv('MIN_SPEECH_DURATION', '0.3')
         )
         min_silence = min_silence_duration or float(
-            os.getenv('MIN_SILENCE_DURATION', '0.5')
+            os.getenv('MIN_SILENCE_DURATION', '0.3')
         )
 
         self.min_speech_samples = int(min_speech * sample_rate)

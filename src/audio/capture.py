@@ -92,6 +92,13 @@ class AudioCaptureManager:
         self.total_chunks = 0
         self.total_segments = 0
 
+        # Real-time audio metrics
+        self.current_energy = 0.0
+        self.peak_energy = 0.0
+        self.is_voice_active = False
+        self._energy_history: list = []  # Rolling window for average
+        self._energy_window_size = 50  # ~5 seconds at 100ms chunks
+
         logger.info(
             f"AudioCaptureManager initialized: "
             f"{self.sample_rate}Hz, {self.channels}ch, "
@@ -210,6 +217,18 @@ class AudioCaptureManager:
         # Convert to float32 for processing
         audio_float = audio_data.astype(np.float32) / 32768.0
 
+        # Update real-time audio metrics
+        energy = float(np.sqrt(np.mean(audio_float ** 2)))
+        self.current_energy = energy
+        self.peak_energy = max(self.peak_energy, energy)
+        self._energy_history.append(energy)
+        if len(self._energy_history) > self._energy_window_size:
+            self._energy_history.pop(0)
+
+        # Update VAD state for external monitoring
+        if self.vad:
+            self.is_voice_active = self.vad.is_speaking
+
         # Update counter
         self.total_chunks += 1
 
@@ -274,6 +293,35 @@ class AudioCaptureManager:
             if cleanup:
                 self.audio.terminate()
                 self.audio = None
+
+    def get_audio_metrics(self) -> dict:
+        """
+        Get real-time audio metrics for monitoring.
+
+        Returns:
+            Dictionary with current audio metrics:
+            - current_energy: Current RMS energy (0.0-1.0)
+            - peak_energy: Peak RMS energy seen
+            - average_energy: Rolling average energy
+            - is_voice_active: Whether VAD detects speech
+            - total_chunks: Total audio chunks processed
+            - total_segments: Total voice segments detected
+            - vad_threshold: Current VAD threshold
+        """
+        avg_energy = (
+            sum(self._energy_history) / len(self._energy_history)
+            if self._energy_history else 0.0
+        )
+
+        return {
+            'current_energy': self.current_energy,
+            'peak_energy': self.peak_energy,
+            'average_energy': avg_energy,
+            'is_voice_active': self.is_voice_active,
+            'total_chunks': self.total_chunks,
+            'total_segments': self.total_segments,
+            'vad_threshold': self.vad.energy_threshold if self.vad else None,
+        }
 
     def __enter__(self):
         """Context manager entry."""
