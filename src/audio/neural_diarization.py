@@ -252,7 +252,14 @@ class NeuralSpeakerDiarizer:
                         self.model_name,
                         use_auth_token=self.use_auth_token
                     )
-                logger.info("✓ Pyannote pipeline loaded successfully")
+
+                # Move pipeline to GPU if available
+                device = _get_device()
+                if device is not None and device.type == "cuda":
+                    self.pipeline = self.pipeline.to(device)
+                    logger.info(f"✓ Pyannote pipeline loaded on {device}")
+                else:
+                    logger.info("✓ Pyannote pipeline loaded on CPU")
             except Exception as e:
                 logger.error(f"Failed to load pyannote pipeline: {e}")
                 raise
@@ -267,9 +274,15 @@ class NeuralSpeakerDiarizer:
                     "pyannote/embedding",
                     token=self.use_auth_token
                 )
-                # Create inference wrapper
-                self.embedding_model = Inference(model)
-                logger.info("✓ Speaker embedding model loaded")
+
+                # Move model to GPU if available
+                device = _get_device()
+                if device is not None and device.type == "cuda":
+                    model = model.to(device)
+
+                # Create inference wrapper with device specification
+                self.embedding_model = Inference(model, device=device)
+                logger.info(f"✓ Speaker embedding model loaded on {device}")
             except Exception as e:
                 logger.warning(f"Failed to load embedding model: {e}")
                 self.embedding_model = None

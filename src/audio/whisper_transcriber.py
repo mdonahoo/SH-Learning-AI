@@ -399,6 +399,22 @@ def is_hallucination(text: str) -> bool:
         if max_count >= len(words) * 0.8:  # 80% same word
             return True
 
+    # Check for repeated 2-word phrases (e.g., "all right all right all right")
+    # This catches common Whisper looping on short phrases
+    if len(words) >= 4:
+        for start in range(len(words) - 3):
+            phrase = ' '.join(words[start:start + 2])
+            if len(phrase) >= 5:  # Minimum 5 chars for 2-word phrase
+                # Count occurrences of this 2-word phrase
+                count = 0
+                for i in range(0, len(words) - 1, 2):
+                    if ' '.join(words[i:i + 2]) == phrase:
+                        count += 1
+                if count >= 3 and count * 2 >= len(words) * 0.75:
+                    # 2-word phrase repeated 3+ times and makes up 75%+ of text
+                    logger.debug(f"Detected 2-word phrase repetition: '{phrase}' x{count}")
+                    return True
+
     # Check for repeated phrases (e.g., "We're going to buzz in close." repeated)
     # This catches Whisper's looping hallucination pattern
     if len(text_clean) > 50:
@@ -407,7 +423,7 @@ def is_hallucination(text: str) -> bool:
             if len(words) >= phrase_len * 3:  # Need at least 3 repetitions
                 for start in range(len(words) - phrase_len * 2):
                     phrase = ' '.join(words[start:start + phrase_len])
-                    if len(phrase) < 10:  # Skip very short phrases
+                    if len(phrase) < 7:  # Skip very short phrases (was 10, now 7)
                         continue
                     # Count how many times this phrase appears
                     count = text_lower.count(phrase)
@@ -609,6 +625,12 @@ class WhisperTranscriber:
         self._results_lock = threading.Lock()
         self._pending_results = []
 
+        # Cross-segment repetition detection
+        # Track recent transcription word sets to detect Whisper looping
+        self._recent_texts: List[set] = []  # Stores word sets for overlap comparison
+        self._max_recent_texts = 10  # Track last 10 segments
+        self._repetition_threshold = 5  # 5+ similar segments = likely loop
+
         logger.info(
             f"WhisperTranscriber initialized: "
             f"model={self.model_size}, device={self.device}, "
@@ -793,11 +815,47 @@ class WhisperTranscriber:
                     item['metadata']
                 )
 
-                # Store result if valid
+                # Store result if valid and not a cross-segment repetition loop
                 if result:
+                    text = result.get('text', '').strip().lower()
+                    # Remove punctuation for comparison
+                    text_words = set(
+                        ''.join(c for c in text if c.isalnum() or c.isspace()).split()
+                    )
+                    is_loop = False
+
                     with self._results_lock:
-                        self._pending_results.append(result)
-                    segments_processed += 1
+                        # Check for cross-segment repetition (Whisper looping)
+                        if text_words and len(text) < 100:
+                            # Count segments with high word overlap (80%+)
+                            similar_count = 0
+                            for recent_words in self._recent_texts:
+                                if recent_words:
+                                    # Calculate word overlap between segments
+                                    overlap = len(text_words & recent_words)
+                                    min_len = min(len(text_words), len(recent_words))
+                                    # 80% overlap = similar segment (likely loop)
+                                    if min_len > 0 and overlap / min_len >= 0.8:
+                                        similar_count += 1
+
+                            if similar_count >= self._repetition_threshold:
+                                logger.warning(
+                                    f"Detected cross-segment loop: '{text[:50]}' "
+                                    f"similar to {similar_count} recent segments, skipping"
+                                )
+                                is_loop = True
+
+                        if not is_loop:
+                            self._pending_results.append(result)
+                            # Track recent word sets for loop detection
+                            self._recent_texts.append(text_words)
+                            if len(self._recent_texts) > self._max_recent_texts:
+                                self._recent_texts.pop(0)
+
+                    if is_loop:
+                        segments_failed += 1
+                    else:
+                        segments_processed += 1
                 else:
                     segments_failed += 1
 
