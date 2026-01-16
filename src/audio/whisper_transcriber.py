@@ -419,6 +419,104 @@ def is_hallucination(text: str) -> bool:
     return False
 
 
+def clean_repetitive_text(text: str) -> str:
+    """
+    Remove repetitive phrases from text that indicate Whisper looping.
+
+    This cleans up text where Whisper got stuck repeating phrases like:
+    "We're going to buzz in close. We're going to buzz in close. We're going to..."
+
+    Args:
+        text: Text to clean
+
+    Returns:
+        Cleaned text with repetitions removed
+    """
+    if not text or len(text) < 50:
+        return text
+
+    import re
+
+    # Split into sentences for sentence-level deduplication
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+
+    # Detect and remove repeated sentences (only if we have multiple sentences)
+    cleaned = []
+    prev_sentence = None
+    repeat_count = 0
+
+    for sentence in sentences:
+        sentence_normalized = sentence.lower().strip()
+        # Skip very short fragments
+        if len(sentence_normalized) < 10:
+            cleaned.append(sentence)
+            prev_sentence = sentence_normalized
+            continue
+
+        if sentence_normalized == prev_sentence:
+            repeat_count += 1
+            # Allow up to 1 natural repeat, filter more
+            if repeat_count <= 1:
+                cleaned.append(sentence)
+        else:
+            cleaned.append(sentence)
+            repeat_count = 0
+
+        prev_sentence = sentence_normalized
+
+    result = ' '.join(cleaned)
+
+    # Detect repeated phrases by splitting on comma/period and deduplicating
+    import re
+
+    # Split on common delimiters (comma, period, semicolon)
+    parts = re.split(r'([,;.!?])', result)
+
+    # Remove consecutive duplicate parts
+    deduped_parts = []
+    prev_content = None
+    repeat_count = 0
+    skip_next_delimiter = False
+
+    for part in parts:
+        part_stripped = part.strip()
+        part_normalized = part_stripped.lower()
+
+        # Handle delimiters
+        if len(part_stripped) <= 1 and part_stripped in ',;.!?':
+            if skip_next_delimiter:
+                skip_next_delimiter = False
+                continue  # Skip delimiter after skipped content
+            deduped_parts.append(part)
+            continue
+
+        # Skip empty parts
+        if not part_stripped:
+            continue
+
+        # Check for repeat
+        if part_normalized == prev_content:
+            repeat_count += 1
+            # Allow 1 natural repeat, skip more
+            if repeat_count <= 1:
+                deduped_parts.append(part)
+            else:
+                skip_next_delimiter = True  # Skip the comma after this
+        else:
+            deduped_parts.append(part)
+            repeat_count = 0
+            prev_content = part_normalized
+
+    result = ''.join(deduped_parts)
+
+    # Clean up any resulting issues
+    result = re.sub(r'\s+', ' ', result)
+    result = re.sub(r'[,;]{2,}', ',', result)
+    result = re.sub(r'\.\s*\.', '.', result)
+
+    return result.strip()
+
+
 class WhisperTranscriber:
     """
     Local AI transcription using Faster-Whisper.
@@ -761,6 +859,7 @@ class WhisperTranscriber:
                 temperature=0.0,  # Deterministic output for consistency
                 repetition_penalty=1.5,  # Stronger penalty for repeated phrases
                 no_repeat_ngram_size=3,  # Prevent 3+ word phrases from repeating
+                hallucination_silence_threshold=0.5,  # Skip text during detected silence
             )
 
             # Extract text and words
@@ -878,19 +977,24 @@ class WhisperTranscriber:
                 log_prob_threshold=-1.0,  # Filter low-confidence output
                 no_speech_threshold=0.6,
                 temperature=0.0,  # Deterministic output
+                hallucination_silence_threshold=0.5,  # Skip text during silence (prevents loops)
             )
 
             # Filter out repetitive/hallucinated segments
             filtered_segments = []
             for segment in segments:
                 text = segment.text.strip()
+                # Clean repetition within the segment first
+                text = clean_repetitive_text(text)
                 # Skip if segment looks like hallucination
-                if not is_hallucination(text):
+                if text and not is_hallucination(text):
                     filtered_segments.append(text)
                 else:
                     logger.debug(f"Filtered hallucinated segment: {text[:50]}...")
 
             full_text = ' '.join(filtered_segments)
+            # Final pass to clean any remaining repetition in joined text
+            full_text = clean_repetitive_text(full_text)
 
             return {
                 'text': full_text,
@@ -905,6 +1009,372 @@ class WhisperTranscriber:
                 'text': '',
                 'error': str(e)
             }
+
+    def transcribe_file_chunked(
+        self,
+        audio_path: str,
+        chunk_duration: int = 300,
+        min_chunk_duration: int = 120,
+        max_chunk_duration: int = 420,
+        overlap_seconds: float = 2.0,
+        progress_callback: Optional[callable] = None
+    ) -> Dict[str, Any]:
+        """
+        Transcribe long audio files by processing in chunks.
+
+        This method prevents Whisper hallucination loops by:
+        - Splitting audio into manageable chunks at silence boundaries
+        - Processing each chunk independently with fresh model state
+        - Using timeout protection per chunk
+
+        Args:
+            audio_path: Path to audio file
+            chunk_duration: Target chunk size in seconds (default 5 minutes)
+            min_chunk_duration: Minimum chunk size in seconds (default 2 minutes)
+            max_chunk_duration: Maximum chunk size in seconds (default 7 minutes)
+            overlap_seconds: Overlap between chunks to avoid cutting words
+            progress_callback: Optional callback(chunk_num, total_chunks, progress_pct)
+
+        Returns:
+            Combined transcription result with all segments
+        """
+        if not self._model_loaded:
+            self.load_model()
+
+        try:
+            from pydub import AudioSegment
+            from pydub.silence import detect_silence
+        except ImportError:
+            logger.warning("pydub not available, falling back to non-chunked transcription")
+            return self.transcribe_file(audio_path)
+
+        try:
+            # Load audio file
+            logger.info(f"Loading audio file for chunked transcription: {audio_path}")
+            audio = AudioSegment.from_file(audio_path)
+            total_duration_ms = len(audio)
+            total_duration_sec = total_duration_ms / 1000.0
+
+            logger.info(f"Audio duration: {total_duration_sec:.1f}s ({total_duration_sec/60:.1f} minutes)")
+
+            # If audio is shorter than 2x chunk duration, process normally
+            if total_duration_sec < chunk_duration * 2:
+                logger.info("Audio is short enough for single-pass transcription")
+                return self.transcribe_file(audio_path)
+
+            # Detect silence points for natural chunk boundaries
+            # Silence detection: min 500ms of silence at -40dB
+            silence_ranges = detect_silence(
+                audio,
+                min_silence_len=500,
+                silence_thresh=-40
+            )
+
+            # Convert silence ranges to candidate split points (midpoints)
+            split_candidates = []
+            for start_ms, end_ms in silence_ranges:
+                midpoint = (start_ms + end_ms) / 2
+                split_candidates.append(midpoint)
+
+            # Generate chunk boundaries
+            chunk_boundaries = self._calculate_chunk_boundaries(
+                total_duration_ms=total_duration_ms,
+                split_candidates=split_candidates,
+                target_chunk_ms=chunk_duration * 1000,
+                min_chunk_ms=min_chunk_duration * 1000,
+                max_chunk_ms=max_chunk_duration * 1000
+            )
+
+            logger.info(f"Splitting audio into {len(chunk_boundaries)} chunks")
+
+            # Process each chunk
+            all_segments = []
+            chunk_results = []
+            import tempfile
+            import os as os_module
+
+            for i, (start_ms, end_ms) in enumerate(chunk_boundaries):
+                chunk_num = i + 1
+                total_chunks = len(chunk_boundaries)
+
+                # Add overlap at start (except first chunk)
+                actual_start_ms = max(0, start_ms - overlap_seconds * 1000) if i > 0 else start_ms
+                # Add overlap at end (except last chunk)
+                actual_end_ms = min(total_duration_ms, end_ms + overlap_seconds * 1000) if i < len(chunk_boundaries) - 1 else end_ms
+
+                chunk_audio = audio[actual_start_ms:actual_end_ms]
+                chunk_duration_sec = len(chunk_audio) / 1000.0
+
+                logger.info(
+                    f"Processing chunk {chunk_num}/{total_chunks}: "
+                    f"{start_ms/1000:.1f}s - {end_ms/1000:.1f}s "
+                    f"(duration: {chunk_duration_sec:.1f}s)"
+                )
+
+                # Report progress
+                if progress_callback:
+                    progress_pct = int((chunk_num - 1) / total_chunks * 100)
+                    try:
+                        progress_callback(chunk_num, total_chunks, progress_pct)
+                    except Exception as e:
+                        logger.warning(f"Progress callback error: {e}")
+
+                # Export chunk to temporary file
+                with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp_file:
+                    chunk_path = tmp_file.name
+
+                try:
+                    # Export as WAV with correct format for Whisper
+                    chunk_audio = chunk_audio.set_channels(1)
+                    chunk_audio = chunk_audio.set_frame_rate(16000)
+                    chunk_audio = chunk_audio.set_sample_width(2)
+                    chunk_audio.export(chunk_path, format='wav')
+
+                    # Transcribe chunk with timeout protection
+                    chunk_result = self._transcribe_chunk_with_timeout(
+                        chunk_path,
+                        timeout_seconds=chunk_duration_sec * 2,  # 2x duration as timeout
+                        chunk_num=chunk_num
+                    )
+
+                    if chunk_result and chunk_result.get('segments'):
+                        # Adjust timestamps by chunk offset
+                        time_offset = start_ms / 1000.0  # Convert to seconds
+
+                        for seg in chunk_result['segments']:
+                            # Adjust for overlap - skip segments that started in previous chunk
+                            seg_adjusted_start = seg['start'] + time_offset - (overlap_seconds if i > 0 else 0)
+
+                            # Skip if segment is before this chunk's actual start (in overlap region)
+                            if i > 0 and seg['start'] < overlap_seconds:
+                                continue
+
+                            adjusted_seg = {
+                                'start': seg_adjusted_start,
+                                'end': seg['end'] + time_offset - (overlap_seconds if i > 0 else 0),
+                                'text': seg['text'],
+                                'confidence': seg.get('confidence', 0),
+                                'words': []
+                            }
+
+                            # Adjust word timestamps if present
+                            if seg.get('words'):
+                                for word in seg['words']:
+                                    adjusted_seg['words'].append({
+                                        'word': word['word'],
+                                        'start': word['start'] + time_offset - (overlap_seconds if i > 0 else 0),
+                                        'end': word['end'] + time_offset - (overlap_seconds if i > 0 else 0),
+                                        'probability': word.get('probability', 0)
+                                    })
+
+                            all_segments.append(adjusted_seg)
+
+                        chunk_results.append({
+                            'chunk_num': chunk_num,
+                            'start_time': start_ms / 1000.0,
+                            'end_time': end_ms / 1000.0,
+                            'segment_count': len(chunk_result['segments']),
+                            'text_length': len(chunk_result.get('text', ''))
+                        })
+                    else:
+                        logger.warning(f"Chunk {chunk_num} produced no valid segments")
+
+                finally:
+                    # Clean up temp file
+                    try:
+                        os_module.remove(chunk_path)
+                    except Exception:
+                        pass
+
+            # Final progress update
+            if progress_callback:
+                try:
+                    progress_callback(len(chunk_boundaries), len(chunk_boundaries), 100)
+                except Exception:
+                    pass
+
+            # Combine all text
+            full_text = ' '.join(seg['text'] for seg in all_segments)
+
+            # Final cleanup pass for any remaining repetition
+            full_text = clean_repetitive_text(full_text)
+
+            logger.info(
+                f"Chunked transcription complete: "
+                f"{len(all_segments)} segments from {len(chunk_boundaries)} chunks"
+            )
+
+            return {
+                'text': full_text,
+                'segments': all_segments,
+                'duration': total_duration_sec,
+                'chunk_count': len(chunk_boundaries),
+                'chunk_results': chunk_results,
+                'language': self.language
+            }
+
+        except Exception as e:
+            logger.error(f"Chunked transcription failed: {e}", exc_info=True)
+            # Fall back to regular transcription
+            logger.info("Falling back to non-chunked transcription")
+            return self.transcribe_file(audio_path)
+
+    def _calculate_chunk_boundaries(
+        self,
+        total_duration_ms: int,
+        split_candidates: List[float],
+        target_chunk_ms: int,
+        min_chunk_ms: int,
+        max_chunk_ms: int
+    ) -> List[tuple]:
+        """
+        Calculate chunk boundaries using silence points as natural breaks.
+
+        Args:
+            total_duration_ms: Total audio duration in milliseconds
+            split_candidates: List of silence midpoint timestamps (ms)
+            target_chunk_ms: Target chunk duration in ms
+            min_chunk_ms: Minimum chunk duration in ms
+            max_chunk_ms: Maximum chunk duration in ms
+
+        Returns:
+            List of (start_ms, end_ms) tuples for each chunk
+        """
+        boundaries = []
+        current_start = 0
+
+        while current_start < total_duration_ms:
+            # Target end point
+            target_end = current_start + target_chunk_ms
+
+            # If we're near the end, just include the rest
+            if target_end >= total_duration_ms - min_chunk_ms:
+                boundaries.append((current_start, total_duration_ms))
+                break
+
+            # Find the best split point near target
+            best_split = target_end  # Default if no silence found
+
+            # Look for silence points within acceptable range
+            min_acceptable = current_start + min_chunk_ms
+            max_acceptable = current_start + max_chunk_ms
+
+            candidates_in_range = [
+                sp for sp in split_candidates
+                if min_acceptable <= sp <= max_acceptable
+            ]
+
+            if candidates_in_range:
+                # Find candidate closest to target
+                best_split = min(
+                    candidates_in_range,
+                    key=lambda x: abs(x - target_end)
+                )
+
+            # Ensure we don't exceed total duration
+            best_split = min(best_split, total_duration_ms)
+
+            boundaries.append((current_start, best_split))
+            current_start = best_split
+
+        return boundaries
+
+    def _transcribe_chunk_with_timeout(
+        self,
+        chunk_path: str,
+        timeout_seconds: float,
+        chunk_num: int
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Transcribe a single chunk with timeout protection.
+
+        Args:
+            chunk_path: Path to chunk audio file
+            timeout_seconds: Maximum time allowed for transcription
+            chunk_num: Chunk number for logging
+
+        Returns:
+            Transcription result or None if failed/timeout
+        """
+        import concurrent.futures
+
+        def _do_transcribe():
+            """Inner function to run transcription."""
+            segments, info = self._model.transcribe(
+                chunk_path,
+                language=None if self.language == 'auto' else self.language,
+                initial_prompt=self.initial_prompt,
+                vad_filter=True,
+                word_timestamps=True,
+                # Critical anti-hallucination settings
+                condition_on_previous_text=False,  # Fresh state per chunk
+                repetition_penalty=1.5,
+                no_repeat_ngram_size=3,
+                compression_ratio_threshold=2.4,
+                log_prob_threshold=-1.0,
+                no_speech_threshold=0.6,
+                temperature=0.0,
+                hallucination_silence_threshold=0.5,
+            )
+
+            # Collect and filter segments
+            result_segments = []
+            texts = []
+
+            for segment in segments:
+                text = segment.text.strip()
+
+                # Clean repetition within segment
+                text = clean_repetitive_text(text)
+
+                # Skip hallucinations
+                if not text or is_hallucination(text):
+                    continue
+
+                seg_data = {
+                    'start': segment.start,
+                    'end': segment.end,
+                    'text': text,
+                    'confidence': getattr(segment, 'avg_logprob', 0),
+                    'words': []
+                }
+
+                if hasattr(segment, 'words') and segment.words:
+                    seg_data['words'] = [
+                        {
+                            'word': w.word,
+                            'start': w.start,
+                            'end': w.end,
+                            'probability': w.probability
+                        }
+                        for w in segment.words
+                    ]
+
+                result_segments.append(seg_data)
+                texts.append(text)
+
+            return {
+                'segments': result_segments,
+                'text': ' '.join(texts),
+                'duration': info.duration if hasattr(info, 'duration') else 0
+            }
+
+        # Run with timeout
+        try:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(_do_transcribe)
+                result = future.result(timeout=timeout_seconds)
+                return result
+
+        except concurrent.futures.TimeoutError:
+            logger.warning(
+                f"Chunk {chunk_num} transcription timed out after {timeout_seconds:.1f}s"
+            )
+            return None
+
+        except Exception as e:
+            logger.error(f"Chunk {chunk_num} transcription failed: {e}")
+            return None
 
     def __enter__(self):
         """Context manager entry."""
