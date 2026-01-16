@@ -503,3 +503,291 @@ Just present the facts as given.
 """
 
     return prompt.strip()
+
+
+def build_educational_report_prompt(
+    enhanced_data: Dict[str, Any],
+    mission_name: str = "Mission Debrief",
+    audience: str = "youth",
+    include_scout_law: bool = True,
+    include_seven_habits: bool = True
+) -> str:
+    """
+    Build prompt for educational mission report targeting youth programs.
+
+    Designed for scout troops, school districts, and other youth educational
+    contexts. Emphasizes character development, leadership skills, and
+    age-appropriate language.
+
+    Args:
+        enhanced_data: Complete analysis data from EnhancedReportBuilder
+        mission_name: Name of the mission
+        audience: Target audience ("youth", "scouts", "school", "general")
+        include_scout_law: Include Scout Law connections
+        include_seven_habits: Include 7 Habits framework
+
+    Returns:
+        Formatted prompt string for educational report
+    """
+    # Extract analysis sections
+    statistics = enhanced_data.get('mission_statistics', {})
+    role_analysis = enhanced_data.get('role_analysis', {})
+    confidence_analysis = enhanced_data.get('confidence_analysis', {})
+    phase_analysis = enhanced_data.get('phase_analysis', {})
+    communication_quality = enhanced_data.get('communication_quality', {})
+    speaker_scorecards = enhanced_data.get('speaker_scorecards', {})
+    seven_habits = enhanced_data.get('seven_habits', {})
+    training_recommendations = enhanced_data.get('training_recommendations', {})
+
+    # Format mission statistics for youth
+    stats_text = f"""
+**Mission Time:** {statistics.get('mission_duration', 'Unknown')}
+**Team Communications:** {statistics.get('total_voice_communications', 0)} messages
+**Team Members Active:** {statistics.get('unique_speakers', 0)} people
+**Goals Completed:** {statistics.get('objectives_completed', 0)} of {statistics.get('objectives_total', 0)} ({statistics.get('completion_rate', 0)}%)
+"""
+
+    # Format 7 Habits section
+    habits_section = ""
+    if include_seven_habits and seven_habits:
+        habits_table = seven_habits.get('habits_section', 'No 7 Habits data available')
+        development_plan = seven_habits.get('development_plan', '')
+
+        strengths = seven_habits.get('strengths', [])
+        growth_areas = seven_habits.get('growth_areas', [])
+
+        habits_section = f"""
+## Leadership Character Assessment (7 Habits)
+*Based on Stephen Covey's "The 7 Habits of Highly Effective People"*
+
+{habits_table}
+
+### Your Team's Strengths
+"""
+        for s in strengths:
+            habits_section += f"- **{s['name']}** (Score: {s['score']}/5): {s['interpretation']}\n"
+
+        habits_section += "\n### Growth Opportunities\n"
+        for g in growth_areas:
+            habits_section += f"- **{g['name']}** (Score: {g['score']}/5)\n"
+            habits_section += f"  - *Development Tip:* {g['development_tip']}\n"
+
+        habits_section += f"\n{development_plan}"
+
+    # Format Scout Law connections
+    scout_section = ""
+    if include_scout_law and training_recommendations:
+        framework_alignment = training_recommendations.get('framework_alignment', {})
+        scout_alignments = framework_alignment.get('7 Habits → Scout Law', [])
+
+        scout_section = """
+## Scout Law Connections
+*Connecting leadership habits to the Scout Law*
+
+| 7 Habit | Scout Law Connection |
+| --- | --- |
+"""
+        for alignment in scout_alignments[:7]:
+            parts = alignment.split('→')
+            if len(parts) == 2:
+                scout_section += f"| {parts[0].strip()} | {parts[1].strip()} |\n"
+
+    # Format recommendations for youth
+    recommendations_section = ""
+    if training_recommendations:
+        immediate_actions = training_recommendations.get('immediate_actions', [])
+        drills = training_recommendations.get('drills', [])
+        discussion_topics = training_recommendations.get('discussion_topics', [])
+
+        recommendations_section = """
+## What To Practice Next
+
+### Quick Wins (Try These Now!)
+"""
+        for i, action in enumerate(immediate_actions[:3], 1):
+            recommendations_section += f"""
+**{i}. {action['title']}**
+- {action['description']}
+- *Scout Connection:* {action.get('scout_connection', 'N/A')}
+- *7 Habits:* {action.get('habit_connection', 'N/A')}
+"""
+
+        recommendations_section += "\n### Team Drills\n"
+        for drill in drills[:2]:
+            recommendations_section += f"""
+**{drill['name']}** ({drill['duration']})
+- *Purpose:* {drill['purpose']}
+- *Steps:*
+"""
+            for step in drill['steps'][:4]:
+                recommendations_section += f"  1. {step}\n"
+            recommendations_section += "\n*Debrief Questions:*\n"
+            for q in drill['debrief_questions'][:2]:
+                recommendations_section += f"- {q}\n"
+
+        recommendations_section += "\n### Discussion Topics\n"
+        for topic in discussion_topics[:2]:
+            recommendations_section += f"""
+**{topic['topic']}**
+- *Question to Discuss:* {topic['question']}
+- *Scout Connection:* {topic.get('scout_connection', 'Think about how this connects to the Scout Law')}
+"""
+
+    # Audience-specific language
+    audience_intros = {
+        "youth": "Great job, crew! Let's see how you did and what you can work on next.",
+        "scouts": "Scouts, let's review your mission and see how you demonstrated the Scout Law!",
+        "school": "Students, let's analyze your team's performance and identify learning opportunities.",
+        "general": "This report summarizes the mission performance and provides training recommendations."
+    }
+
+    intro = audience_intros.get(audience, audience_intros['general'])
+
+    prompt = f"""You are creating an EDUCATIONAL mission debrief for {audience} learners.
+ALL DATA has been pre-calculated. Your job is to format it in an encouraging, age-appropriate way.
+
+🚨 CRITICAL RULES:
+1. Use ONLY the exact numbers provided - do not calculate or invent anything
+2. Use encouraging, youth-appropriate language (no jargon)
+3. Focus on GROWTH and IMPROVEMENT, not criticism
+4. Connect performance to character development (7 Habits, Scout Law)
+5. Make recommendations actionable and specific
+6. Celebrate strengths before addressing growth areas
+
+---
+
+# PRE-COMPUTED MISSION DATA
+
+## Mission Statistics
+{stats_text}
+
+## Role Analysis
+{role_analysis.get('role_table', 'No role data')}
+
+## Confidence Distribution
+{confidence_analysis.get('distribution_table', 'No confidence data')}
+Quality Assessment: {confidence_analysis.get('quality_assessment', 'Unknown')}
+
+## Mission Phases
+{phase_analysis.get('phase_analysis_section', 'No phase data')}
+
+## 7 Habits Analysis (PRE-COMPUTED)
+Overall Effectiveness Score: {seven_habits.get('overall_effectiveness_score', 'N/A')}/5
+Strengths: {[s['name'] for s in seven_habits.get('strengths', [])]}
+Growth Areas: {[g['name'] for g in seven_habits.get('growth_areas', [])]}
+
+## Training Recommendations (PRE-COMPUTED)
+Total Recommendations: {training_recommendations.get('total_recommendations', 0)}
+
+---
+
+# YOUR TASK
+
+Create an encouraging, educational mission debrief report. Use this structure:
+
+# 🚀 Mission Debrief: {mission_name}
+
+## Welcome Message
+{intro}
+
+## How Did We Do? (Mission Stats)
+Present the statistics in a friendly, youth-appropriate way.
+Use phrases like "We achieved..." and "Our team..."
+
+## Team Roles
+Briefly explain what role each person played, using the role table above.
+Make it positive - everyone contributed!
+
+## Mission Timeline
+Describe the mission phases in story-like language.
+What happened during each phase?
+
+{habits_section}
+
+{scout_section}
+
+{recommendations_section}
+
+## Celebration Corner 🎉
+Highlight 2-3 specific achievements from the data above.
+Be specific about what went well!
+
+## My Personal Challenge
+Based on the growth areas above, what's ONE thing each person can focus on?
+Make it personal and achievable.
+
+## Reflection Questions
+1. What was your favorite moment in the mission?
+2. What did you learn about teamwork?
+3. How did you help a teammate today?
+4. What will you do differently next time?
+
+---
+
+**Keep Growing!** Remember: Every mission is a chance to learn.
+
+---
+
+REMEMBER:
+- This is for YOUNG LEARNERS - keep language accessible
+- Focus on GROWTH and ENCOURAGEMENT
+- Use the EXACT data provided
+- Connect everything to character development
+- Make it FUN and ENGAGING
+"""
+
+    return prompt.strip()
+
+
+def build_scout_troop_report_prompt(
+    enhanced_data: Dict[str, Any],
+    mission_name: str = "Mission Debrief",
+    troop_number: Optional[str] = None
+) -> str:
+    """
+    Build prompt specifically for Boy Scout troop debriefs.
+
+    Emphasizes Scout Law, Scout Oath, and merit badge connections.
+
+    Args:
+        enhanced_data: Complete analysis data from EnhancedReportBuilder
+        mission_name: Name of the mission
+        troop_number: Optional troop number for personalization
+
+    Returns:
+        Formatted prompt string for scout troop report
+    """
+    return build_educational_report_prompt(
+        enhanced_data=enhanced_data,
+        mission_name=mission_name,
+        audience="scouts",
+        include_scout_law=True,
+        include_seven_habits=True
+    )
+
+
+def build_school_district_report_prompt(
+    enhanced_data: Dict[str, Any],
+    mission_name: str = "Mission Debrief",
+    grade_level: Optional[str] = None
+) -> str:
+    """
+    Build prompt for school district educational reports.
+
+    Emphasizes learning standards, collaborative skills, and academic language.
+
+    Args:
+        enhanced_data: Complete analysis data from EnhancedReportBuilder
+        mission_name: Name of the mission
+        grade_level: Optional grade level for appropriate language
+
+    Returns:
+        Formatted prompt string for school district report
+    """
+    return build_educational_report_prompt(
+        enhanced_data=enhanced_data,
+        mission_name=mission_name,
+        audience="school",
+        include_scout_law=False,
+        include_seven_habits=True
+    )

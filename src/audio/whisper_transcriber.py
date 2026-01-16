@@ -371,8 +371,24 @@ class WhisperTranscriber:
 
         # Load configuration
         self.model_size = model_size or os.getenv('WHISPER_MODEL_SIZE', 'large-v3')
-        self.device = device or os.getenv('WHISPER_DEVICE', 'cpu')
-        self.compute_type = compute_type or os.getenv('WHISPER_COMPUTE_TYPE', 'int8')
+
+        # Auto-detect GPU if not specified
+        env_device = os.getenv('WHISPER_DEVICE', 'auto')
+        if device:
+            self.device = device
+        elif env_device != 'auto':
+            self.device = env_device
+        else:
+            self.device = self._detect_device()
+
+        # Set compute type based on device
+        env_compute = os.getenv('WHISPER_COMPUTE_TYPE', 'auto')
+        if compute_type:
+            self.compute_type = compute_type
+        elif env_compute != 'auto':
+            self.compute_type = env_compute
+        else:
+            self.compute_type = 'float16' if self.device == 'cuda' else 'int8'
         self.language = language or os.getenv('TRANSCRIBE_LANGUAGE', 'en')
         self.num_workers = num_workers or int(os.getenv('TRANSCRIPTION_WORKERS', '2'))
 
@@ -410,6 +426,31 @@ class WhisperTranscriber:
             f"workers={self.num_workers}, "
             f"prompt_length={len(self.initial_prompt)} chars"
         )
+
+    def _detect_device(self) -> str:
+        """
+        Auto-detect the best available device (CUDA or CPU).
+
+        Returns:
+            'cuda' if GPU is available and working, 'cpu' otherwise
+        """
+        try:
+            import torch
+            if torch.cuda.is_available():
+                # Test that CUDA actually works
+                try:
+                    torch.zeros(1).cuda()
+                    logger.info("CUDA detected and working, using GPU")
+                    return 'cuda'
+                except Exception as e:
+                    logger.warning(f"CUDA available but not working: {e}")
+                    return 'cpu'
+            else:
+                logger.info("CUDA not available, using CPU")
+                return 'cpu'
+        except ImportError:
+            logger.info("PyTorch not available for GPU detection, using CPU")
+            return 'cpu'
 
     def load_model(self) -> bool:
         """

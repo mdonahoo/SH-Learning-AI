@@ -41,9 +41,14 @@
             <!-- Audio Preview -->
             <div id="audio-preview" class="audio-preview hidden">
                 <audio id="audio-player" controls></audio>
-                <button id="analyze-btn" class="btn btn-analyze">
-                    Analyze Audio
-                </button>
+                <div class="preview-buttons">
+                    <button id="analyze-btn" class="btn btn-analyze">
+                        Analyze Audio
+                    </button>
+                    <button id="save-audio-btn" class="btn btn-upload hidden">
+                        <span class="icon">&#8595;</span> Save Recording
+                    </button>
+                </div>
             </div>
         </section>
 
@@ -89,6 +94,27 @@
                     <span class="step-icon">&#9675;</span>
                     <span class="step-label">Evaluating learning metrics</span>
                 </div>
+                <div class="step" data-step="habits">
+                    <span class="step-icon">&#9675;</span>
+                    <span class="step-label">Analyzing 7 Habits</span>
+                </div>
+                <div class="step" data-step="training">
+                    <span class="step-icon">&#9675;</span>
+                    <span class="step-label">Generating training recommendations</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Archive Section -->
+        <section id="archive-section" class="archive-section">
+            <div class="archive-header">
+                <h2>Analysis Archive</h2>
+                <button id="refresh-archive-btn" class="btn btn-small">
+                    <span class="icon">&#8635;</span> Refresh
+                </button>
+            </div>
+            <div id="archive-list" class="archive-list">
+                <p class="empty">Loading...</p>
             </div>
         </section>
 
@@ -96,9 +122,14 @@
         <section id="results-section" class="results-section hidden">
             <div class="results-header">
                 <h2>Analysis Results</h2>
-                <button id="download-btn" class="btn btn-download">
-                    <span class="icon">&#8595;</span> Download Report
-                </button>
+                <div class="download-buttons">
+                    <button id="download-audio-btn" class="btn btn-upload hidden">
+                        <span class="icon">&#127911;</span> Download Audio
+                    </button>
+                    <button id="download-btn" class="btn btn-download">
+                        <span class="icon">&#8595;</span> Download Report
+                    </button>
+                </div>
             </div>
 
             <!-- Tabs -->
@@ -108,6 +139,8 @@
                 <button class="tab" data-tab="scorecards">Scorecards</button>
                 <button class="tab" data-tab="quality">Quality</button>
                 <button class="tab" data-tab="learning">Learning</button>
+                <button class="tab" data-tab="habits">7 Habits</button>
+                <button class="tab" data-tab="training">Training</button>
             </div>
 
             <!-- Tab Content -->
@@ -153,6 +186,20 @@
                 <div id="tab-learning" class="tab-panel hidden">
                     <div id="learning-content" class="learning-content">
                         <!-- Learning evaluation will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- 7 Habits Tab -->
+                <div id="tab-habits" class="tab-panel hidden">
+                    <div id="habits-content" class="habits-content">
+                        <!-- 7 Habits assessment will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- Training Tab -->
+                <div id="tab-training" class="tab-panel hidden">
+                    <div id="training-content" class="training-content">
+                        <!-- Training recommendations will be rendered here -->
                     </div>
                 </div>
             </div>

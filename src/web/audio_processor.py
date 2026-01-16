@@ -81,17 +81,34 @@ except ImportError:
     LEARNING_EVALUATOR_AVAILABLE = False
     LearningEvaluator = None
 
+# Educational framework imports
+try:
+    from src.metrics.seven_habits import SevenHabitsAnalyzer
+    SEVEN_HABITS_AVAILABLE = True
+except ImportError:
+    SEVEN_HABITS_AVAILABLE = False
+    SevenHabitsAnalyzer = None
+
+try:
+    from src.metrics.training_recommendations import TrainingRecommendationEngine
+    TRAINING_RECOMMENDATIONS_AVAILABLE = True
+except ImportError:
+    TRAINING_RECOMMENDATIONS_AVAILABLE = False
+    TrainingRecommendationEngine = None
+
 
 # Progress step definitions
 ANALYSIS_STEPS = [
     {"id": "convert", "label": "Converting audio", "weight": 5},
-    {"id": "transcribe", "label": "Transcribing audio", "weight": 30},
-    {"id": "diarize", "label": "Identifying speakers", "weight": 15},
-    {"id": "roles", "label": "Inferring roles", "weight": 10},
-    {"id": "quality", "label": "Analyzing communication quality", "weight": 10},
-    {"id": "scorecards", "label": "Generating scorecards", "weight": 15},
+    {"id": "transcribe", "label": "Transcribing audio", "weight": 25},
+    {"id": "diarize", "label": "Identifying speakers", "weight": 12},
+    {"id": "roles", "label": "Inferring roles", "weight": 8},
+    {"id": "quality", "label": "Analyzing communication quality", "weight": 8},
+    {"id": "scorecards", "label": "Generating scorecards", "weight": 10},
     {"id": "confidence", "label": "Analyzing confidence", "weight": 5},
-    {"id": "learning", "label": "Evaluating learning metrics", "weight": 10},
+    {"id": "learning", "label": "Evaluating learning metrics", "weight": 7},
+    {"id": "habits", "label": "Analyzing 7 Habits", "weight": 10},
+    {"id": "training", "label": "Generating training recommendations", "weight": 10},
 ]
 
 
@@ -127,6 +144,16 @@ class AudioProcessor:
         # Configuration
         self.sample_rate = int(os.getenv('AUDIO_SAMPLE_RATE', '16000'))
         self.temp_dir = os.getenv('AUDIO_TEMP_DIR', tempfile.gettempdir())
+
+        # Recordings and analyses storage
+        self.save_recordings = os.getenv('SAVE_RECORDINGS', 'true').lower() == 'true'
+        self.recordings_dir = Path(os.getenv('RECORDINGS_DIR', 'data/recordings'))
+        self.analyses_dir = Path(os.getenv('ANALYSES_DIR', 'data/analyses'))
+        if self.save_recordings:
+            self.recordings_dir.mkdir(parents=True, exist_ok=True)
+            self.analyses_dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Recordings will be saved to: {self.recordings_dir}")
+            logger.info(f"Analyses will be saved to: {self.analyses_dir}")
 
         logger.info(
             f"AudioProcessor initialized: model={self.whisper_model_size}, "
@@ -166,6 +193,144 @@ class AudioProcessor:
     def is_model_loaded(self) -> bool:
         """Check if Whisper model is loaded."""
         return self._model_loaded
+
+    def save_recording(self, audio_path: str, original_filename: str = None) -> Optional[str]:
+        """
+        Save a recording to the recordings directory.
+
+        Args:
+            audio_path: Path to the audio file (typically WAV after conversion)
+            original_filename: Original filename for reference
+
+        Returns:
+            Path to saved recording, or None if saving is disabled
+        """
+        if not self.save_recordings:
+            return None
+
+        try:
+            from datetime import datetime
+            import shutil
+
+            # Generate timestamped filename
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            ext = Path(audio_path).suffix or '.wav'
+            saved_name = f"recording_{timestamp}{ext}"
+            saved_path = self.recordings_dir / saved_name
+
+            # Copy the file
+            shutil.copy2(audio_path, saved_path)
+            logger.info(f"Recording saved: {saved_path}")
+
+            return str(saved_path)
+
+        except Exception as e:
+            logger.warning(f"Failed to save recording: {e}")
+            return None
+
+    def save_analysis(self, results: Dict[str, Any], recording_path: Optional[str] = None) -> Optional[str]:
+        """
+        Save analysis results to JSON file.
+
+        Args:
+            results: Analysis results dictionary
+            recording_path: Path to associated recording (for linking)
+
+        Returns:
+            Path to saved analysis JSON, or None if saving is disabled
+        """
+        if not self.save_recordings:
+            return None
+
+        try:
+            import json
+            from datetime import datetime
+
+            # Generate timestamped filename
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            saved_name = f"analysis_{timestamp}.json"
+            saved_path = self.analyses_dir / saved_name
+
+            # Add metadata
+            analysis_data = {
+                'metadata': {
+                    'created_at': datetime.now().isoformat(),
+                    'recording_file': Path(recording_path).name if recording_path else None,
+                    'duration_seconds': results.get('duration_seconds', 0),
+                    'speaker_count': len(results.get('speakers', [])),
+                    'segment_count': len(results.get('transcription', [])),
+                },
+                'results': results
+            }
+
+            # Save as JSON
+            with open(saved_path, 'w') as f:
+                json.dump(analysis_data, f, indent=2, default=str)
+
+            logger.info(f"Analysis saved: {saved_path}")
+            return str(saved_path)
+
+        except Exception as e:
+            logger.warning(f"Failed to save analysis: {e}")
+            return None
+
+    def list_analyses(self) -> List[Dict[str, Any]]:
+        """
+        List all saved analyses.
+
+        Returns:
+            List of analysis metadata dictionaries
+        """
+        if not self.analyses_dir.exists():
+            return []
+
+        analyses = []
+        for f in sorted(self.analyses_dir.glob("analysis_*.json"), reverse=True):
+            try:
+                import json
+                with open(f, 'r') as fp:
+                    data = json.load(fp)
+                    metadata = data.get('metadata', {})
+                    analyses.append({
+                        'filename': f.name,
+                        'created_at': metadata.get('created_at'),
+                        'duration_seconds': metadata.get('duration_seconds', 0),
+                        'speaker_count': metadata.get('speaker_count', 0),
+                        'segment_count': metadata.get('segment_count', 0),
+                        'recording_file': metadata.get('recording_file'),
+                        'size_bytes': f.stat().st_size,
+                    })
+            except Exception as e:
+                logger.warning(f"Failed to read analysis {f}: {e}")
+                continue
+
+        return analyses[:100]  # Limit to 100 most recent
+
+    def get_analysis(self, filename: str) -> Optional[Dict[str, Any]]:
+        """
+        Get a specific saved analysis.
+
+        Args:
+            filename: Analysis filename (e.g., 'analysis_20260116_120000.json')
+
+        Returns:
+            Analysis data or None if not found
+        """
+        # Security: only allow files from analyses directory
+        if '..' in filename or '/' in filename:
+            return None
+
+        file_path = self.analyses_dir / filename
+        if not file_path.exists():
+            return None
+
+        try:
+            import json
+            with open(file_path, 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error(f"Failed to load analysis {filename}: {e}")
+            return None
 
     def convert_to_wav(self, input_path: str, output_path: Optional[str] = None) -> str:
         """
@@ -236,13 +401,15 @@ class AudioProcessor:
 
     def transcribe_with_segments(
         self,
-        audio_path: str
+        audio_path: str,
+        progress_callback: Optional[callable] = None
     ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
         """
         Transcribe audio file with segment-level details.
 
         Args:
             audio_path: Path to audio file (WAV preferred)
+            progress_callback: Optional callback(step_id, label, progress_pct)
 
         Returns:
             Tuple of (segments_list, info_dict)
@@ -257,15 +424,23 @@ class AudioProcessor:
 
         try:
             # Access the underlying model directly for segment info
+            # Always use English and domain-specific prompt for better accuracy
             segments_gen, info = self._transcriber._model.transcribe(
                 audio_path,
-                language=None if self._transcriber.language == 'auto' else self._transcriber.language,
+                language='en',  # Force English for Starship Horizons
                 initial_prompt=self._transcriber.initial_prompt,
                 vad_filter=True,
-                word_timestamps=True
+                word_timestamps=True,
+                beam_size=5,  # Better accuracy with beam search
+                best_of=5,    # Consider more candidates
+                temperature=0.0,  # Deterministic output for consistency
+                condition_on_previous_text=True,  # Better context awareness
+                no_speech_threshold=0.6,  # Filter out non-speech
             )
 
+            total_duration = info.duration
             segments = []
+
             for segment in segments_gen:
                 # Filter hallucinations
                 from src.audio.whisper_transcriber import is_hallucination
@@ -293,6 +468,18 @@ class AudioProcessor:
                     ]
 
                 segments.append(seg_data)
+
+                # Report granular progress based on how far through audio we are
+                if progress_callback and total_duration > 0:
+                    # Transcription is steps 5-35%, so map segment progress to that range
+                    segment_progress = min(segment.end / total_duration, 1.0)
+                    # Map 0-100% of audio to 5-35% overall progress
+                    overall_progress = 5 + int(segment_progress * 30)
+                    progress_callback(
+                        "transcribe",
+                        f"Transcribing... {segment.end:.1f}s / {total_duration:.1f}s",
+                        overall_progress
+                    )
 
             info_dict = {
                 'language': info.language,
@@ -347,6 +534,9 @@ class AudioProcessor:
             'role_assignments': [],
             'confidence_distribution': None,
             'learning_evaluation': None,
+            'seven_habits': None,
+            'training_recommendations': None,
+            'saved_recording_path': None,
             'processing_time_seconds': 0
         }
 
@@ -364,12 +554,19 @@ class AudioProcessor:
                 converted = True
             except Exception as e:
                 logger.warning(f"Conversion failed, trying direct: {e}")
+
+        # Save recording if enabled
+        saved_path = self.save_recording(wav_path)
+        results['saved_recording_path'] = saved_path
         progress = 5
 
         try:
-            # Step 2: Transcription
+            # Step 2: Transcription (with granular progress updates)
             update_progress("transcribe", "Transcribing audio with Whisper", progress)
-            segments, info = self.transcribe_with_segments(wav_path)
+            segments, info = self.transcribe_with_segments(
+                wav_path,
+                progress_callback=progress_callback  # Pass through for granular updates
+            )
             results['duration_seconds'] = info.get('duration', 0)
             results['language'] = info.get('language', 'unknown')
             progress = 35
@@ -426,6 +623,37 @@ class AudioProcessor:
             if include_detailed and LEARNING_EVALUATOR_AVAILABLE and transcripts:
                 update_progress("learning", "Evaluating learning metrics", progress)
                 results['learning_evaluation'] = self._evaluate_learning(transcripts)
+            progress = 80
+
+            # Step 9: 7 Habits analysis
+            if include_detailed and SEVEN_HABITS_AVAILABLE and transcripts:
+                update_progress("habits", "Analyzing 7 Habits framework", progress)
+                results['seven_habits'] = self._analyze_seven_habits(transcripts)
+            progress = 90
+
+            # Step 10: Training recommendations
+            if include_detailed and TRAINING_RECOMMENDATIONS_AVAILABLE and transcripts:
+                update_progress("training", "Generating training recommendations", progress)
+                # Pass analysis results wrapped in expected format for training engine
+                comm_quality = results.get('communication_quality') or {}
+                conf_dist = results.get('confidence_distribution') or {}
+                analysis_context = {
+                    'communication_quality': {
+                        'statistics': {
+                            'improvement_count': comm_quality.get('improvement_count', 0),
+                            'total_utterances': comm_quality.get('effective_count', 0) + comm_quality.get('improvement_count', 0),
+                        }
+                    },
+                    'confidence_analysis': {
+                        'statistics': {
+                            'average_confidence': conf_dist.get('average_confidence', 0),
+                        }
+                    },
+                    'role_analysis': results.get('role_assignments') or [],
+                }
+                results['training_recommendations'] = self._generate_training_recommendations(
+                    transcripts, analysis_context
+                )
             progress = 100
 
             update_progress("complete", "Analysis complete", progress)
@@ -439,6 +667,11 @@ class AudioProcessor:
                     pass
 
         results['processing_time_seconds'] = time.time() - start_time
+
+        # Save analysis results
+        saved_analysis_path = self.save_analysis(results, results.get('saved_recording_path'))
+        results['saved_analysis_path'] = saved_analysis_path
+
         return results
 
     def _build_transcripts_list(
@@ -511,7 +744,7 @@ class AudioProcessor:
                     'role': scorecard.inferred_role,
                     'utterance_count': scorecard.utterance_count,
                     'overall_score': scorecard.overall_score,
-                    'metrics': scores,
+                    'metrics': metrics,
                     'strengths': scorecard.strengths,
                     'areas_for_improvement': scorecard.development_areas
                 })
@@ -565,7 +798,14 @@ class AudioProcessor:
 
         except Exception as e:
             logger.error(f"Confidence analysis failed: {e}")
-            return None
+            return {
+                'total_utterances': 0,
+                'average_confidence': 0,
+                'median_confidence': 0,
+                'buckets': [],
+                'speaker_averages': {},
+                'quality_assessment': 'Unknown'
+            }
 
     def _evaluate_learning(
         self,
@@ -652,7 +892,9 @@ class AudioProcessor:
             samples = np.array(audio.get_array_of_samples(), dtype=np.float32)
             samples = samples / 32768.0  # Normalize to -1 to 1
 
-            diarizer = SpeakerDiarizer()
+            # Use higher threshold (0.75) for better speaker separation
+            # Lower threshold = speakers merge together, higher = more distinct speakers
+            diarizer = SpeakerDiarizer(similarity_threshold=0.75)
             engagement = EngagementAnalyzer()
 
             for seg in segments:
@@ -755,7 +997,7 @@ class AudioProcessor:
                     'category': 'effective',
                     'description': '',
                     'count': len(assessments),
-                    'examples': [a.evidence[:100] for a in assessments[:3]]
+                    'examples': [a.text[:100] for a in assessments[:3]]
                 })
             for pattern_name, assessments in results.get('improvement_by_pattern', {}).items():
                 patterns.append({
@@ -763,7 +1005,7 @@ class AudioProcessor:
                     'category': 'needs_improvement',
                     'description': '',
                     'count': len(assessments),
-                    'examples': [a.evidence[:100] for a in assessments[:3]]
+                    'examples': [a.text[:100] for a in assessments[:3]]
                 })
 
             return {
@@ -777,7 +1019,126 @@ class AudioProcessor:
 
         except Exception as e:
             logger.error(f"Quality analysis failed: {e}")
+            return {
+                'effective_count': 0,
+                'improvement_count': 0,
+                'effective_percentage': 0,
+                'patterns': []
+            }
+
+    def _analyze_seven_habits(
+        self,
+        transcripts: List[Dict[str, Any]]
+    ) -> Optional[Dict[str, Any]]:
+        """Analyze transcripts using 7 Habits framework."""
+        try:
+            analyzer = SevenHabitsAnalyzer(transcripts)
+            results = analyzer.get_structured_results()
+
+            # Format habits for frontend
+            habits = []
+            for habit_name, habit_data in results.get('habits', {}).items():
+                habits.append({
+                    'habit_number': habit_data.get('habit_number', 0),
+                    'habit_name': habit_name.replace('_', ' ').title(),
+                    'youth_friendly_name': habit_data.get('youth_name', ''),
+                    'score': habit_data.get('score', 1),
+                    'observation_count': habit_data.get('count', 0),
+                    'interpretation': habit_data.get('interpretation', ''),
+                    'development_tip': habit_data.get('development_tip', ''),
+                    'examples': [
+                        ex.get('text', '')[:100]
+                        for ex in habit_data.get('examples', [])[:2]
+                    ]
+                })
+
+            # Sort by habit number
+            habits.sort(key=lambda x: x['habit_number'])
+
+            return {
+                'overall_score': results.get('overall_effectiveness_score', 0),
+                'habits': habits,
+                'strengths': results.get('strengths', []),
+                'growth_areas': results.get('growth_areas', [])
+            }
+
+        except Exception as e:
+            logger.error(f"7 Habits analysis failed: {e}")
             return None
+
+    def _generate_training_recommendations(
+        self,
+        transcripts: List[Dict[str, Any]],
+        analysis_context: Dict[str, Any] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Generate comprehensive training recommendations."""
+        try:
+            engine = TrainingRecommendationEngine(
+                transcripts,
+                analysis_results=analysis_context or {}
+            )
+            results = engine.get_structured_results()
+
+            # Format immediate actions
+            immediate_actions = []
+            for action in results.get('immediate_actions', []):
+                immediate_actions.append({
+                    'title': action.get('title', ''),
+                    'description': action.get('description', ''),
+                    'priority': action.get('priority', 'MEDIUM'),
+                    'category': action.get('category', ''),
+                    'frameworks': action.get('frameworks', []),
+                    'scout_connection': action.get('scout_connection'),
+                    'habit_connection': action.get('habit_connection'),
+                    'success_criteria': action.get('success_criteria', '')
+                })
+
+            # Format drills
+            drills = []
+            for drill in results.get('drills', []):
+                drills.append({
+                    'name': drill.get('name', ''),
+                    'purpose': drill.get('purpose', ''),
+                    'duration': drill.get('duration', ''),
+                    'participants': 'full team',
+                    'steps': drill.get('steps', []),
+                    'debrief_questions': drill.get('debrief_questions', []),
+                    'frameworks_addressed': []
+                })
+
+            # Format discussion topics
+            discussion_topics = []
+            for topic in results.get('discussion_topics', []):
+                discussion_topics.append({
+                    'topic': topic.get('topic', ''),
+                    'question': topic.get('question', ''),
+                    'scout_connection': topic.get('scout_connection'),
+                    'discussion_points': topic.get('discussion_points', [])
+                })
+
+            return {
+                'immediate_actions': immediate_actions,
+                'communication_improvements': [],  # Extracted from immediate_actions by category
+                'leadership_development': [],
+                'teamwork_enhancements': [],
+                'drills': drills,
+                'discussion_topics': discussion_topics,
+                'framework_alignment': results.get('framework_alignment', {}),
+                'total_recommendations': results.get('total_recommendations', 0)
+            }
+
+        except Exception as e:
+            logger.error(f"Training recommendations failed: {e}")
+            return {
+                'immediate_actions': [],
+                'communication_improvements': [],
+                'leadership_development': [],
+                'teamwork_enhancements': [],
+                'drills': [],
+                'discussion_topics': [],
+                'framework_alignment': {},
+                'total_recommendations': 0
+            }
 
     def transcribe_only(self, audio_path: str) -> Dict[str, Any]:
         """

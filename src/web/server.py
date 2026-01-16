@@ -316,6 +316,89 @@ async def get_analysis_steps():
     return {"steps": ANALYSIS_STEPS}
 
 
+@app.get("/api/recordings/{filename}")
+async def download_recording(filename: str):
+    """Download a saved recording."""
+    processor = get_processor()
+
+    # Security: only allow files from recordings directory
+    if '..' in filename or '/' in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    file_path = processor.recordings_dir / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Recording not found")
+
+    return FileResponse(
+        str(file_path),
+        media_type="audio/wav",
+        filename=filename
+    )
+
+
+@app.get("/api/recordings")
+async def list_recordings():
+    """List all saved recordings."""
+    processor = get_processor()
+
+    if not processor.recordings_dir.exists():
+        return {"recordings": []}
+
+    recordings = []
+    for f in sorted(processor.recordings_dir.glob("*.wav"), reverse=True):
+        recordings.append({
+            "filename": f.name,
+            "size_bytes": f.stat().st_size,
+            "created": f.stat().st_mtime
+        })
+
+    return {"recordings": recordings[:50]}  # Limit to 50 most recent
+
+
+@app.get("/api/analyses")
+async def list_analyses():
+    """List all saved analyses."""
+    processor = get_processor()
+    analyses = processor.list_analyses()
+    return {"analyses": analyses}
+
+
+@app.get("/api/analyses/{filename}")
+async def get_analysis(filename: str):
+    """Get a specific saved analysis."""
+    processor = get_processor()
+
+    # Security: only allow valid filenames
+    if '..' in filename or '/' in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    analysis = processor.get_analysis(filename)
+    if analysis is None:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+
+    return analysis
+
+
+@app.delete("/api/analyses/{filename}")
+async def delete_analysis(filename: str):
+    """Delete a saved analysis."""
+    processor = get_processor()
+
+    # Security: only allow valid filenames
+    if '..' in filename or '/' in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    file_path = processor.analyses_dir / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Analysis not found")
+
+    try:
+        file_path.unlink()
+        return {"status": "ok", "message": f"Deleted {filename}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/api/transcribe", response_model=TranscriptionResult)
 async def transcribe_audio(
     file: UploadFile = File(..., description="Audio file to transcribe")

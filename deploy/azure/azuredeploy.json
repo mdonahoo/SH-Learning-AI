@@ -1,0 +1,340 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "Deploys a GPU-enabled VM for Starship Horizons Learning AI with NVIDIA drivers, Docker, Ollama, and Whisper"
+  },
+  "parameters": {
+    "vmName": {
+      "type": "string",
+      "defaultValue": "sh-learning-ai-vm",
+      "metadata": {
+        "description": "Name for the virtual machine"
+      }
+    },
+    "adminUsername": {
+      "type": "string",
+      "defaultValue": "azureuser",
+      "metadata": {
+        "description": "Admin username for the VM"
+      }
+    },
+    "authenticationType": {
+      "type": "string",
+      "defaultValue": "sshPublicKey",
+      "allowedValues": [
+        "sshPublicKey",
+        "password"
+      ],
+      "metadata": {
+        "description": "Type of authentication to use"
+      }
+    },
+    "adminPasswordOrKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "SSH public key or password for the VM"
+      }
+    },
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_NC4as_T4_v3",
+      "allowedValues": [
+        "Standard_NC4as_T4_v3",
+        "Standard_NC8as_T4_v3",
+        "Standard_NC16as_T4_v3",
+        "Standard_NC6s_v3",
+        "Standard_NC12s_v3",
+        "Standard_NV12s_v3",
+        "Standard_NV24s_v3"
+      ],
+      "metadata": {
+        "description": "Size of the GPU VM"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for all resources"
+      }
+    },
+    "osDiskType": {
+      "type": "string",
+      "defaultValue": "Premium_LRS",
+      "allowedValues": [
+        "Premium_LRS",
+        "StandardSSD_LRS",
+        "Standard_LRS"
+      ],
+      "metadata": {
+        "description": "OS disk type"
+      }
+    },
+    "osDiskSizeGB": {
+      "type": "int",
+      "defaultValue": 128,
+      "minValue": 64,
+      "maxValue": 1024,
+      "metadata": {
+        "description": "OS disk size in GB"
+      }
+    },
+    "gitRepoUrl": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Git repository URL to clone (leave empty to skip)"
+      }
+    },
+    "whisperModel": {
+      "type": "string",
+      "defaultValue": "medium",
+      "allowedValues": [
+        "tiny",
+        "base",
+        "small",
+        "medium",
+        "large-v2",
+        "large-v3"
+      ],
+      "metadata": {
+        "description": "Whisper model size for audio transcription"
+      }
+    },
+    "ollamaModel": {
+      "type": "string",
+      "defaultValue": "llama3.2",
+      "allowedValues": [
+        "llama3.2",
+        "qwen2.5:7b",
+        "qwen2.5:14b-instruct",
+        "mistral",
+        "phi3"
+      ],
+      "metadata": {
+        "description": "Ollama LLM model for report generation"
+      }
+    },
+    "webServerPort": {
+      "type": "int",
+      "defaultValue": 8000,
+      "metadata": {
+        "description": "Port for the web server"
+      }
+    },
+    "allowedSourceIPs": {
+      "type": "string",
+      "defaultValue": "*",
+      "metadata": {
+        "description": "Allowed source IP addresses for web access (comma-separated or * for all)"
+      }
+    }
+  },
+  "variables": {
+    "vnetName": "[concat(parameters('vmName'), '-vnet')]",
+    "subnetName": "default",
+    "nsgName": "[concat(parameters('vmName'), '-nsg')]",
+    "publicIPName": "[concat(parameters('vmName'), '-ip')]",
+    "nicName": "[concat(parameters('vmName'), '-nic')]",
+    "vnetAddressPrefix": "10.0.0.0/16",
+    "subnetAddressPrefix": "10.0.0.0/24",
+    "linuxConfiguration": {
+      "disablePasswordAuthentication": true,
+      "ssh": {
+        "publicKeys": [
+          {
+            "path": "[concat('/home/', parameters('adminUsername'), '/.ssh/authorized_keys')]",
+            "keyData": "[parameters('adminPasswordOrKey')]"
+          }
+        ]
+      }
+    },
+    "cloudInitScript": "[concat('#cloud-config\npackage_update: true\npackage_upgrade: true\n\npackages:\n  - apt-transport-https\n  - ca-certificates\n  - curl\n  - gnupg\n  - lsb-release\n  - git\n  - ffmpeg\n  - python3-pip\n  - jq\n\nwrite_files:\n  - path: /home/', parameters('adminUsername'), '/start-app.sh\n    permissions: \"0755\"\n    owner: ', parameters('adminUsername'), ':', parameters('adminUsername'), '\n    content: |\n      #!/bin/bash\n      set -e\n      echo \"=== Starting Starship Horizons Learning AI ===\"\n      \n      cd /home/', parameters('adminUsername'), '/app\n      \n      # Build Docker image\n      echo \"Building Docker image...\"\n      docker build -t sh-learning-ai .\n      \n      # Stop existing container if running\n      docker stop sh-learning-ai 2>/dev/null || true\n      docker rm sh-learning-ai 2>/dev/null || true\n      \n      # Run container with GPU support\n      echo \"Starting container...\"\n      docker run -d \\\n        --gpus all \\\n        -p ', string(parameters('webServerPort')), ':', string(parameters('webServerPort')), ' \\\n        --name sh-learning-ai \\\n        -e WHISPER_MODEL=', parameters('whisperModel'), ' \\\n        -e OLLAMA_MODEL=', parameters('ollamaModel'), ' \\\n        -v /home/', parameters('adminUsername'), '/ollama-models:/root/.ollama \\\n        --restart unless-stopped \\\n        sh-learning-ai\n      \n      echo \"=== Application started ===\"\n      echo \"Web interface: http://$(curl -s ifconfig.me):', string(parameters('webServerPort')), '\"\n      echo \"View logs: docker logs -f sh-learning-ai\"\n\n  - path: /home/', parameters('adminUsername'), '/check-status.sh\n    permissions: \"0755\"\n    owner: ', parameters('adminUsername'), ':', parameters('adminUsername'), '\n    content: |\n      #!/bin/bash\n      echo \"=== System Status ===\"\n      echo \"\"\n      echo \"GPU Status:\"\n      nvidia-smi --query-gpu=name,memory.used,memory.total --format=csv 2>/dev/null || echo \"GPU not available\"\n      echo \"\"\n      echo \"Docker Containers:\"\n      docker ps --format \"table {{.Names}}\\t{{.Status}}\\t{{.Ports}}\"\n      echo \"\"\n      echo \"Application Health:\"\n      curl -s http://localhost:', string(parameters('webServerPort')), '/api/health | jq . 2>/dev/null || echo \"Application not responding\"\n\nruncmd:\n  # Install NVIDIA drivers and container toolkit\n  - distribution=$(. /etc/os-release;echo $ID$VERSION_ID)\n  - curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg\n  - curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | sed \"s#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g\" | tee /etc/apt/sources.list.d/nvidia-container-toolkit.list\n  - apt-get update\n  - apt-get install -y nvidia-driver-535 nvidia-container-toolkit\n  \n  # Install Docker\n  - curl -fsSL https://get.docker.com | sh\n  - systemctl enable docker\n  - systemctl start docker\n  - usermod -aG docker ', parameters('adminUsername'), '\n  \n  # Configure NVIDIA runtime for Docker\n  - nvidia-ctk runtime configure --runtime=docker\n  - systemctl restart docker\n  \n  # Create Ollama models directory (persisted outside container)\n  - mkdir -p /home/', parameters('adminUsername'), '/ollama-models\n  - chown ', parameters('adminUsername'), ':', parameters('adminUsername'), ' /home/', parameters('adminUsername'), '/ollama-models\n  \n  # Clone repository\n  - ', if(empty(parameters('gitRepoUrl')), 'echo \"No git repo specified - clone manually to /home/', parameters('adminUsername'), '/app\"', concat('cd /home/', parameters('adminUsername'), ' && git clone ', parameters('gitRepoUrl'), ' app && chown -R ', parameters('adminUsername'), ':', parameters('adminUsername'), ' app')), '\n\nfinal_message: |\n  ===========================================\n  Cloud-init completed!\n  ===========================================\n  \n  Next steps:\n  1. SSH into the VM\n  2. Run: ~/start-app.sh\n  3. Wait for Docker build and model downloads\n  4. Access: http://YOUR_IP:', string(parameters('webServerPort')), '\n  \n  Useful commands:\n  - ~/check-status.sh   - Check system status\n  - docker logs -f sh-learning-ai - View logs\n  ===========================================')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('nsgName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "SSH",
+            "properties": {
+              "priority": 1000,
+              "protocol": "Tcp",
+              "access": "Allow",
+              "direction": "Inbound",
+              "sourceAddressPrefix": "[parameters('allowedSourceIPs')]",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "*",
+              "destinationPortRange": "22"
+            }
+          },
+          {
+            "name": "WebServer",
+            "properties": {
+              "priority": 1010,
+              "protocol": "Tcp",
+              "access": "Allow",
+              "direction": "Inbound",
+              "sourceAddressPrefix": "[parameters('allowedSourceIPs')]",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "*",
+              "destinationPortRange": "[string(parameters('webServerPort'))]"
+            }
+          },
+          {
+            "name": "HTTPS",
+            "properties": {
+              "priority": 1020,
+              "protocol": "Tcp",
+              "access": "Allow",
+              "direction": "Inbound",
+              "sourceAddressPrefix": "[parameters('allowedSourceIPs')]",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "*",
+              "destinationPortRange": "443"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('vnetName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('vnetAddressPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('subnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('subnetAddressPrefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+              }
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('publicIPName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Static",
+        "dnsSettings": {
+          "domainNameLabel": "[toLower(parameters('vmName'))]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('nicName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('subnetName'))]"
+              },
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPName'))]"
+              }
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]",
+        "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2023-07-01",
+      "name": "[parameters('vmName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('vmSize')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "Canonical",
+            "offer": "0001-com-ubuntu-server-jammy",
+            "sku": "22_04-lts-gen2",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "[concat(parameters('vmName'), '-osdisk')]",
+            "createOption": "FromImage",
+            "managedDisk": {
+              "storageAccountType": "[parameters('osDiskType')]"
+            },
+            "diskSizeGB": "[parameters('osDiskSizeGB')]"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
+            }
+          ]
+        },
+        "osProfile": {
+          "computerName": "[parameters('vmName')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[if(equals(parameters('authenticationType'), 'password'), parameters('adminPasswordOrKey'), null())]",
+          "linuxConfiguration": "[if(equals(parameters('authenticationType'), 'sshPublicKey'), variables('linuxConfiguration'), null())]",
+          "customData": "[base64(variables('cloudInitScript'))]"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "vmPublicIP": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPName'))).ipAddress]"
+    },
+    "vmFQDN": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPName'))).dnsSettings.fqdn]"
+    },
+    "sshCommand": {
+      "type": "string",
+      "value": "[concat('ssh ', parameters('adminUsername'), '@', reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPName'))).dnsSettings.fqdn)]"
+    },
+    "webServerUrl": {
+      "type": "string",
+      "value": "[concat('http://', reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPName'))).dnsSettings.fqdn, ':', string(parameters('webServerPort')))]"
+    },
+    "nextSteps": {
+      "type": "string",
+      "value": "1) SSH into VM  2) Run ~/start-app.sh  3) Wait for model downloads  4) Access web interface"
+    }
+  }
+}

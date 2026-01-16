@@ -207,6 +207,32 @@ class ApiClient {
         const response = await fetch(`${this.baseUrl}/api/health`);
         return response.json();
     }
+
+    async listAnalyses() {
+        const response = await fetch(`${this.baseUrl}/api/analyses`);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+    }
+
+    async getAnalysis(filename) {
+        const response = await fetch(`${this.baseUrl}/api/analyses/${filename}`);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+    }
+
+    async deleteAnalysis(filename) {
+        const response = await fetch(`${this.baseUrl}/api/analyses/${filename}`, {
+            method: 'DELETE'
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+    }
 }
 
 
@@ -242,6 +268,12 @@ class ResultsRenderer {
 
         // Render learning
         this.renderLearning(results.learning_evaluation);
+
+        // Render 7 Habits
+        this.renderHabits(results.seven_habits);
+
+        // Render Training recommendations
+        this.renderTraining(results.training_recommendations);
     }
 
     renderTranscript(segments, fullText) {
@@ -487,6 +519,192 @@ class ResultsRenderer {
         `;
     }
 
+    renderHabits(habits) {
+        const container = document.getElementById('habits-content');
+
+        if (!habits) {
+            container.innerHTML = '<p class="empty">No 7 Habits assessment available</p>';
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="habits-overview">
+                <h3>Leadership Effectiveness Assessment</h3>
+                <div class="overall-score-display">
+                    <div class="score-circle" style="--score: ${(habits.overall_score / 5) * 100}%">
+                        <span class="score-value">${habits.overall_score.toFixed(1)}</span>
+                        <span class="score-max">/5</span>
+                    </div>
+                    <div class="score-label">Overall Effectiveness</div>
+                </div>
+            </div>
+
+            <div class="habits-grid">
+                ${habits.habits.map(h => `
+                    <div class="habit-card">
+                        <div class="habit-header">
+                            <span class="habit-number">Habit ${h.habit_number}</span>
+                            <span class="habit-score score-${h.score}">${h.score}/5</span>
+                        </div>
+                        <div class="habit-name">${h.youth_friendly_name || h.habit_name}</div>
+                        <div class="habit-observations">${h.observation_count} observations</div>
+                        <div class="habit-interpretation">${h.interpretation}</div>
+                        ${h.development_tip ? `
+                            <div class="habit-tip">
+                                <strong>Tip:</strong> ${h.development_tip}
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('')}
+            </div>
+
+            ${habits.strengths && habits.strengths.length > 0 ? `
+                <div class="habits-section strengths">
+                    <h3>Team Strengths</h3>
+                    <ul class="habits-list">
+                        ${habits.strengths.map(s => `
+                            <li>
+                                <strong>${s.name}</strong> (${s.score}/5)
+                                ${s.interpretation ? `<p>${s.interpretation}</p>` : ''}
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            ` : ''}
+
+            ${habits.growth_areas && habits.growth_areas.length > 0 ? `
+                <div class="habits-section growth-areas">
+                    <h3>Growth Opportunities</h3>
+                    <ul class="habits-list">
+                        ${habits.growth_areas.map(g => `
+                            <li>
+                                <strong>${g.name}</strong> (${g.score}/5)
+                                ${g.development_tip ? `<p class="dev-tip"><em>Tip:</em> ${g.development_tip}</p>` : ''}
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            ` : ''}
+        `;
+    }
+
+    renderTraining(training) {
+        const container = document.getElementById('training-content');
+
+        if (!training) {
+            container.innerHTML = '<p class="empty">No training recommendations available</p>';
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="training-header">
+                <h3>Training Recommendations</h3>
+                <span class="total-count">${training.total_recommendations} recommendations</span>
+            </div>
+
+            ${training.immediate_actions && training.immediate_actions.length > 0 ? `
+                <div class="training-section">
+                    <h3>Immediate Actions</h3>
+                    <div class="recommendations-grid">
+                        ${training.immediate_actions.map(action => `
+                            <div class="recommendation-card priority-${action.priority.toLowerCase()}">
+                                <div class="rec-header">
+                                    <span class="rec-priority">${action.priority}</span>
+                                    <span class="rec-category">${action.category}</span>
+                                </div>
+                                <h4>${action.title}</h4>
+                                <p>${action.description}</p>
+                                ${action.scout_connection ? `
+                                    <div class="rec-connection scout">
+                                        <strong>Scout:</strong> ${action.scout_connection}
+                                    </div>
+                                ` : ''}
+                                ${action.habit_connection ? `
+                                    <div class="rec-connection habit">
+                                        <strong>7 Habits:</strong> ${action.habit_connection}
+                                    </div>
+                                ` : ''}
+                                ${action.success_criteria ? `
+                                    <div class="rec-success">
+                                        <strong>Success:</strong> ${action.success_criteria}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : ''}
+
+            ${training.drills && training.drills.length > 0 ? `
+                <div class="training-section">
+                    <h3>Training Drills</h3>
+                    <div class="drills-list">
+                        ${training.drills.map(drill => `
+                            <div class="drill-card">
+                                <div class="drill-header">
+                                    <h4>${drill.name}</h4>
+                                    <span class="drill-duration">${drill.duration}</span>
+                                </div>
+                                <p class="drill-purpose">${drill.purpose}</p>
+                                ${drill.steps && drill.steps.length > 0 ? `
+                                    <div class="drill-steps">
+                                        <strong>Steps:</strong>
+                                        <ol>
+                                            ${drill.steps.map(s => `<li>${s}</li>`).join('')}
+                                        </ol>
+                                    </div>
+                                ` : ''}
+                                ${drill.debrief_questions && drill.debrief_questions.length > 0 ? `
+                                    <div class="drill-debrief">
+                                        <strong>Debrief Questions:</strong>
+                                        <ul>
+                                            ${drill.debrief_questions.map(q => `<li>${q}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : ''}
+
+            ${training.discussion_topics && training.discussion_topics.length > 0 ? `
+                <div class="training-section">
+                    <h3>Discussion Topics</h3>
+                    <div class="topics-list">
+                        ${training.discussion_topics.map(topic => `
+                            <div class="topic-card">
+                                <h4>${topic.topic}</h4>
+                                <p class="topic-question">${topic.question}</p>
+                                ${topic.scout_connection ? `
+                                    <div class="topic-scout">
+                                        <strong>Scout Connection:</strong> ${topic.scout_connection}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : ''}
+
+            ${training.framework_alignment && Object.keys(training.framework_alignment).length > 0 ? `
+                <div class="training-section">
+                    <h3>Framework Alignment</h3>
+                    <div class="framework-alignment">
+                        ${Object.entries(training.framework_alignment).map(([key, values]) => `
+                            <div class="alignment-group">
+                                <h4>${key}</h4>
+                                <ul>
+                                    ${values.slice(0, 3).map(v => `<li>${v}</li>`).join('')}
+                                </ul>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : ''}
+        `;
+    }
+
     formatDuration(seconds) {
         if (!seconds) return '0:00';
         const mins = Math.floor(seconds / 60);
@@ -655,6 +873,100 @@ class ResultsRenderer {
             }
         }
 
+        // 7 Habits Assessment
+        if (results.seven_habits) {
+            const habits = results.seven_habits;
+            md += `## 7 Habits of Highly Effective People\n\n`;
+            md += `**Overall Effectiveness Score:** ${habits.overall_score.toFixed(1)}/5\n\n`;
+
+            if (habits.habits && habits.habits.length > 0) {
+                md += `| Habit | Youth Name | Score | Observations |\n`;
+                md += `|-------|------------|-------|-------------|\n`;
+                for (const h of habits.habits) {
+                    md += `| ${h.habit_number}. ${h.habit_name} | ${h.youth_friendly_name} | ${h.score}/5 | ${h.observation_count} |\n`;
+                }
+                md += `\n`;
+            }
+
+            if (habits.strengths && habits.strengths.length > 0) {
+                md += `### Strengths\n\n`;
+                for (const s of habits.strengths) {
+                    md += `- **${s.name}** (${s.score}/5)\n`;
+                }
+                md += `\n`;
+            }
+
+            if (habits.growth_areas && habits.growth_areas.length > 0) {
+                md += `### Growth Opportunities\n\n`;
+                for (const g of habits.growth_areas) {
+                    md += `- **${g.name}** (${g.score}/5)`;
+                    if (g.development_tip) {
+                        md += ` - *Tip: ${g.development_tip}*`;
+                    }
+                    md += `\n`;
+                }
+                md += `\n`;
+            }
+        }
+
+        // Training Recommendations
+        if (results.training_recommendations) {
+            const training = results.training_recommendations;
+            md += `## Training Recommendations\n\n`;
+
+            if (training.immediate_actions && training.immediate_actions.length > 0) {
+                md += `### Immediate Actions\n\n`;
+                for (let i = 0; i < training.immediate_actions.length; i++) {
+                    const action = training.immediate_actions[i];
+                    md += `**${i + 1}. ${action.title}** (${action.priority})\n\n`;
+                    md += `${action.description}\n\n`;
+                    if (action.scout_connection) {
+                        md += `- *Scout Connection:* ${action.scout_connection}\n`;
+                    }
+                    if (action.habit_connection) {
+                        md += `- *7 Habits:* ${action.habit_connection}\n`;
+                    }
+                    if (action.success_criteria) {
+                        md += `- *Success Criteria:* ${action.success_criteria}\n`;
+                    }
+                    md += `\n`;
+                }
+            }
+
+            if (training.drills && training.drills.length > 0) {
+                md += `### Training Drills\n\n`;
+                for (const drill of training.drills) {
+                    md += `**${drill.name}** (${drill.duration})\n\n`;
+                    md += `*Purpose:* ${drill.purpose}\n\n`;
+                    if (drill.steps && drill.steps.length > 0) {
+                        md += `*Steps:*\n`;
+                        for (let i = 0; i < drill.steps.length; i++) {
+                            md += `${i + 1}. ${drill.steps[i]}\n`;
+                        }
+                        md += `\n`;
+                    }
+                    if (drill.debrief_questions && drill.debrief_questions.length > 0) {
+                        md += `*Debrief Questions:*\n`;
+                        for (const q of drill.debrief_questions) {
+                            md += `- ${q}\n`;
+                        }
+                        md += `\n`;
+                    }
+                }
+            }
+
+            if (training.discussion_topics && training.discussion_topics.length > 0) {
+                md += `### Discussion Topics\n\n`;
+                for (const topic of training.discussion_topics) {
+                    md += `**${topic.topic}**\n\n`;
+                    md += `*Question:* ${topic.question}\n\n`;
+                    if (topic.scout_connection) {
+                        md += `*Scout Connection:* ${topic.scout_connection}\n\n`;
+                    }
+                }
+            }
+        }
+
         // Transcript
         md += `## Transcript\n\n`;
         if (results.transcription && results.transcription.length > 0) {
@@ -690,9 +1002,11 @@ class App {
         this.renderer = new ResultsRenderer(document.getElementById('results-section'));
         this.currentBlob = null;
         this.currentResults = null;
+        this.savedRecordingPath = null;
 
         this.initElements();
         this.bindEvents();
+        this.loadArchive();
     }
 
     initElements() {
@@ -709,6 +1023,10 @@ class App {
         this.statusBanner = document.getElementById('status-banner');
         this.statusText = document.getElementById('status-text');
         this.downloadBtn = document.getElementById('download-btn');
+        this.downloadAudioBtn = document.getElementById('download-audio-btn');
+        this.saveAudioBtn = document.getElementById('save-audio-btn');
+        this.archiveList = document.getElementById('archive-list');
+        this.refreshArchiveBtn = document.getElementById('refresh-archive-btn');
     }
 
     bindEvents() {
@@ -722,13 +1040,18 @@ class App {
         // Analyze button
         this.analyzeBtn.addEventListener('click', () => this.analyzeAudio());
 
-        // Download button
+        // Download buttons
         this.downloadBtn.addEventListener('click', () => this.downloadReport());
+        this.downloadAudioBtn.addEventListener('click', () => this.downloadAudio());
+        this.saveAudioBtn.addEventListener('click', () => this.downloadAudio());
 
         // Tabs
         document.querySelectorAll('.tab').forEach(tab => {
             tab.addEventListener('click', (e) => this.switchTab(e.target.dataset.tab));
         });
+
+        // Archive
+        this.refreshArchiveBtn.addEventListener('click', () => this.loadArchive());
     }
 
     async toggleRecording() {
@@ -742,6 +1065,8 @@ class App {
             if (blob) {
                 this.currentBlob = blob;
                 this.showAudioPreview(blob);
+                // Show save button for recorded audio
+                this.saveAudioBtn.classList.remove('hidden');
             }
         } else {
             // Start recording
@@ -761,6 +1086,7 @@ class App {
 
                 this.fileName.textContent = '';
                 this.hideStatus();
+                this.saveAudioBtn.classList.add('hidden');
             } catch (error) {
                 this.showStatus('Failed to access microphone: ' + error.message, 'error');
             }
@@ -809,9 +1135,21 @@ class App {
             });
 
             this.currentResults = results;
+            this.savedRecordingPath = results.saved_recording_path || null;
             this.renderer.render(results);
             this.resultsSection.classList.remove('hidden');
+
+            // Show/hide download audio button based on saved recording
+            if (this.savedRecordingPath) {
+                this.downloadAudioBtn.classList.remove('hidden');
+            } else {
+                this.downloadAudioBtn.classList.add('hidden');
+            }
+
             this.showStatus('Analysis complete!', 'success');
+
+            // Refresh archive to show new analysis
+            this.loadArchive();
         } catch (error) {
             console.error('Analysis failed:', error);
             this.showStatus('Analysis failed: ' + error.message, 'error');
@@ -828,11 +1166,31 @@ class App {
         if (progressFill) progressFill.style.width = '0%';
         if (progressPercent) progressPercent.textContent = '0%';
 
+        // Original step labels
+        const originalLabels = {
+            'convert': 'Converting audio',
+            'transcribe': 'Transcribing with Whisper',
+            'diarize': 'Identifying speakers',
+            'roles': 'Inferring roles',
+            'quality': 'Analyzing communication quality',
+            'scorecards': 'Generating scorecards',
+            'confidence': 'Analyzing confidence',
+            'learning': 'Evaluating learning metrics',
+            'habits': 'Analyzing 7 Habits',
+            'training': 'Generating training recommendations'
+        };
+
         // Reset all steps
         document.querySelectorAll('#progress-steps .step').forEach(step => {
             step.classList.remove('active', 'completed');
             const icon = step.querySelector('.step-icon');
+            const stepLabel = step.querySelector('.step-label');
+            const stepId = step.dataset.step;
             if (icon) icon.innerHTML = '&#9675;'; // Empty circle
+            // Restore original label
+            if (stepLabel && originalLabels[stepId]) {
+                stepLabel.textContent = originalLabels[stepId];
+            }
         });
     }
 
@@ -850,12 +1208,15 @@ class App {
         steps.forEach(step => {
             const currentStepId = step.dataset.step;
             const icon = step.querySelector('.step-icon');
+            const stepLabel = step.querySelector('.step-label');
 
             if (currentStepId === stepId) {
                 // This is the current active step
                 step.classList.add('active');
                 step.classList.remove('completed');
                 if (icon) icon.innerHTML = '&#9679;'; // Filled circle
+                // Update label with dynamic text (e.g., "Transcribing... 5.2s / 20.5s")
+                if (stepLabel && label) stepLabel.textContent = label;
                 foundCurrent = true;
             } else if (!foundCurrent) {
                 // Steps before current are completed
@@ -922,6 +1283,150 @@ class App {
         URL.revokeObjectURL(url);
 
         this.showStatus('Report downloaded!', 'success');
+    }
+
+    downloadAudio() {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+
+        // If we have a server-saved path, use the API endpoint
+        if (this.savedRecordingPath) {
+            const filename = this.savedRecordingPath.split('/').pop();
+            const a = document.createElement('a');
+            a.href = `/api/recordings/${filename}`;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            this.showStatus('Audio downloaded!', 'success');
+            return;
+        }
+
+        // Otherwise download the local blob (before analysis)
+        if (this.currentBlob) {
+            const extension = this.getExtensionFromMimeType(this.currentBlob.type);
+            const filename = `recording-${timestamp}${extension}`;
+            const url = URL.createObjectURL(this.currentBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            this.showStatus('Audio downloaded!', 'success');
+            return;
+        }
+
+        this.showStatus('No audio to download', 'error');
+    }
+
+    async loadArchive() {
+        try {
+            const data = await this.api.listAnalyses();
+            this.renderArchive(data.analyses || []);
+        } catch (error) {
+            console.error('Failed to load archive:', error);
+            this.archiveList.innerHTML = '<p class="empty">Failed to load archive</p>';
+        }
+    }
+
+    renderArchive(analyses) {
+        if (!analyses || analyses.length === 0) {
+            this.archiveList.innerHTML = '<p class="empty">No saved analyses yet</p>';
+            return;
+        }
+
+        this.archiveList.innerHTML = analyses.map(analysis => {
+            const date = new Date(analysis.created_at);
+            const dateStr = date.toLocaleDateString();
+            const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const duration = this.formatDuration(analysis.duration_seconds);
+
+            return `
+                <div class="archive-item" data-filename="${analysis.filename}">
+                    <div class="archive-item-info" onclick="app.loadArchivedAnalysis('${analysis.filename}')">
+                        <div class="archive-item-title">${dateStr} ${timeStr}</div>
+                        <div class="archive-item-meta">
+                            <span>${duration}</span>
+                            <span>${analysis.speaker_count} speakers</span>
+                            <span>${analysis.segment_count} segments</span>
+                        </div>
+                    </div>
+                    <div class="archive-item-actions">
+                        ${analysis.recording_file ? `
+                            <button class="btn-icon" onclick="event.stopPropagation(); app.downloadArchivedAudio('${analysis.recording_file}')" title="Download Audio">
+                                &#127911;
+                            </button>
+                        ` : ''}
+                        <button class="btn-icon delete" onclick="event.stopPropagation(); app.deleteAnalysis('${analysis.filename}')" title="Delete">
+                            &#128465;
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async loadArchivedAnalysis(filename) {
+        try {
+            this.showStatus('Loading analysis...', 'info');
+            const data = await this.api.getAnalysis(filename);
+
+            if (data && data.results) {
+                this.currentResults = data.results;
+                this.savedRecordingPath = null;
+
+                // Check for linked recording
+                if (data.metadata && data.metadata.recording_file) {
+                    this.savedRecordingPath = `data/recordings/${data.metadata.recording_file}`;
+                    this.downloadAudioBtn.classList.remove('hidden');
+                } else {
+                    this.downloadAudioBtn.classList.add('hidden');
+                }
+
+                this.renderer.render(data.results);
+                this.resultsSection.classList.remove('hidden');
+                this.hideStatus();
+
+                // Scroll to results
+                this.resultsSection.scrollIntoView({ behavior: 'smooth' });
+            }
+        } catch (error) {
+            console.error('Failed to load analysis:', error);
+            this.showStatus('Failed to load analysis: ' + error.message, 'error');
+        }
+    }
+
+    downloadArchivedAudio(filename) {
+        const a = document.createElement('a');
+        a.href = `/api/recordings/${filename}`;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        this.showStatus('Audio downloaded!', 'success');
+    }
+
+    async deleteAnalysis(filename) {
+        if (!confirm('Delete this analysis? This cannot be undone.')) {
+            return;
+        }
+
+        try {
+            await this.api.deleteAnalysis(filename);
+            this.showStatus('Analysis deleted', 'success');
+            this.loadArchive();
+        } catch (error) {
+            console.error('Failed to delete analysis:', error);
+            this.showStatus('Failed to delete: ' + error.message, 'error');
+        }
+    }
+
+    formatDuration(seconds) {
+        if (!seconds) return '0:00';
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
 
     showStatus(message, type = 'info') {

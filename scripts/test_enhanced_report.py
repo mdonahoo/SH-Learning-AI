@@ -155,14 +155,36 @@ def generate_enhanced_report(transcripts: list, events: list, mission_name: str)
     return report
 
 
-def generate_llm_report(transcripts: list, events: list, mission_name: str, use_llm: bool = True) -> str:
-    """Generate report with LLM narrative enhancement."""
+def generate_llm_report(
+    transcripts: list,
+    events: list,
+    mission_name: str,
+    use_llm: bool = True,
+    audience: str = "professional"
+) -> str:
+    """Generate report with LLM narrative enhancement.
+
+    Args:
+        transcripts: List of transcript dictionaries
+        events: List of game event dictionaries
+        mission_name: Name of the mission
+        use_llm: Whether to use LLM for narrative formatting
+        audience: Target audience ('professional', 'scouts', 'school', 'youth')
+
+    Returns:
+        Generated report as markdown string
+    """
     from src.metrics.enhanced_report_builder import EnhancedReportBuilder
-    from src.llm.hybrid_prompts import build_enhanced_report_prompt
+    from src.llm.hybrid_prompts import (
+        build_enhanced_report_prompt,
+        build_educational_report_prompt,
+        build_scout_troop_report_prompt,
+        build_school_district_report_prompt
+    )
     from src.llm.ollama_client import OllamaClient
 
     print("\n" + "="*60)
-    print("GENERATING LLM-ENHANCED REPORT")
+    print(f"GENERATING LLM-ENHANCED REPORT (Audience: {audience})")
     print("="*60)
 
     # Build analysis data
@@ -178,8 +200,33 @@ def generate_llm_report(transcripts: list, events: list, mission_name: str, use_
         print("LLM disabled - returning pre-computed report")
         return enhanced_data['full_report']
 
-    # Build prompt for LLM
-    prompt = build_enhanced_report_prompt(enhanced_data, mission_name, style="professional")
+    # Select prompt based on audience
+    if audience == "scouts":
+        prompt = build_scout_troop_report_prompt(enhanced_data, mission_name)
+        system_prompt = """You are an encouraging educational report writer for Boy Scout troops.
+You format pre-computed data into youth-friendly reports that connect to the Scout Law.
+Focus on character development, teamwork, and growth opportunities.
+You NEVER calculate, modify, or invent data. You ONLY format provided facts in encouraging language."""
+
+    elif audience == "school":
+        prompt = build_school_district_report_prompt(enhanced_data, mission_name)
+        system_prompt = """You are an educational report writer for school district STEM programs.
+You format pre-computed data into student-friendly reports emphasizing learning and collaboration.
+Focus on educational outcomes, teamwork skills, and personal growth.
+You NEVER calculate, modify, or invent data. You ONLY format provided facts in age-appropriate language."""
+
+    elif audience == "youth":
+        prompt = build_educational_report_prompt(enhanced_data, mission_name, audience="youth")
+        system_prompt = """You are an encouraging educational report writer for youth programs.
+You format pre-computed data into youth-friendly reports focusing on character and teamwork.
+Use positive, encouraging language that motivates young learners.
+You NEVER calculate, modify, or invent data. You ONLY format provided facts."""
+
+    else:  # professional
+        prompt = build_enhanced_report_prompt(enhanced_data, mission_name, style="professional")
+        system_prompt = """You are a training assessment formatter for Starship Horizons bridge simulator.
+You format pre-computed data into readable narratives matching professional military debrief standards.
+You NEVER calculate, modify, or invent data. You ONLY format provided facts."""
 
     print(f"Prompt size: {len(prompt)} characters")
 
@@ -199,10 +246,6 @@ def generate_llm_report(transcripts: list, events: list, mission_name: str, use_
     print("Generating report with LLM...")
 
     # Generate with progress
-    system_prompt = """You are a training assessment formatter for Starship Horizons bridge simulator.
-You format pre-computed data into readable narratives matching professional military debrief standards.
-You NEVER calculate, modify, or invent data. You ONLY format provided facts."""
-
     result = client.generate_with_progress(
         prompt,
         system=system_prompt,
@@ -248,6 +291,12 @@ def main():
         '--mission-name', '-n',
         default='Test Mission',
         help='Mission name for the report'
+    )
+    parser.add_argument(
+        '--audience', '-a',
+        default='professional',
+        choices=['professional', 'scouts', 'school', 'youth'],
+        help='Target audience for the report (default: professional)'
     )
 
     args = parser.parse_args()
@@ -296,7 +345,10 @@ def main():
     if args.no_llm:
         report = generate_enhanced_report(transcripts, events, args.mission_name)
     else:
-        report = generate_llm_report(transcripts, events, args.mission_name, use_llm=True)
+        report = generate_llm_report(
+            transcripts, events, args.mission_name,
+            use_llm=True, audience=args.audience
+        )
 
     # Output report
     if args.output:

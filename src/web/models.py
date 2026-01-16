@@ -151,6 +151,112 @@ class LearningEvaluation(BaseModel):
     overall_learning_score: float = Field(description="Combined learning score (0-100)")
 
 
+# ============================================================================
+# Educational Framework Models (7 Habits, Training Recommendations)
+# ============================================================================
+
+
+class HabitScore(BaseModel):
+    """Score for a single habit from the 7 Habits framework."""
+
+    habit_number: int = Field(description="Habit number (1-7)")
+    habit_name: str = Field(description="Official habit name")
+    youth_friendly_name: str = Field(description="Youth-friendly habit name")
+    score: int = Field(description="Score from 1-5", ge=1, le=5)
+    observation_count: int = Field(description="Number of observations")
+    interpretation: str = Field(description="Assessment interpretation")
+    development_tip: str = Field(description="Tip for developing this habit")
+    examples: List[str] = Field(default_factory=list, description="Example quotes")
+
+
+class SevenHabitsAssessment(BaseModel):
+    """Complete 7 Habits of Highly Effective People assessment."""
+
+    overall_score: float = Field(description="Overall effectiveness score (1-5)")
+    habits: List[HabitScore] = Field(description="Individual habit scores")
+    strengths: List[Dict[str, Any]] = Field(
+        default_factory=list, description="Top strength habits"
+    )
+    growth_areas: List[Dict[str, Any]] = Field(
+        default_factory=list, description="Habits needing development"
+    )
+
+
+class TrainingRecommendationItem(BaseModel):
+    """Single training recommendation."""
+
+    title: str = Field(description="Recommendation title")
+    description: str = Field(description="Detailed description")
+    priority: str = Field(description="Priority level (CRITICAL/HIGH/MEDIUM/LOW)")
+    category: str = Field(description="Skill category")
+    frameworks: List[str] = Field(default_factory=list, description="Related frameworks")
+    scout_connection: Optional[str] = Field(
+        default=None, description="Connection to Scout Law"
+    )
+    habit_connection: Optional[str] = Field(
+        default=None, description="Connection to 7 Habits"
+    )
+    success_criteria: str = Field(description="How to measure success")
+
+
+class DrillActivity(BaseModel):
+    """Training drill activity."""
+
+    name: str = Field(description="Drill name")
+    purpose: str = Field(description="Purpose of the drill")
+    duration: str = Field(description="Estimated duration")
+    participants: str = Field(description="Who should participate")
+    steps: List[str] = Field(default_factory=list, description="Activity steps")
+    debrief_questions: List[str] = Field(
+        default_factory=list, description="Discussion questions"
+    )
+    frameworks_addressed: List[str] = Field(
+        default_factory=list, description="Frameworks this drill addresses"
+    )
+
+
+class DiscussionTopic(BaseModel):
+    """Team discussion topic."""
+
+    topic: str = Field(description="Discussion topic title")
+    question: str = Field(description="Main discussion question")
+    scout_connection: Optional[str] = Field(
+        default=None, description="Connection to Scout Law"
+    )
+    discussion_points: List[str] = Field(
+        default_factory=list, description="Key points to cover"
+    )
+
+
+class TrainingRecommendations(BaseModel):
+    """Complete training recommendations for educational contexts."""
+
+    immediate_actions: List[TrainingRecommendationItem] = Field(
+        default_factory=list, description="Immediate action items"
+    )
+    communication_improvements: List[TrainingRecommendationItem] = Field(
+        default_factory=list, description="Communication skill recommendations"
+    )
+    leadership_development: List[TrainingRecommendationItem] = Field(
+        default_factory=list, description="Leadership development recommendations"
+    )
+    teamwork_enhancements: List[TrainingRecommendationItem] = Field(
+        default_factory=list, description="Teamwork improvement recommendations"
+    )
+    drills: List[DrillActivity] = Field(
+        default_factory=list, description="Recommended training drills"
+    )
+    discussion_topics: List[DiscussionTopic] = Field(
+        default_factory=list, description="Team discussion topics"
+    )
+    framework_alignment: Dict[str, List[str]] = Field(
+        default_factory=dict, description="How frameworks align with each other"
+    )
+    total_recommendations: int = Field(
+        default=0, description="Total number of recommendations"
+    )
+
+
 class AnalysisResult(BaseModel):
     """Complete audio analysis result."""
 
@@ -175,6 +281,13 @@ class AnalysisResult(BaseModel):
     )
     learning_evaluation: Optional[LearningEvaluation] = Field(
         default=None, description="Learning framework evaluation"
+    )
+    # Educational framework analysis
+    seven_habits: Optional[SevenHabitsAssessment] = Field(
+        default=None, description="7 Habits of Highly Effective People assessment"
+    )
+    training_recommendations: Optional[TrainingRecommendations] = Field(
+        default=None, description="Training recommendations for educational contexts"
     )
     processing_time_seconds: float = Field(
         description="Total processing time in seconds"
