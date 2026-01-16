@@ -78,6 +78,7 @@ class SpeakerScore:
     score: int  # 1-5
     evidence: str
     raw_value: float  # The underlying measurement
+    supporting_quotes: List[str] = field(default_factory=list)  # Actual quotes
 
 
 @dataclass
@@ -190,12 +191,21 @@ class SpeakerScorecardGenerator:
 
         matches = 0
         total = len(utterances)
+        matching_quotes = []
 
         for u in utterances:
             text = u.get('text', '')
             for pattern in protocol_patterns:
                 if re.search(pattern, text):
                     matches += 1
+                    # Collect quote with timestamp if available
+                    ts = u.get('timestamp', u.get('start_time', ''))
+                    if isinstance(ts, (int, float)):
+                        ts = f"{int(ts // 60)}:{int(ts % 60):02d}"
+                    quote = f'"{text[:100]}..."' if len(text) > 100 else f'"{text}"'
+                    if ts:
+                        quote = f"[{ts}] {quote}"
+                    matching_quotes.append(quote)
                     break
 
         if total == 0:
@@ -224,7 +234,8 @@ class SpeakerScorecardGenerator:
             metric_name="protocol_adherence",
             score=score,
             evidence=f"{evidence} ({matches}/{total} utterances, {rate*100:.1f}%)",
-            raw_value=rate
+            raw_value=rate,
+            supporting_quotes=matching_quotes[:5]  # Limit to 5 examples
         )
 
     def _score_communication_clarity(self, utterances: List[Dict]) -> SpeakerScore:
@@ -234,7 +245,8 @@ class SpeakerScorecardGenerator:
                 metric_name="communication_clarity",
                 score=1,
                 evidence="No communications to assess",
-                raw_value=0
+                raw_value=0,
+                supporting_quotes=[]
             )
 
         # Factors: confidence, sentence completeness, filler words
@@ -258,17 +270,39 @@ class SpeakerScorecardGenerator:
 
         incomplete_count = 0
         filler_count = 0
+        clear_quotes = []  # High confidence, complete utterances
+        unclear_quotes = []  # Low confidence or fillers
 
         for u in utterances:
             text = u.get('text', '')
+            conf = u.get('confidence', 0)
+            ts = u.get('timestamp', u.get('start_time', ''))
+            if isinstance(ts, (int, float)):
+                ts = f"{int(ts // 60)}:{int(ts % 60):02d}"
+
+            is_incomplete = False
+            has_filler = False
+
             for pattern in incomplete_patterns:
                 if re.search(pattern, text):
                     incomplete_count += 1
+                    is_incomplete = True
                     break
             for pattern in filler_patterns:
                 if re.search(pattern, text):
                     filler_count += 1
+                    has_filler = True
                     break
+
+            # Collect examples
+            quote = f'"{text[:80]}..."' if len(text) > 80 else f'"{text}"'
+            if ts:
+                quote = f"[{ts}] {quote}"
+
+            if conf >= 0.7 and not is_incomplete and not has_filler:
+                clear_quotes.append(quote)
+            elif is_incomplete or has_filler or conf < 0.5:
+                unclear_quotes.append(quote)
 
         total = len(utterances)
         incomplete_rate = incomplete_count / total if total > 0 else 0
@@ -280,30 +314,37 @@ class SpeakerScorecardGenerator:
         if clarity >= 0.80:
             score = 5
             evidence = f"Consistently clear (confidence: {avg_confidence:.2f})"
+            quotes = clear_quotes[:3]
         elif clarity >= 0.70:
             score = 4
             evidence = f"Generally clear (confidence: {avg_confidence:.2f})"
+            quotes = clear_quotes[:3]
         elif clarity >= 0.60:
             score = 3
             evidence = f"Some clarity issues (confidence: {avg_confidence:.2f}, {incomplete_count} incomplete)"
+            quotes = unclear_quotes[:3] if unclear_quotes else clear_quotes[:3]
         elif clarity >= 0.50:
             score = 2
             evidence = f"Clarity needs work (confidence: {avg_confidence:.2f}, {filler_count} fillers)"
+            quotes = unclear_quotes[:3]
         else:
             score = 1
             evidence = f"Frequent unclear communications (confidence: {avg_confidence:.2f})"
+            quotes = unclear_quotes[:3]
 
         return SpeakerScore(
             metric_name="communication_clarity",
             score=score,
             evidence=evidence,
-            raw_value=clarity
+            raw_value=clarity,
+            supporting_quotes=quotes
         )
 
     def _score_response_time(self, speaker: str, utterances: List[Dict]) -> SpeakerScore:
         """Score response time based on command-response patterns."""
         # Find responses from this speaker to other speakers' commands
         response_times = []
+        response_examples = []
 
         command_patterns = [
             r"(?i)(helm|tactical|science|engineering|operations),?\s",
@@ -337,6 +378,12 @@ class SpeakerScorecardGenerator:
                             delta = (t2 - t1).total_seconds()
                             if 0 < delta < 30:
                                 response_times.append(delta)
+                                # Record the command-response pair
+                                cmd_text = text[:50] + "..." if len(text) > 50 else text
+                                resp_text = next_t.get('text', '')[:50]
+                                response_examples.append(
+                                    f'Command: "{cmd_text}" → Response ({delta:.1f}s): "{resp_text}"'
+                                )
                     except (ValueError, TypeError):
                         pass
                     break
@@ -344,6 +391,18 @@ class SpeakerScorecardGenerator:
         if not response_times:
             # If no clear command-response patterns, use utterance frequency
             utterance_rate = len(utterances) / self.total_utterances if self.total_utterances > 0 else 0
+            # Get some example utterances
+            example_quotes = []
+            for u in utterances[:3]:
+                text = u.get('text', '')
+                ts = u.get('timestamp', u.get('start_time', ''))
+                if isinstance(ts, (int, float)):
+                    ts = f"{int(ts // 60)}:{int(ts % 60):02d}"
+                quote = f'"{text[:60]}..."' if len(text) > 60 else f'"{text}"'
+                if ts:
+                    quote = f"[{ts}] {quote}"
+                example_quotes.append(quote)
+
             if utterance_rate >= 0.20:
                 score = 4
                 evidence = f"High engagement ({len(utterances)} utterances, no command-response pairs detected)"
@@ -358,7 +417,8 @@ class SpeakerScorecardGenerator:
                 metric_name="response_time",
                 score=score,
                 evidence=evidence,
-                raw_value=utterance_rate
+                raw_value=utterance_rate,
+                supporting_quotes=example_quotes
             )
 
         avg_response = sum(response_times) / len(response_times)
@@ -383,7 +443,8 @@ class SpeakerScorecardGenerator:
             metric_name="response_time",
             score=score,
             evidence=evidence,
-            raw_value=avg_response
+            raw_value=avg_response,
+            supporting_quotes=response_examples[:3]
         )
 
     def _score_technical_accuracy(self, utterances: List[Dict]) -> SpeakerScore:
@@ -399,12 +460,21 @@ class SpeakerScorecardGenerator:
 
         matches = 0
         total = len(utterances)
+        technical_quotes = []
 
         for u in utterances:
             text = u.get('text', '')
             for pattern in technical_patterns:
                 if re.search(pattern, text):
                     matches += 1
+                    # Collect quote with timestamp
+                    ts = u.get('timestamp', u.get('start_time', ''))
+                    if isinstance(ts, (int, float)):
+                        ts = f"{int(ts // 60)}:{int(ts % 60):02d}"
+                    quote = f'"{text[:80]}..."' if len(text) > 80 else f'"{text}"'
+                    if ts:
+                        quote = f"[{ts}] {quote}"
+                    technical_quotes.append(quote)
                     break
 
         if total == 0:
@@ -432,7 +502,8 @@ class SpeakerScorecardGenerator:
             metric_name="technical_accuracy",
             score=score,
             evidence=evidence,
-            raw_value=rate
+            raw_value=rate,
+            supporting_quotes=technical_quotes[:5]
         )
 
     def _score_team_coordination(self, utterances: List[Dict]) -> SpeakerScore:
@@ -447,12 +518,21 @@ class SpeakerScorecardGenerator:
 
         matches = 0
         total = len(utterances)
+        coordination_quotes = []
 
         for u in utterances:
             text = u.get('text', '')
             for pattern in coordination_patterns:
                 if re.search(pattern, text):
                     matches += 1
+                    # Collect quote with timestamp
+                    ts = u.get('timestamp', u.get('start_time', ''))
+                    if isinstance(ts, (int, float)):
+                        ts = f"{int(ts // 60)}:{int(ts % 60):02d}"
+                    quote = f'"{text[:80]}..."' if len(text) > 80 else f'"{text}"'
+                    if ts:
+                        quote = f"[{ts}] {quote}"
+                    coordination_quotes.append(quote)
                     break
 
         if total == 0:
@@ -480,7 +560,8 @@ class SpeakerScorecardGenerator:
             metric_name="team_coordination",
             score=score,
             evidence=evidence,
-            raw_value=rate
+            raw_value=rate,
+            supporting_quotes=coordination_quotes[:5]
         )
 
     def _parse_timestamp(self, ts: Any) -> Optional[datetime]:

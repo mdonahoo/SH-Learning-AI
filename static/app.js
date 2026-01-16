@@ -440,14 +440,27 @@ class ResultsRenderer {
                 <div class="score-grid">
                     ${card.metrics.map(m => `
                         <div class="score-item">
-                            <span class="score-name">${m.name}</span>
-                            <div class="score-value">
-                                <div class="score-dots">
-                                    ${[1,2,3,4,5].map(i => `
-                                        <span class="score-dot ${i <= m.score ? 'filled score-' + m.score : ''}"></span>
-                                    `).join('')}
+                            <div class="score-item-header">
+                                <span class="score-name">${m.name}</span>
+                                <div class="score-value">
+                                    <div class="score-dots">
+                                        ${[1,2,3,4,5].map(i => `
+                                            <span class="score-dot ${i <= m.score ? 'filled score-' + m.score : ''}"></span>
+                                        `).join('')}
+                                    </div>
                                 </div>
                             </div>
+                            <div class="score-evidence">${this.escapeHtml(m.evidence)}</div>
+                            ${m.supporting_quotes && m.supporting_quotes.length > 0 ? `
+                                <div class="score-quotes">
+                                    <details>
+                                        <summary>Evidence Quotes (${m.supporting_quotes.length})</summary>
+                                        <ul class="quote-list">
+                                            ${m.supporting_quotes.map(q => `<li class="quote">${this.escapeHtml(q)}</li>`).join('')}
+                                        </ul>
+                                    </details>
+                                </div>
+                            ` : ''}
                         </div>
                     `).join('')}
                 </div>
@@ -457,29 +470,15 @@ class ResultsRenderer {
                         ${card.strengths?.length > 0 ? `
                             <div class="strengths">
                                 <h4>Strengths</h4>
-                                <ul>${card.strengths.map(s => `<li>${s}</li>`).join('')}</ul>
+                                <ul>${card.strengths.map(s => `<li>${this.escapeHtml(s)}</li>`).join('')}</ul>
                             </div>
                         ` : ''}
                         ${card.areas_for_improvement?.length > 0 ? `
                             <div class="weaknesses">
                                 <h4>Areas for Improvement</h4>
-                                <ul>${card.areas_for_improvement.map(a => `<li>${a}</li>`).join('')}</ul>
+                                <ul>${card.areas_for_improvement.map(a => `<li>${this.escapeHtml(a)}</li>`).join('')}</ul>
                             </div>
                         ` : ''}
-                    </div>
-                ` : ''}
-
-                ${card.example_quotes?.length > 0 ? `
-                    <div class="example-quotes">
-                        <h4>Example Quotes</h4>
-                        <ul class="quote-list">
-                            ${card.example_quotes.map(q => `
-                                <li class="quote-item">
-                                    <span class="quote-time">[${q.timestamp || ''}]</span>
-                                    <span class="quote-text">"${this.escapeHtml(q.text)}"</span>
-                                </li>
-                            `).join('')}
-                        </ul>
                     </div>
                 ` : ''}
             </div>
@@ -847,12 +846,23 @@ class ResultsRenderer {
                 md += `**Overall Score:** ${card.overall_score.toFixed(1)}/5\n\n`;
 
                 if (card.metrics && card.metrics.length > 0) {
-                    md += `| Metric | Score |\n`;
-                    md += `|--------|-------|\n`;
+                    md += `| Metric | Score | Evidence |\n`;
+                    md += `|--------|-------|----------|\n`;
                     for (const m of card.metrics) {
-                        md += `| ${m.name} | ${'★'.repeat(m.score)}${'☆'.repeat(5 - m.score)} (${m.score}/5) |\n`;
+                        md += `| ${m.name} | ${'★'.repeat(m.score)}${'☆'.repeat(5 - m.score)} (${m.score}/5) | ${m.evidence || '-'} |\n`;
                     }
                     md += `\n`;
+
+                    // Add supporting quotes for each metric
+                    for (const m of card.metrics) {
+                        if (m.supporting_quotes && m.supporting_quotes.length > 0) {
+                            md += `**${m.name} - Evidence Quotes:**\n`;
+                            for (const q of m.supporting_quotes) {
+                                md += `> ${q}\n`;
+                            }
+                            md += `\n`;
+                        }
+                    }
                 }
 
                 if (card.strengths && card.strengths.length > 0) {
@@ -870,13 +880,6 @@ class ResultsRenderer {
                     }
                     md += `\n`;
                 }
-
-                if (card.example_quotes && card.example_quotes.length > 0) {
-                    md += `**Example Quotes:**\n`;
-                    for (const q of card.example_quotes) {
-                        md += `> "${q.text}" — *[${q.timestamp || ''}]*\n\n`;
-                    }
-                }
             }
         }
 
@@ -891,23 +894,9 @@ class ResultsRenderer {
             if (q.patterns && q.patterns.length > 0) {
                 md += `### Detected Patterns\n\n`;
                 for (const p of q.patterns) {
-                    const categoryEmoji = p.category === 'effective' ? '✓' : '⚠';
-                    md += `#### ${categoryEmoji} ${this.formatPatternName(p.pattern_name)} (${p.count} instances)\n\n`;
-                    if (p.description) {
-                        md += `${p.description}\n\n`;
-                    }
-                    if (p.examples && p.examples.length > 0) {
-                        md += `**Examples:**\n`;
-                        for (const ex of p.examples) {
-                            const speaker = ex.speaker || 'Speaker';
-                            md += `> "${ex.text || ex}" — *${speaker}*\n`;
-                            if (ex.assessment) {
-                                md += `> *Assessment: ${ex.assessment}*\n`;
-                            }
-                            md += `\n`;
-                        }
-                    }
+                    md += `| ${this.formatPatternName(p.pattern_name)} | ${p.category} | ${p.count} |\n`;
                 }
+                md += `\n`;
             }
         }
 

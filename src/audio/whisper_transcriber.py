@@ -50,8 +50,12 @@ STARSHIP_HORIZONS_PROMPT = (
     "Enemy ships: Lutren, Lutrench, Belgore, MSF, Wickert, Phobos, core trailer, chord trailer. "
     "Ship designations: 215, 302, 307, 310, 22, 32, R2. "
 
-    # Warp and navigation - critical distinctions
-    "Warp terms: warp jammer, warp jamming, warp jammed, warp champed, my warp is jammed. "
+    # CRITICAL: "warp" not "work" - this is a sci-fi bridge simulator
+    "IMPORTANT: In this context, 'warp' is a navigation term, NOT 'work'. "
+    "Warp terms: warp, warp drive, warp to, go to warp, warp factor, warping, "
+    "warp jammer, warp jamming, warp jammed, my warp is jammed, warp has jammed, "
+    "warp speed, maximum warp, engage warp, drop out of warp, out of warp, "
+    "warp one, warp two, warp three, warp point, warp point three, waypoint. "
     "War: war declared, war has been declared, war depicted. "
 
     # Bridge stations (both games)
@@ -103,8 +107,10 @@ STARSHIP_HORIZONS_PROMPT = (
     "Tubes: left tube, right tube, load tubes, put in tubes, unload, "
     "install the right tube, launch the missile, launch left tube, launch right tube. "
     "Missiles: homing missiles, homings, nukes, EMPs, EMP, mines, torpedoes. "
-    "Beam frequency: terahertz, 800 terahertz, set to 800 terahertz, set your laser to 800 terahertz, "
-    "500 terahertz, 460 terahertz, 100 terahertz, 200 terahertz, frequency in terahertz. "
+    "Beam frequency: terahertz (NOT hertz or earths), "
+    "800 terahertz, set to 800 terahertz, set your laser to 800 terahertz, set lasers to 800 terahertz, "
+    "500 terahertz, 460 terahertz, 100 terahertz, 200 terahertz, 300 terahertz, "
+    "frequency in terahertz, beam frequency terahertz, shield frequency terahertz. "
     "Calibrate: calibrate, recalibrate, calibrate the shields, calibrate to their shields. "
     "Beam ship: beam ship, we are a beam ship, we are primarily a beam ship, "
     "primarily a beam ship, we are a beam vessel, our beams. "
@@ -392,6 +398,23 @@ def is_hallucination(text: str) -> bool:
         max_count = max(word_counts.values())
         if max_count >= len(words) * 0.8:  # 80% same word
             return True
+
+    # Check for repeated phrases (e.g., "We're going to buzz in close." repeated)
+    # This catches Whisper's looping hallucination pattern
+    if len(text_clean) > 50:
+        # Look for repeated 3-6 word phrases
+        for phrase_len in range(3, 7):
+            if len(words) >= phrase_len * 3:  # Need at least 3 repetitions
+                for start in range(len(words) - phrase_len * 2):
+                    phrase = ' '.join(words[start:start + phrase_len])
+                    if len(phrase) < 10:  # Skip very short phrases
+                        continue
+                    # Count how many times this phrase appears
+                    count = text_lower.count(phrase)
+                    if count >= 3:
+                        # Phrase repeated 3+ times is likely hallucination
+                        logger.debug(f"Detected repeated phrase hallucination: '{phrase}' x{count}")
+                        return True
 
     return False
 
@@ -722,18 +745,22 @@ class WhisperTranscriber:
 
             # Transcribe with Whisper
             # Settings optimized for maximum accuracy with large-v3 model
+            # Anti-hallucination settings prevent looping on long/unclear audio
             segments, info = self._model.transcribe(
                 audio_data,
                 language=None if self.language == 'auto' else self.language,
                 initial_prompt=self.initial_prompt,  # Domain vocabulary
                 vad_filter=False,  # Disable - we already do VAD upstream
                 word_timestamps=True,
-                condition_on_previous_text=False,  # Prevent hallucination propagation
+                condition_on_previous_text=False,  # Critical: prevents loop propagation
                 no_speech_threshold=0.6,  # Higher = more lenient speech detection
                 log_prob_threshold=-1.0,  # Filter low-confidence output
+                compression_ratio_threshold=2.4,  # Reject highly repetitive segments
                 beam_size=5,  # Larger beam = better accuracy (default is 5)
                 best_of=5,  # Consider more candidates for better accuracy
                 temperature=0.0,  # Deterministic output for consistency
+                repetition_penalty=1.5,  # Stronger penalty for repeated phrases
+                no_repeat_ngram_size=3,  # Prevent 3+ word phrases from repeating
             )
 
             # Extract text and words
@@ -842,10 +869,28 @@ class WhisperTranscriber:
                 language=None if self.language == 'auto' else self.language,
                 initial_prompt=self.initial_prompt,  # Domain vocabulary
                 vad_filter=True,
-                word_timestamps=True
+                word_timestamps=True,
+                # Anti-hallucination settings for long recordings
+                condition_on_previous_text=False,  # Critical: prevents loop propagation
+                repetition_penalty=1.5,  # Penalize repeated tokens
+                no_repeat_ngram_size=3,  # Prevent 3+ word phrases from repeating
+                compression_ratio_threshold=2.4,  # Reject highly repetitive segments
+                log_prob_threshold=-1.0,  # Filter low-confidence output
+                no_speech_threshold=0.6,
+                temperature=0.0,  # Deterministic output
             )
 
-            full_text = ' '.join([segment.text for segment in segments])
+            # Filter out repetitive/hallucinated segments
+            filtered_segments = []
+            for segment in segments:
+                text = segment.text.strip()
+                # Skip if segment looks like hallucination
+                if not is_hallucination(text):
+                    filtered_segments.append(text)
+                else:
+                    logger.debug(f"Filtered hallucinated segment: {text[:50]}...")
+
+            full_text = ' '.join(filtered_segments)
 
             return {
                 'text': full_text,

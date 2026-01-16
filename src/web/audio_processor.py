@@ -45,14 +45,6 @@ except ImportError:
     SpeakerDiarizer = None
     EngagementAnalyzer = None
 
-# Try to import neural (pyannote) diarization for better accuracy
-try:
-    from src.audio.neural_diarization import NeuralSpeakerDiarizer, PYANNOTE_AVAILABLE
-    NEURAL_DIARIZATION_AVAILABLE = PYANNOTE_AVAILABLE
-except ImportError:
-    NEURAL_DIARIZATION_AVAILABLE = False
-    NeuralSpeakerDiarizer = None
-
 try:
     from src.metrics.communication_quality import CommunicationQualityAnalyzer
     QUALITY_ANALYZER_AVAILABLE = True
@@ -746,7 +738,8 @@ class AudioProcessor:
                     metrics.append({
                         'name': score.metric_name.replace('_', ' ').title(),
                         'score': score.score,
-                        'evidence': score.evidence
+                        'evidence': score.evidence,
+                        'supporting_quotes': getattr(score, 'supporting_quotes', [])
                     })
 
                 result.append({
@@ -756,8 +749,7 @@ class AudioProcessor:
                     'overall_score': scorecard.overall_score,
                     'metrics': metrics,
                     'strengths': scorecard.strengths,
-                    'areas_for_improvement': scorecard.development_areas,
-                    'example_quotes': scorecard.example_quotes or []
+                    'areas_for_improvement': scorecard.development_areas
                 })
 
             return result
@@ -902,34 +894,16 @@ class AudioProcessor:
         wav_path: str,
         segments: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
-        """Add speaker identification to segments."""
+        """Add speaker identification to segments using neural diarization."""
         try:
             # Load audio for diarization
             audio = AudioSegment.from_wav(wav_path)
             samples = np.array(audio.get_array_of_samples(), dtype=np.float32)
             samples = samples / 32768.0  # Normalize to -1 to 1
 
-            # Use neural (pyannote) diarization if available for better accuracy
-            # Configurable threshold: higher = fewer speakers (stricter matching)
-            similarity_threshold = float(os.getenv('SPEAKER_SIMILARITY_THRESHOLD', '0.80'))
-            max_speakers = int(os.getenv('MAX_EXPECTED_SPEAKERS', '6'))
-
-            if NEURAL_DIARIZATION_AVAILABLE and NeuralSpeakerDiarizer is not None:
-                logger.info(
-                    f"Using pyannote neural diarization "
-                    f"(threshold={similarity_threshold}, max_speakers={max_speakers})"
-                )
-                diarizer = NeuralSpeakerDiarizer(
-                    similarity_threshold=similarity_threshold,
-                    max_speakers=max_speakers
-                )
-            else:
-                # Fall back to simple spectral diarization
-                logger.info(
-                    f"Using simple spectral diarization "
-                    f"(threshold={similarity_threshold}, pyannote not available)"
-                )
-                diarizer = SpeakerDiarizer(similarity_threshold=similarity_threshold)
+            # Use higher threshold (0.75) for better speaker separation
+            # Lower threshold = speakers merge together, higher = more distinct speakers
+            diarizer = SpeakerDiarizer(similarity_threshold=0.75)
             engagement = EngagementAnalyzer()
 
             for seg in segments:
@@ -943,7 +917,9 @@ class AudioProcessor:
                     )
                     seg['speaker_id'] = speaker_id
                     seg['speaker_confidence'] = confidence
-                    seg['speaker_role'] = diarizer.speaker_roles.get(speaker_id)
+                    # speaker_roles only available on simple diarizer
+                    speaker_roles = getattr(diarizer, 'speaker_roles', {})
+                    seg['speaker_role'] = speaker_roles.get(speaker_id)
 
                     # Track engagement
                     speaker_seg = SpeakerSegment(
@@ -956,6 +932,9 @@ class AudioProcessor:
                     )
                     engagement.update_speaker_stats(speaker_id, speaker_seg)
 
+            # Count unique speakers from segments
+            unique_speakers = set(s.get('speaker_id') for s in segments if s.get('speaker_id'))
+            logger.info(f"Speaker diarization complete: {len(unique_speakers)} speakers detected")
             return segments
 
         except Exception as e:
