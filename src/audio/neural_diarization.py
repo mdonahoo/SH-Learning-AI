@@ -40,6 +40,12 @@ try:
 except ImportError:
     PYANNOTE_AVAILABLE = False
 
+try:
+    from pydub import AudioSegment as _PydubCheck
+    PYDUB_AVAILABLE = True
+except ImportError:
+    PYDUB_AVAILABLE = False
+
 load_dotenv()
 
 logger = logging.getLogger(__name__)
@@ -598,6 +604,132 @@ class NeuralSpeakerDiarizer:
         except Exception as e:
             logger.error(f"Diarization failed: {e}")
             return {}
+
+    def diarize_and_align(
+        self,
+        audio_path: str,
+        transcription_segments: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        Run full pipeline diarization and align with transcription segments.
+
+        This is the most accurate approach:
+        1. Runs pyannote's neural diarization on the entire audio file
+        2. Aligns diarization results with transcription segments by time overlap
+        3. Each transcription segment gets the speaker who spoke most during that time
+
+        Args:
+            audio_path: Path to WAV audio file
+            transcription_segments: List of segments with 'start', 'end', 'text' keys
+
+        Returns:
+            Transcription segments with 'speaker_id' and 'speaker_confidence' added
+        """
+        if not transcription_segments:
+            return transcription_segments
+
+        self._load_pipeline()
+
+        try:
+            logger.info(f"Running full pipeline diarization on {audio_path}")
+
+            # Run pyannote pipeline on entire file
+            diarization = self.pipeline(
+                audio_path,
+                min_speakers=self.min_speakers,
+                max_speakers=self.max_speakers
+            )
+
+            # Build list of speaker turns: (start, end, speaker_label)
+            speaker_turns = []
+            for turn, _, speaker in diarization.itertracks(yield_label=True):
+                speaker_turns.append((turn.start, turn.end, speaker))
+
+            logger.info(f"Pipeline detected {len(set(t[2] for t in speaker_turns))} speakers, "
+                       f"{len(speaker_turns)} speaker turns")
+
+            # Align each transcription segment with speaker turns
+            for seg in transcription_segments:
+                seg_start = seg['start']
+                seg_end = seg['end']
+                seg_duration = seg_end - seg_start
+
+                # Find overlapping speaker turns and calculate overlap duration
+                speaker_overlaps = defaultdict(float)
+
+                for turn_start, turn_end, speaker in speaker_turns:
+                    # Calculate overlap
+                    overlap_start = max(seg_start, turn_start)
+                    overlap_end = min(seg_end, turn_end)
+                    overlap_duration = max(0, overlap_end - overlap_start)
+
+                    if overlap_duration > 0:
+                        speaker_overlaps[speaker] += overlap_duration
+
+                if speaker_overlaps:
+                    # Assign to speaker with most overlap
+                    best_speaker = max(speaker_overlaps.items(), key=lambda x: x[1])
+                    speaker_label = best_speaker[0]
+                    overlap_ratio = best_speaker[1] / seg_duration if seg_duration > 0 else 0
+
+                    # Convert pyannote speaker label (e.g., "SPEAKER_00") to our format
+                    # Extract number and make it 1-indexed
+                    try:
+                        speaker_num = int(speaker_label.split('_')[-1]) + 1
+                        speaker_id = f"speaker_{speaker_num}"
+                    except (ValueError, IndexError):
+                        speaker_id = speaker_label
+
+                    seg['speaker_id'] = speaker_id
+                    seg['speaker_confidence'] = min(1.0, overlap_ratio + 0.3)  # Base confidence + overlap bonus
+
+                    logger.debug(
+                        f"Segment {seg_start:.1f}-{seg_end:.1f}s -> {speaker_id} "
+                        f"(overlap: {overlap_ratio:.2f})"
+                    )
+                else:
+                    # No overlap found - assign to unknown
+                    seg['speaker_id'] = 'unknown'
+                    seg['speaker_confidence'] = 0.0
+                    logger.debug(f"Segment {seg_start:.1f}-{seg_end:.1f}s -> no speaker overlap found")
+
+            # Log speaker distribution
+            speaker_counts = defaultdict(int)
+            for seg in transcription_segments:
+                speaker_counts[seg.get('speaker_id', 'unknown')] += 1
+            logger.info(f"Final speaker distribution: {dict(speaker_counts)}")
+
+            return transcription_segments
+
+        except Exception as e:
+            logger.error(f"Full pipeline diarization failed: {e}", exc_info=True)
+            # Fall back to segment-by-segment processing
+            logger.info("Falling back to segment-by-segment diarization")
+            return self._fallback_segment_diarization(audio_path, transcription_segments)
+
+    def _fallback_segment_diarization(
+        self,
+        audio_path: str,
+        segments: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Fallback to embedding-based segment diarization if pipeline fails."""
+        try:
+            if not PYDUB_AVAILABLE:
+                logger.warning("pydub not available for fallback diarization")
+                return segments
+
+            from pydub import AudioSegment as PydubAudioSegment
+            audio = PydubAudioSegment.from_file(audio_path)
+            samples = np.array(audio.get_array_of_samples(), dtype=np.float32)
+            samples = samples / 32768.0
+
+            sample_rate = audio.frame_rate
+
+            return self.process_segments_batch(segments, samples, sample_rate)
+
+        except Exception as e:
+            logger.error(f"Fallback diarization also failed: {e}")
+            return segments
 
     def process_audio_segment(
         self,

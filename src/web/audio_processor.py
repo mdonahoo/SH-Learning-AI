@@ -1227,49 +1227,30 @@ class AudioProcessor:
         """
         Add speaker identification to segments using neural diarization.
 
-        Uses batch processing with clustering for improved accuracy and
-        consistency across the entire recording.
+        Uses pyannote's full pipeline diarization on the entire audio file
+        for maximum accuracy, then aligns with transcription segments.
         """
         try:
-            # Load audio for diarization
-            audio = AudioSegment.from_wav(wav_path)
-            samples = np.array(audio.get_array_of_samples(), dtype=np.float32)
-            samples = samples / 32768.0  # Normalize to -1 to 1
-
-            # Use neural diarization if available (much better accuracy)
+            # Use neural diarization with full pipeline if available (most accurate)
             if NEURAL_DIARIZATION_AVAILABLE and self.use_neural_diarization:
-                logger.info("Using enhanced neural speaker diarization (pyannote.audio)")
+                logger.info("Using pyannote full pipeline diarization (most accurate)")
                 diarizer = NeuralSpeakerDiarizer(
                     similarity_threshold=self.speaker_embedding_threshold,
                     min_speakers=self.min_expected_speakers,
                     max_speakers=self.max_expected_speakers
                 )
 
-                # Use batch processing for better consistency across segments
-                if len(segments) > 5:
-                    logger.info(f"Using batch processing for {len(segments)} segments")
-                    segments = diarizer.process_segments_batch(
-                        segments,
-                        samples,
-                        sample_rate=self.sample_rate
-                    )
-                else:
-                    # For small number of segments, use sequential processing
-                    for seg in segments:
-                        start_sample = int(seg['start'] * self.sample_rate)
-                        end_sample = int(seg['end'] * self.sample_rate)
-                        segment_audio = samples[start_sample:end_sample]
+                # Use full pipeline diarization and alignment
+                # This runs pyannote on the entire file, then aligns with transcription
+                segments = diarizer.diarize_and_align(wav_path, segments)
 
-                        if len(segment_audio) > 0:
-                            speaker_id, confidence = diarizer.identify_speaker(
-                                segment_audio,
-                                start_time=seg['start'],
-                                end_time=seg['end']
-                            )
-                            seg['speaker_id'] = speaker_id
-                            seg['speaker_confidence'] = confidence
             else:
-                logger.info("Using simple speaker diarization")
+                # Fallback to simple speaker diarization
+                logger.info("Using simple speaker diarization (neural not available)")
+                audio = AudioSegment.from_wav(wav_path)
+                samples = np.array(audio.get_array_of_samples(), dtype=np.float32)
+                samples = samples / 32768.0  # Normalize to -1 to 1
+
                 diarizer = SpeakerDiarizer(similarity_threshold=self.speaker_similarity_threshold)
 
                 for seg in segments:
@@ -1283,29 +1264,34 @@ class AudioProcessor:
                         seg['speaker_confidence'] = confidence
 
             # Add speaker roles if available
-            speaker_roles = getattr(diarizer, 'speaker_roles', {})
+            speaker_roles = getattr(diarizer, 'speaker_roles', {}) if 'diarizer' in dir() else {}
             for seg in segments:
                 speaker_id = seg.get('speaker_id')
                 if speaker_id:
                     seg['speaker_role'] = speaker_roles.get(speaker_id)
 
             # Track engagement metrics
-            engagement = EngagementAnalyzer()
-            for seg in segments:
-                if seg.get('speaker_id'):
-                    start_sample = int(seg['start'] * self.sample_rate)
-                    end_sample = int(seg['end'] * self.sample_rate)
-                    segment_audio = samples[start_sample:end_sample]
+            if DIARIZATION_AVAILABLE and EngagementAnalyzer:
+                audio = AudioSegment.from_wav(wav_path)
+                samples = np.array(audio.get_array_of_samples(), dtype=np.float32)
+                samples = samples / 32768.0
 
-                    speaker_seg = SpeakerSegment(
-                        speaker_id=seg['speaker_id'],
-                        start_time=seg['start'],
-                        end_time=seg['end'],
-                        audio_data=segment_audio,
-                        confidence=seg.get('speaker_confidence', 0.5),
-                        text=seg.get('text', '')
-                    )
-                    engagement.update_speaker_stats(seg['speaker_id'], speaker_seg)
+                engagement = EngagementAnalyzer()
+                for seg in segments:
+                    if seg.get('speaker_id') and SpeakerSegment:
+                        start_sample = int(seg['start'] * self.sample_rate)
+                        end_sample = int(seg['end'] * self.sample_rate)
+                        segment_audio = samples[start_sample:end_sample]
+
+                        speaker_seg = SpeakerSegment(
+                            speaker_id=seg['speaker_id'],
+                            start_time=seg['start'],
+                            end_time=seg['end'],
+                            audio_data=segment_audio,
+                            confidence=seg.get('speaker_confidence', 0.5),
+                            text=seg.get('text', '')
+                        )
+                        engagement.update_speaker_stats(seg['speaker_id'], speaker_seg)
 
             # Count unique speakers
             unique_speakers = set(s.get('speaker_id') for s in segments if s.get('speaker_id'))
