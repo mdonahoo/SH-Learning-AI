@@ -544,7 +544,7 @@ class SpeakerScorecardGenerator:
         sorted_u = sorted(utterances, key=lambda x: x.get('confidence', 0), reverse=True)
 
         examples = []
-        for u in sorted_u[:3]:
+        for u in sorted_u[:5]:
             ts = u.get('timestamp', '')
             if isinstance(ts, datetime):
                 ts = ts.strftime('%H:%M:%S')

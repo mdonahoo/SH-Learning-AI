@@ -247,7 +247,7 @@ class RoleInferenceEngine:
 
         # Select example utterances (high confidence, showing role indicators)
         example_utterances = []
-        for u in sorted(utterances, key=lambda x: x.get('confidence', 0), reverse=True)[:3]:
+        for u in sorted(utterances, key=lambda x: x.get('confidence', 0), reverse=True)[:5]:
             example_utterances.append({
                 'timestamp': u.get('timestamp', ''),
                 'text': u.get('text', ''),

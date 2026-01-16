@@ -41,6 +41,7 @@ RUN mkdir -p /workspaces/SH-Learning-AI && \
 RUN echo '#!/bin/bash\nif [ -d "/workspaces/SH-Learning-AI" ]; then\n    sudo chown -R vscode:vscode /workspaces/SH-Learning-AI\n    sudo find /workspaces/SH-Learning-AI -type d -exec chmod 755 {} \\;\n    sudo find /workspaces/SH-Learning-AI -type f -exec chmod 644 {} \\;\nfi' > /usr/local/bin/fix-permissions.sh && \
     chmod +x /usr/local/bin/fix-permissions.sh
 
+RUN apt-get update && apt-get install -y zstd && rm -rf /var/lib/apt/lists/*
 # Install Ollama for local LLM inference
 RUN curl -fsSL https://ollama.com/install.sh | sh
 

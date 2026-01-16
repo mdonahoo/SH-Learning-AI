@@ -213,7 +213,7 @@ class SpeakerDiarizer:
             bridge_roles: List of bridge crew roles
         """
         self.similarity_threshold = similarity_threshold or float(
-            os.getenv('SPEAKER_SIMILARITY_THRESHOLD', '0.7')
+            os.getenv('SPEAKER_SIMILARITY_THRESHOLD', '0.80')
         )
 
         # Bridge crew roles from environment or defaults

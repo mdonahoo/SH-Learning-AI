@@ -45,6 +45,14 @@ except ImportError:
     SpeakerDiarizer = None
     EngagementAnalyzer = None
 
+# Try to import neural (pyannote) diarization for better accuracy
+try:
+    from src.audio.neural_diarization import NeuralSpeakerDiarizer, PYANNOTE_AVAILABLE
+    NEURAL_DIARIZATION_AVAILABLE = PYANNOTE_AVAILABLE
+except ImportError:
+    NEURAL_DIARIZATION_AVAILABLE = False
+    NeuralSpeakerDiarizer = None
+
 try:
     from src.metrics.communication_quality import CommunicationQualityAnalyzer
     QUALITY_ANALYZER_AVAILABLE = True
@@ -710,7 +718,9 @@ class AudioProcessor:
                     'role': role_name,
                     'confidence': analysis.confidence,
                     'keyword_matches': analysis.total_keyword_matches,
-                    'key_indicators': analysis.key_indicators[:5] if analysis.key_indicators else []
+                    'key_indicators': analysis.key_indicators[:5] if analysis.key_indicators else [],
+                    'example_utterances': analysis.example_utterances or [],
+                    'methodology': analysis.methodology_notes
                 })
 
             return role_assignments
@@ -746,7 +756,8 @@ class AudioProcessor:
                     'overall_score': scorecard.overall_score,
                     'metrics': metrics,
                     'strengths': scorecard.strengths,
-                    'areas_for_improvement': scorecard.development_areas
+                    'areas_for_improvement': scorecard.development_areas,
+                    'example_quotes': scorecard.example_quotes or []
                 })
 
             return result
@@ -850,13 +861,19 @@ class AudioProcessor:
             # Calculate overall score
             overall = sum(l['score'] for l in levels) / 4 if levels else 50
 
+            # Get top quotes from structured report
+            structured = evaluator.generate_structured_report()
+            top_communications = structured.get('top_communications', [])
+
             return {
                 'kirkpatrick_levels': levels,
                 'blooms_level': blooms_level,
                 'blooms_score': blooms_score / 100,  # Convert to 0-1
                 'nasa_tlx_score': nasa_score,
                 'engagement_score': engagement,
-                'overall_learning_score': overall / 100  # Convert to 0-1
+                'overall_learning_score': overall / 100,  # Convert to 0-1
+                'top_communications': top_communications,
+                'speaker_statistics': structured.get('speaker_statistics', {})
             }
 
         except Exception as e:
@@ -892,9 +909,27 @@ class AudioProcessor:
             samples = np.array(audio.get_array_of_samples(), dtype=np.float32)
             samples = samples / 32768.0  # Normalize to -1 to 1
 
-            # Use higher threshold (0.75) for better speaker separation
-            # Lower threshold = speakers merge together, higher = more distinct speakers
-            diarizer = SpeakerDiarizer(similarity_threshold=0.75)
+            # Use neural (pyannote) diarization if available for better accuracy
+            # Configurable threshold: higher = fewer speakers (stricter matching)
+            similarity_threshold = float(os.getenv('SPEAKER_SIMILARITY_THRESHOLD', '0.80'))
+            max_speakers = int(os.getenv('MAX_EXPECTED_SPEAKERS', '6'))
+
+            if NEURAL_DIARIZATION_AVAILABLE and NeuralSpeakerDiarizer is not None:
+                logger.info(
+                    f"Using pyannote neural diarization "
+                    f"(threshold={similarity_threshold}, max_speakers={max_speakers})"
+                )
+                diarizer = NeuralSpeakerDiarizer(
+                    similarity_threshold=similarity_threshold,
+                    max_speakers=max_speakers
+                )
+            else:
+                # Fall back to simple spectral diarization
+                logger.info(
+                    f"Using simple spectral diarization "
+                    f"(threshold={similarity_threshold}, pyannote not available)"
+                )
+                diarizer = SpeakerDiarizer(similarity_threshold=similarity_threshold)
             engagement = EngagementAnalyzer()
 
             for seg in segments:
@@ -989,23 +1024,41 @@ class AudioProcessor:
             improvement_count = len(results.get('needs_improvement', []))
             total = effective_count + improvement_count
 
-            # Build pattern summary
+            # Build pattern summary with full examples
             patterns = []
             for pattern_name, assessments in results.get('effective_by_pattern', {}).items():
+                examples = []
+                for a in assessments[:5]:  # Up to 5 examples per pattern
+                    examples.append({
+                        'text': a.text,
+                        'speaker': a.speaker,
+                        'timestamp': a.timestamp,
+                        'assessment': a.assessment,
+                        'pattern_description': a.pattern_description
+                    })
                 patterns.append({
                     'pattern_name': pattern_name,
                     'category': 'effective',
-                    'description': '',
+                    'description': assessments[0].pattern_description if assessments else '',
                     'count': len(assessments),
-                    'examples': [a.text[:100] for a in assessments[:3]]
+                    'examples': examples
                 })
             for pattern_name, assessments in results.get('improvement_by_pattern', {}).items():
+                examples = []
+                for a in assessments[:5]:  # Up to 5 examples per pattern
+                    examples.append({
+                        'text': a.text,
+                        'speaker': a.speaker,
+                        'timestamp': a.timestamp,
+                        'assessment': a.assessment,
+                        'pattern_description': a.pattern_description
+                    })
                 patterns.append({
                     'pattern_name': pattern_name,
                     'category': 'needs_improvement',
-                    'description': '',
+                    'description': assessments[0].pattern_description if assessments else '',
                     'count': len(assessments),
-                    'examples': [a.text[:100] for a in assessments[:3]]
+                    'examples': examples
                 })
 
             return {
@@ -1038,6 +1091,15 @@ class AudioProcessor:
             # Format habits for frontend
             habits = []
             for habit_name, habit_data in results.get('habits', {}).items():
+                # Include full examples with speaker context
+                formatted_examples = []
+                for ex in habit_data.get('examples', [])[:5]:  # Up to 5 examples
+                    formatted_examples.append({
+                        'text': ex.get('text', ''),
+                        'speaker': ex.get('speaker', 'unknown'),
+                        'timestamp': ex.get('timestamp', '')
+                    })
+
                 habits.append({
                     'habit_number': habit_data.get('habit_number', 0),
                     'habit_name': habit_name.replace('_', ' ').title(),
@@ -1046,10 +1108,7 @@ class AudioProcessor:
                     'observation_count': habit_data.get('count', 0),
                     'interpretation': habit_data.get('interpretation', ''),
                     'development_tip': habit_data.get('development_tip', ''),
-                    'examples': [
-                        ex.get('text', '')[:100]
-                        for ex in habit_data.get('examples', [])[:2]
-                    ]
+                    'examples': formatted_examples
                 })
 
             # Sort by habit number

@@ -391,14 +391,29 @@ class ResultsRenderer {
             ${quality.patterns && quality.patterns.length > 0 ? `
                 <div class="patterns-section">
                     <h3>Detected Patterns</h3>
-                    <ul class="pattern-list">
-                        ${quality.patterns.map(p => `
-                            <li class="pattern-item">
+                    ${quality.patterns.map(p => `
+                        <div class="pattern-card ${p.category}">
+                            <div class="pattern-header">
                                 <span class="pattern-name">${this.formatPatternName(p.pattern_name)}</span>
-                                <span class="pattern-count ${p.category}">${p.count}</span>
-                            </li>
-                        `).join('')}
-                    </ul>
+                                <span class="pattern-count ${p.category}">${p.count} instances</span>
+                            </div>
+                            ${p.description ? `<p class="pattern-description">${p.description}</p>` : ''}
+                            ${p.examples?.length > 0 ? `
+                                <div class="pattern-examples">
+                                    <strong>Examples:</strong>
+                                    <ul class="quote-list">
+                                        ${p.examples.map(ex => `
+                                            <li class="quote-item">
+                                                <span class="quote-speaker">${ex.speaker || 'Speaker'}:</span>
+                                                <span class="quote-text">"${this.escapeHtml(ex.text || ex)}"</span>
+                                                ${ex.assessment ? `<span class="quote-assessment">${ex.assessment}</span>` : ''}
+                                            </li>
+                                        `).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('')}
                 </div>
             ` : ''}
         `;
@@ -451,6 +466,20 @@ class ResultsRenderer {
                                 <ul>${card.areas_for_improvement.map(a => `<li>${a}</li>`).join('')}</ul>
                             </div>
                         ` : ''}
+                    </div>
+                ` : ''}
+
+                ${card.example_quotes?.length > 0 ? `
+                    <div class="example-quotes">
+                        <h4>Example Quotes</h4>
+                        <ul class="quote-list">
+                            ${card.example_quotes.map(q => `
+                                <li class="quote-item">
+                                    <span class="quote-time">[${q.timestamp || ''}]</span>
+                                    <span class="quote-text">"${this.escapeHtml(q.text)}"</span>
+                                </li>
+                            `).join('')}
+                        </ul>
                     </div>
                 ` : ''}
             </div>
@@ -516,6 +545,36 @@ class ResultsRenderer {
                     </ul>
                 </div>
             ` : ''}
+
+            ${learning.top_communications && learning.top_communications.length > 0 ? `
+                <div class="learning-section">
+                    <h3>Key Communications</h3>
+                    <p class="section-description">Top utterances by transcription confidence:</p>
+                    <ul class="quote-list">
+                        ${learning.top_communications.map(comm => `
+                            <li class="quote-item">
+                                <span class="quote-speaker">${comm.speaker}:</span>
+                                <span class="quote-text">"${this.escapeHtml(comm.text)}"</span>
+                                <span class="quote-confidence">(${(comm.confidence * 100).toFixed(0)}% confidence)</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            ` : ''}
+
+            ${learning.speaker_statistics && Object.keys(learning.speaker_statistics).length > 0 ? `
+                <div class="learning-section">
+                    <h3>Speaker Statistics</h3>
+                    <div class="speaker-stats-grid">
+                        ${(Array.isArray(learning.speaker_statistics) ? learning.speaker_statistics : Object.values(learning.speaker_statistics)).map(stat => `
+                            <div class="speaker-stat-card">
+                                <strong>${stat.speaker}</strong>
+                                <span>${stat.utterances} utterances (${stat.percentage}%)</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : ''}
         `;
     }
 
@@ -552,6 +611,19 @@ class ResultsRenderer {
                         ${h.development_tip ? `
                             <div class="habit-tip">
                                 <strong>Tip:</strong> ${h.development_tip}
+                            </div>
+                        ` : ''}
+                        ${h.examples?.length > 0 ? `
+                            <div class="habit-examples">
+                                <strong>Evidence:</strong>
+                                <ul class="quote-list">
+                                    ${h.examples.map(ex => `
+                                        <li class="quote-item">
+                                            <span class="quote-speaker">${ex.speaker || 'Speaker'}:</span>
+                                            <span class="quote-text">"${this.escapeHtml(ex.text || ex)}"</span>
+                                        </li>
+                                    `).join('')}
+                                </ul>
                             </div>
                         ` : ''}
                     </div>
@@ -798,6 +870,13 @@ class ResultsRenderer {
                     }
                     md += `\n`;
                 }
+
+                if (card.example_quotes && card.example_quotes.length > 0) {
+                    md += `**Example Quotes:**\n`;
+                    for (const q of card.example_quotes) {
+                        md += `> "${q.text}" — *[${q.timestamp || ''}]*\n\n`;
+                    }
+                }
             }
         }
 
@@ -811,12 +890,24 @@ class ResultsRenderer {
 
             if (q.patterns && q.patterns.length > 0) {
                 md += `### Detected Patterns\n\n`;
-                md += `| Pattern | Category | Count |\n`;
-                md += `|---------|----------|-------|\n`;
                 for (const p of q.patterns) {
-                    md += `| ${this.formatPatternName(p.pattern_name)} | ${p.category} | ${p.count} |\n`;
+                    const categoryEmoji = p.category === 'effective' ? '✓' : '⚠';
+                    md += `#### ${categoryEmoji} ${this.formatPatternName(p.pattern_name)} (${p.count} instances)\n\n`;
+                    if (p.description) {
+                        md += `${p.description}\n\n`;
+                    }
+                    if (p.examples && p.examples.length > 0) {
+                        md += `**Examples:**\n`;
+                        for (const ex of p.examples) {
+                            const speaker = ex.speaker || 'Speaker';
+                            md += `> "${ex.text || ex}" — *${speaker}*\n`;
+                            if (ex.assessment) {
+                                md += `> *Assessment: ${ex.assessment}*\n`;
+                            }
+                            md += `\n`;
+                        }
+                    }
                 }
-                md += `\n`;
             }
         }
 
@@ -871,6 +962,15 @@ class ResultsRenderer {
                 }
                 md += `\n`;
             }
+
+            if (learn.top_communications && learn.top_communications.length > 0) {
+                md += `### Key Communications\n\n`;
+                md += `*Top utterances by transcription confidence:*\n\n`;
+                for (const comm of learn.top_communications) {
+                    const confidence = (comm.confidence * 100).toFixed(0);
+                    md += `> "${comm.text}" — *${comm.speaker}* (${confidence}% confidence)\n\n`;
+                }
+            }
         }
 
         // 7 Habits Assessment
@@ -886,6 +986,28 @@ class ResultsRenderer {
                     md += `| ${h.habit_number}. ${h.habit_name} | ${h.youth_friendly_name} | ${h.score}/5 | ${h.observation_count} |\n`;
                 }
                 md += `\n`;
+
+                // Detailed habit analysis with examples
+                md += `### Habit Evidence\n\n`;
+                for (const h of habits.habits) {
+                    if (h.observation_count > 0) {
+                        md += `#### Habit ${h.habit_number}: ${h.youth_friendly_name || h.habit_name}\n\n`;
+                        if (h.interpretation) {
+                            md += `${h.interpretation}\n\n`;
+                        }
+                        if (h.development_tip) {
+                            md += `**Tip:** ${h.development_tip}\n\n`;
+                        }
+                        if (h.examples && h.examples.length > 0) {
+                            md += `**Evidence:**\n`;
+                            for (const ex of h.examples) {
+                                const speaker = ex.speaker || 'Speaker';
+                                const text = ex.text || ex;
+                                md += `> "${text}" — *${speaker}*\n\n`;
+                            }
+                        }
+                    }
+                }
             }
 
             if (habits.strengths && habits.strengths.length > 0) {

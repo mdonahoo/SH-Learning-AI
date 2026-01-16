@@ -212,7 +212,7 @@ class SevenHabitsAnalyzer:
                 for pattern in patterns:
                     if re.search(pattern, text):
                         count += 1
-                        if len(examples) < 3:
+                        if len(examples) < 5:
                             examples.append({
                                 'timestamp': timestamp,
                                 'speaker': speaker,

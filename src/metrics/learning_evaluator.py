@@ -394,9 +394,9 @@ class LearningEvaluator:
         top_quotes = []
         for speaker, quotes in speaker_quotes.items():
             sorted_quotes = sorted(quotes, key=lambda x: x.get('confidence', 0), reverse=True)
-            top_quotes.extend(sorted_quotes[:3])  # Top 3 per speaker
+            top_quotes.extend(sorted_quotes[:5])  # Top 5 per speaker
 
-        top_quotes = sorted(top_quotes, key=lambda x: x.get('confidence', 0), reverse=True)[:10]
+        top_quotes = sorted(top_quotes, key=lambda x: x.get('confidence', 0), reverse=True)[:15]
 
         # Speaker statistics
         speaker_counts = Counter(t['speaker'] for t in self.transcripts)

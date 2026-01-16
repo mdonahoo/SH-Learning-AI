@@ -35,6 +35,18 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+# Determine device for pyannote models
+def _get_device():
+    """Get the best available device for pyannote models."""
+    if PYANNOTE_AVAILABLE:
+        if torch.cuda.is_available():
+            logger.info("CUDA available for pyannote, using GPU")
+            return torch.device("cuda")
+        else:
+            logger.info("CUDA not available for pyannote, using CPU")
+            return torch.device("cpu")
+    return None
+
 
 class NeuralSpeakerDiarizer:
     """
@@ -49,7 +61,8 @@ class NeuralSpeakerDiarizer:
         model_name: str = "pyannote/speaker-diarization-3.1",
         min_speakers: Optional[int] = None,
         max_speakers: Optional[int] = None,
-        use_auth_token: Optional[str] = None
+        use_auth_token: Optional[str] = None,
+        similarity_threshold: Optional[float] = None
     ):
         """
         Initialize neural speaker diarizer.
@@ -59,6 +72,7 @@ class NeuralSpeakerDiarizer:
             min_speakers: Minimum number of speakers expected
             max_speakers: Maximum number of speakers expected
             use_auth_token: Hugging Face authentication token (if needed)
+            similarity_threshold: Minimum similarity (0-1) to match speakers
         """
         if not PYANNOTE_AVAILABLE:
             raise ImportError(
@@ -76,7 +90,13 @@ class NeuralSpeakerDiarizer:
         # Speaker tracking with embeddings
         self.speaker_embeddings: Dict[str, List[np.ndarray]] = {}  # speaker_id -> [embeddings]
         self.speaker_count = 0
-        self.similarity_threshold = float(os.getenv('SPEAKER_EMBEDDING_THRESHOLD', '0.75'))
+        self.similarity_threshold = similarity_threshold or float(
+            os.getenv('SPEAKER_EMBEDDING_THRESHOLD', '0.80')
+        )
+
+        # Speaker metadata (for compatibility with SpeakerDiarizer interface)
+        self.speaker_roles: Dict[str, str] = {}
+        self.speaker_names: Dict[str, str] = {}
 
         # Minimum segment duration for reliable embedding (seconds)
         # Shorter segments use pipeline fallback for better accuracy
