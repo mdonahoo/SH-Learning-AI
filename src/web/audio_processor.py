@@ -466,16 +466,18 @@ class AudioProcessor:
         """Run role inference analysis."""
         try:
             engine = RoleInferenceEngine(transcripts)
-            results = engine.analyze_all()
+            results = engine.analyze_all_speakers()
 
             role_assignments = []
-            for speaker_id, analysis in results.get('speakers', {}).items():
+            for speaker_id, analysis in results.items():
+                # analysis is a SpeakerRoleAnalysis dataclass
+                role_name = analysis.inferred_role.value if hasattr(analysis.inferred_role, 'value') else str(analysis.inferred_role)
                 role_assignments.append({
                     'speaker_id': speaker_id,
-                    'role': analysis.get('inferred_role', 'Crew Member'),
-                    'confidence': analysis.get('confidence', 0),
-                    'keyword_matches': analysis.get('total_keyword_matches', 0),
-                    'key_indicators': analysis.get('key_indicators', [])[:5]
+                    'role': role_name,
+                    'confidence': analysis.confidence,
+                    'keyword_matches': analysis.total_keyword_matches,
+                    'key_indicators': analysis.key_indicators[:5] if analysis.key_indicators else []
                 })
 
             return role_assignments
@@ -491,27 +493,27 @@ class AudioProcessor:
         """Generate speaker scorecards."""
         try:
             generator = SpeakerScorecardGenerator(transcripts)
-            scorecards = generator.generate_all()
+            scorecards_dict = generator.generate_all_scorecards()
+            scorecards = list(scorecards_dict.values())
 
             result = []
             for scorecard in scorecards:
-                scores = []
+                metrics = []
                 for score in scorecard.scores:
-                    scores.append({
-                        'metric_name': score.metric_name,
-                        'display_name': score.metric_name.replace('_', ' ').title(),
+                    metrics.append({
+                        'name': score.metric_name.replace('_', ' ').title(),
                         'score': score.score,
                         'evidence': score.evidence
                     })
 
                 result.append({
                     'speaker_id': scorecard.speaker,
-                    'inferred_role': scorecard.inferred_role,
+                    'role': scorecard.inferred_role,
                     'utterance_count': scorecard.utterance_count,
                     'overall_score': scorecard.overall_score,
-                    'scores': scores,
+                    'metrics': scores,
                     'strengths': scorecard.strengths,
-                    'development_areas': scorecard.development_areas
+                    'areas_for_improvement': scorecard.development_areas
                 })
 
             return result
@@ -527,35 +529,38 @@ class AudioProcessor:
         """Analyze confidence distribution."""
         try:
             analyzer = ConfidenceAnalyzer(transcripts)
-            distribution = analyzer.analyze_distribution()
+            result = analyzer.analyze_distribution()
 
+            # Transform distribution to buckets for frontend
             buckets = []
-            for bucket_name, data in distribution.get('buckets', {}).items():
+            for dist_item in result.get('distribution', []):
                 buckets.append({
-                    'label': data.get('label', bucket_name),
-                    'range_name': bucket_name,
-                    'count': data.get('count', 0),
-                    'percentage': data.get('percentage', 0)
+                    'label': dist_item.get('range', 'Unknown'),
+                    'count': dist_item.get('count', 0),
+                    'percentage': dist_item.get('percentage', 0)
                 })
 
             # Get per-speaker averages
             speaker_averages = {}
-            for speaker_data in distribution.get('per_speaker', {}).values():
-                speaker_id = speaker_data.get('speaker', 'unknown')
-                speaker_averages[speaker_id] = speaker_data.get('average', 0)
+            for speaker_id, stats in result.get('speaker_stats', {}).items():
+                speaker_averages[speaker_id] = stats.get('average_confidence', 0)
 
-            avg_conf = distribution.get('overall', {}).get('average', 0)
-            quality = "Excellent" if avg_conf > 0.9 else \
-                      "Good" if avg_conf > 0.8 else \
-                      "Acceptable" if avg_conf > 0.7 else \
-                      "Marginal" if avg_conf > 0.6 else "Poor"
+            avg_conf = result.get('average_confidence', 0)
+
+            # Calculate median from transcripts
+            confidences = sorted([
+                t.get('confidence', 0) if t.get('confidence', 0) <= 1 else t.get('confidence', 0) / 100
+                for t in transcripts
+            ])
+            median_conf = confidences[len(confidences) // 2] if confidences else 0
 
             return {
-                'total_utterances': distribution.get('overall', {}).get('count', 0),
+                'total_utterances': result.get('total_utterances', 0),
                 'average_confidence': avg_conf,
+                'median_confidence': median_conf,
                 'buckets': buckets,
                 'speaker_averages': speaker_averages,
-                'quality_assessment': quality
+                'quality_assessment': result.get('quality_assessment', 'Unknown')
             }
 
         except Exception as e:
@@ -580,12 +585,12 @@ class AudioProcessor:
 
             for i, (name, key) in enumerate(zip(level_names, level_keys), 1):
                 level_data = kirkpatrick.get(key, {})
-                # Calculate a score based on available metrics
-                score = self._calculate_level_score(level_data, i)
+                # Calculate a score based on available metrics (0-100 scale)
+                score_pct = self._calculate_level_score(level_data, i)
                 levels.append({
                     'level': i,
                     'name': name,
-                    'score': score,
+                    'score': score_pct / 100,  # Convert to 0-1 range for frontend
                     'interpretation': level_data.get('interpretation', f'Level {i} assessment')
                 })
 
@@ -596,7 +601,11 @@ class AudioProcessor:
 
             # Extract NASA teamwork
             nasa = results.get('nasa_teamwork', {})
-            nasa_score = nasa.get('overall_score', 50)
+            nasa_score = nasa.get('overall_score', 50) / 100  # Convert to 0-1 range
+
+            # Calculate overall engagement from participation
+            mission = results.get('mission_specific', {})
+            engagement = mission.get('communication_frequency', {}).get('score', 50) / 100
 
             # Calculate overall score
             overall = sum(l['score'] for l in levels) / 4 if levels else 50
@@ -604,9 +613,10 @@ class AudioProcessor:
             return {
                 'kirkpatrick_levels': levels,
                 'blooms_level': blooms_level,
-                'blooms_score': blooms_score,
-                'nasa_teamwork_score': nasa_score,
-                'overall_learning_score': overall
+                'blooms_score': blooms_score / 100,  # Convert to 0-1
+                'nasa_tlx_score': nasa_score,
+                'engagement_score': engagement,
+                'overall_learning_score': overall / 100  # Convert to 0-1
             }
 
         except Exception as e:
@@ -652,8 +662,7 @@ class AudioProcessor:
 
                 if len(segment_audio) > 0:
                     speaker_id, confidence = diarizer.identify_speaker(
-                        segment_audio,
-                        seg['start']
+                        segment_audio
                     )
                     seg['speaker_id'] = speaker_id
                     seg['speaker_confidence'] = confidence

@@ -370,7 +370,7 @@ class WhisperTranscriber:
             )
 
         # Load configuration
-        self.model_size = model_size or os.getenv('WHISPER_MODEL_SIZE', 'small')
+        self.model_size = model_size or os.getenv('WHISPER_MODEL_SIZE', 'large-v3')
         self.device = device or os.getenv('WHISPER_DEVICE', 'cpu')
         self.compute_type = compute_type or os.getenv('WHISPER_COMPUTE_TYPE', 'int8')
         self.language = language or os.getenv('TRANSCRIBE_LANGUAGE', 'en')

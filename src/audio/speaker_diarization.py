@@ -77,7 +77,7 @@ class SimpleVAD:
             sample_rate: Audio sample rate in Hz
         """
         self.energy_threshold = energy_threshold or float(
-            os.getenv('VAD_ENERGY_THRESHOLD', '500')
+            os.getenv('VAD_ENERGY_THRESHOLD', '0.02')
         )
         self.sample_rate = sample_rate
 

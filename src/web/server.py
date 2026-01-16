@@ -58,8 +58,8 @@ async def lifespan(app: FastAPI):
     logger.info("Starting audio analysis server...")
     processor = get_processor()
 
-    # Optionally preload model on startup
-    if os.getenv('PRELOAD_WHISPER', 'false').lower() == 'true':
+    # Preload model on startup (disable with PRELOAD_WHISPER=false)
+    if os.getenv('PRELOAD_WHISPER', 'true').lower() == 'true':
         logger.info("Preloading Whisper model...")
         processor.load_model()
 
