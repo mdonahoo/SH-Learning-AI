@@ -85,8 +85,9 @@ class AudioOnlyRecorder:
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         # Determine diarization mode
+        # Default to neural diarization for better speaker identification
         if use_neural is None:
-            use_neural = os.getenv('USE_NEURAL_DIARIZATION', 'false').lower() == 'true'
+            use_neural = os.getenv('USE_NEURAL_DIARIZATION', 'true').lower() == 'true'
         self.use_neural = use_neural and PYANNOTE_AVAILABLE
 
         if use_neural and not PYANNOTE_AVAILABLE:
@@ -236,6 +237,10 @@ class AudioOnlyRecorder:
             'transcripts_count': len(self.transcripts),
         }
 
+        # Add audio metrics from capture manager
+        if self.capture:
+            stats['audio_metrics'] = self.capture.get_audio_metrics()
+
         # Add engagement metrics (uses internal state from _update_engagement calls)
         if self.transcripts and self.engagement:
             stats['engagement_metrics'] = self.engagement.calculate_engagement_scores()
@@ -258,17 +263,85 @@ class AudioOnlyRecorder:
         # Stop capture
         if self.capture:
             self.capture.stop_capture()
+            total_segments = self.capture.total_segments
+            logger.info(f"Total audio segments detected: {total_segments}")
 
-        # Wait for pending transcriptions
-        time.sleep(2)
-
-        # Get final results
+        # Wait for all pending transcriptions to complete
+        # large-v3 model takes 35-70s per segment, so we need to wait
         if self.transcriber:
-            final_results = self.transcriber.get_results()
-            # Update engagement analyzer with final results
-            for result in final_results:
-                self._update_engagement(result)
-            self.transcripts.extend(final_results)
+            initial_queue_size = self.transcriber._transcription_queue.qsize()
+            if initial_queue_size > 0:
+                logger.info(f"Processing {initial_queue_size} remaining segments in queue...")
+                logger.info("This may take a while with large-v3 model (~35-70s per segment)")
+                estimated_time = initial_queue_size * 50 / 4  # 50s avg, 4 workers
+                logger.info(f"Estimated time: ~{int(estimated_time / 60)} minutes")
+
+            # Poll until queue is empty and all results are collected
+            last_count = 0
+            last_queue_size = initial_queue_size
+            stable_count = 0
+            stuck_count = 0
+            start_wait = time.time()
+            max_wait_time = 1800  # 30 minute max wait
+            stuck_threshold = 120  # 2 minutes without progress = stuck
+
+            while True:
+                # Get any available results
+                results = self.transcriber.get_results()
+                if results:
+                    for result in results:
+                        self._update_engagement(result)
+                        logger.info(
+                            f"[{result.get('speaker_id', 'Unknown')}] "
+                            f"({result.get('confidence', 0):.2f}): {result.get('text', '')}"
+                        )
+                    self.transcripts.extend(results)
+
+                # Check queue status
+                queue_size = self.transcriber._transcription_queue.qsize()
+                current_count = len(self.transcripts)
+
+                # Check if processing is complete
+                if queue_size == 0 and current_count == last_count:
+                    stable_count += 1
+                    if stable_count >= 3:  # No new results for 3 seconds
+                        logger.info("All segments processed")
+                        break
+                else:
+                    stable_count = 0
+
+                # Detect stuck workers (queue not changing)
+                if queue_size == last_queue_size and current_count == last_count:
+                    stuck_count += 1
+                    if stuck_count >= stuck_threshold:
+                        logger.warning(
+                            f"Workers appear stuck - no progress for {stuck_threshold}s. "
+                            f"Saving {current_count} transcripts and stopping."
+                        )
+                        break
+                else:
+                    stuck_count = 0
+                    last_queue_size = queue_size
+                    last_count = current_count
+
+                # Check total timeout
+                elapsed = time.time() - start_wait
+                if elapsed > max_wait_time:
+                    logger.warning(
+                        f"Max wait time ({max_wait_time}s) exceeded. "
+                        f"Saving {current_count} transcripts and stopping."
+                    )
+                    break
+
+                if queue_size > 0:
+                    remaining_time = (queue_size * 50 / 4)  # Rough estimate
+                    logger.info(
+                        f"Queue: {queue_size} remaining, {current_count} transcribed "
+                        f"(~{int(remaining_time / 60)}min left)"
+                    )
+
+                time.sleep(1)
+
             self.transcriber.stop_workers()
 
         self.is_recording = False
@@ -332,7 +405,7 @@ class AudioOnlyRecorder:
 
 
 def display_live_stats(recorder: AudioOnlyRecorder):
-    """Display live recording statistics."""
+    """Display live recording statistics with audio metrics."""
     stats = recorder.get_live_stats()
 
     if stats.get('status') == 'not_recording':
@@ -345,16 +418,56 @@ def display_live_stats(recorder: AudioOnlyRecorder):
     logger.info(f"Duration: {stats.get('duration')}")
     logger.info(f"Transcripts: {stats.get('transcripts_count')}")
 
+    # Display audio metrics
+    audio = stats.get('audio_metrics', {})
+    if audio:
+        current = audio.get('current_energy', 0)
+        peak = audio.get('peak_energy', 0)
+        average = audio.get('average_energy', 0)
+        threshold = audio.get('vad_threshold', 0.02)
+        is_voice = audio.get('is_voice_active', False)
+        segments = audio.get('total_segments', 0)
+        chunks = audio.get('total_chunks', 0)
+
+        # Create visual meter (40 chars wide)
+        meter_width = 40
+        current_bars = int(min(current / 0.5, 1.0) * meter_width)
+        peak_bars = int(min(peak / 0.5, 1.0) * meter_width)
+        threshold_pos = int(min(threshold / 0.5, 1.0) * meter_width)
+
+        # Build meter with threshold marker
+        meter = ['░'] * meter_width
+        for i in range(current_bars):
+            meter[i] = '█'
+        if threshold_pos < meter_width:
+            meter[threshold_pos] = '│'  # Threshold marker
+
+        meter_str = ''.join(meter)
+        voice_indicator = "🎤 VOICE" if is_voice else "   quiet"
+
+        logger.info("")
+        logger.info("Audio Levels:")
+        logger.info(f"  Current: {current:.4f} [{meter_str}] {voice_indicator}")
+        logger.info(f"  Peak:    {peak:.4f}  |  Average: {average:.4f}  |  Threshold: {threshold}")
+        logger.info(f"  Chunks:  {chunks}  |  Voice Segments: {segments}")
+
+        # Health check
+        if peak < threshold:
+            logger.warning("  ⚠ Peak below VAD threshold - mic may not be working!")
+        elif peak < threshold * 2:
+            logger.info("  ⚠ Low audio levels - speak louder or move closer")
+        else:
+            logger.info("  ✓ Audio levels OK")
+
     # engagement is a dict of speaker_id -> scores
     engagement = stats.get('engagement_metrics', {})
     if engagement:
-        logger.info(f"Unique Speakers: {len(engagement)}")
-        logger.info("Speaker Activity:")
+        logger.info("")
+        logger.info(f"Speakers: {len(engagement)}")
         for speaker_id, data in engagement.items():
             logger.info(
                 f"  {speaker_id}: {data.get('utterance_count', 0)} utterances, "
-                f"{data.get('speaking_time_seconds', 0):.1f}s, "
-                f"engagement: {data.get('engagement_score', 0):.0f}%"
+                f"{data.get('speaking_time_seconds', 0):.1f}s"
             )
 
     logger.info("=" * 60)
@@ -381,8 +494,8 @@ def main():
     parser.add_argument(
         '--stats-interval',
         type=int,
-        default=15,
-        help='Live stats display interval in seconds (default: 15)'
+        default=5,
+        help='Live stats display interval in seconds (default: 5)'
     )
     parser.add_argument(
         '--list-devices',

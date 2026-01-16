@@ -33,7 +33,26 @@ logger = logging.getLogger(__name__)
 STARSHIP_HORIZONS_PROMPT = (
     # Starship Horizons specific
     "Starship Horizons bridge simulator, USS Donahoo, captain's log, stardate. "
-    "Star systems: Paravera, Calavera, Faraday, Parrot Arrow, Starbase Delta. "
+    "Star systems: Paravera, Calavera, Caravera, Faraday, Parrot Arrow, Starbase Delta. "
+    "Galaxy map, galaxy view, zoom in, zoom out. "
+
+    # Alien races and factions
+    "Alien races: Craylor, Craylord, Craylords, cralor, Kralien, Torgoth, Arvonian, Ximni, Skaraan. "
+    "Human Navy, human navy headquarters, fleet admiral, fleet command, fleet disposition. "
+    "Treaty: treaty, the treaty, Craylor treaty, human Craylor treaty, human Craylord treaty, "
+    "held a treaty, treaty for years, treaty is in effect. "
+    "Neutral zone, blue neutral border zone, border patrol, tensions rising. "
+
+    # Ship names and designations - Hedge is critical (often misheard)
+    "Player ship: Hedge, USS Hedge, the Hedge, of Hedge, crew of Hedge. "
+    "Common phrases: captain and crew of Hedge, commanding officer of Hedge, "
+    "greetings captain and crew of Hedge, to the commanding officer of Hedge. "
+    "Enemy ships: Lutren, Lutrench, Belgore, MSF, Wickert, Phobos, core trailer, chord trailer. "
+    "Ship designations: 215, 302, 307, 310, 22, 32, R2. "
+
+    # Warp and navigation - critical distinctions
+    "Warp terms: warp jammer, warp jamming, warp jammed, warp champed, my warp is jammed. "
+    "War: war declared, war has been declared, war depicted. "
 
     # Bridge stations (both games)
     "Bridge stations: helm, tactical, science, engineering, operations, communications, "
@@ -47,17 +66,25 @@ STARSHIP_HORIZONS_PROMPT = (
     "sensor array, long-range sensors, short-range sensors, scanners, "
     "transporter, tractor beam, combat maneuver, jump drive, reactor. "
 
-    # Navigation terms
+    # Navigation terms - warp is critical (not 'work')
     "Navigation: waypoint, sector, bearing, mark, coordinates, heading, "
-    "course plotted, course laid in, set course, engage, "
-    "all stop, full stop, full impulse, half impulse, one quarter impulse, "
-    "all back, reverse, maximum warp, warp factor, drop out of warp, de-warp, "
+    "waypoint one, waypoint two, waypoint three, waypoint four, waypoint five, "
+    "course plotted, course laid in, set course, tap set course, engage, "
+    "all stop, full stop, full impulse, half impulse, one quarter impulse, quarter impulse, "
+    "all back, back us out, reverse, "
+    "warp, go to warp, warp there, warp drive, maximum warp, warp factor, drop out of warp, de-warp, "
+    "ready to warp, warping, we warp, warp one, warp two, best speed, recommend warp two, "
     "ETA, coming about, closing distance, intercept course, evasive maneuvers. "
+    "Maneuvers: combat maneuver, flyby, fly past, bring us around, turn us around, hell turn. "
 
-    # Communications
+    # UI interaction terms
+    "UI commands: tap, tap the system, tap a thing, scan it, select, click, swipe. "
+
+    # Communications and docking
     "Communications: comm station, hail, hailing frequencies, channel open, "
-    "transmitting, receiving, subspace, distress signal, distress call, "
-    "Space Dock, docking permission, undock, undocking, request permission. "
+    "transmitting, receiving, subspace, distress signal, distress call. "
+    "Docking: Space Dock, docking permission, undock, undock us, undocking, "
+    "request permission, back us out, meters clear, hundred meters. "
 
     # Alerts and conditions
     "Alerts: red alert, condition red, yellow alert, condition yellow, "
@@ -67,10 +94,20 @@ STARSHIP_HORIZONS_PROMPT = (
     # Combat terminology
     "Combat: fire, open fire, cease fire, fire at will, weapons free, "
     "attack pattern, attack pattern Delta, attack pattern Alpha, "
-    "weapons hot, target locked, lock on, targeting, "
+    "weapons hot, target locked, lock on, targeting, target them, retarget, "
     "direct hit, hull damage, hull breach, shields failing, shields holding, "
     "torpedoes away, firing phasers, beam weapons, projectile weapons, "
     "missile lock, countermeasures, point defense. "
+
+    # Weapons and tubes - critical for accuracy
+    "Tubes: left tube, right tube, load tubes, put in tubes, unload, "
+    "install the right tube, launch the missile, launch left tube, launch right tube. "
+    "Missiles: homing missiles, homings, nukes, EMPs, EMP, mines, torpedoes. "
+    "Beam frequency: terahertz, 800 terahertz, set to 800 terahertz, set your laser to 800 terahertz, "
+    "500 terahertz, 460 terahertz, 100 terahertz, 200 terahertz, frequency in terahertz. "
+    "Calibrate: calibrate, recalibrate, calibrate the shields, calibrate to their shields. "
+    "Beam ship: beam ship, we are a beam ship, we are primarily a beam ship, "
+    "primarily a beam ship, we are a beam vessel, our beams. "
 
     # Commands and responses
     "Commands: engage, make it so, on screen, main viewer, acknowledged, "
@@ -91,11 +128,28 @@ STARSHIP_HORIZONS_PROMPT = (
     "dock, supply station, defense platform, sentry turret, "
     "player ship, CPU ship, scenario, mission objective. "
 
-    # Crew coordination
+    # Crew coordination and scanning
     "Crew: speak from diaphragm, bridge crew, away team, "
-    "triangulate, scan the planet, scan complete, scan results, "
+    "triangulate, scan the planet, scan the planets, scan complete, scan results, "
     "balance power, power distribution, boost shields, boost weapons, "
     "route power, divert power, emergency power. "
+
+    # Mission briefing and commands
+    "Briefing: here's the briefing, greetings captain, greetings captain and crew, "
+    "your mission, patrol the border, patrol the border area, "
+    "relieved of command, relieved of fleet command duties, "
+    "relay officer's directives, imminent intrusion, imminent Craylor intrusion. "
+
+    # Station-specific commands
+    "Science: scan, scanning, get a scan, scan the contacts, scan on, "
+    "call sign, interpretation, type, ship type, weak against. "
+    "Engineering: boost to beams, boosting our beam weapons, energy is down. "
+    "Weapons: stand by to engage, alternate targets, focus on, switch to. "
+    "Helm: undock, undock us, take us to, copy that, copy down. "
+
+    # Objects and entities
+    "Objects: drones, interact with drones, probes, asteroids, debris, "
+    "planets, moons, stations, ships, contacts. "
 )
 
 # Alternative shorter prompt if the full one causes issues
@@ -103,6 +157,9 @@ STARSHIP_HORIZONS_PROMPT_SHORT = (
     "Starship bridge simulator. Stations: helm, tactical, science, engineering, ops. "
     "Terms: warp, impulse, shields, phasers, torpedoes, bearing, mark, heading. "
     "Commands: engage, fire, on screen, aye captain, red alert, shields up. "
+    "Races: Craylor, Craylord, human Craylord treaty, Kralien, Torgoth. "
+    "Ships: Hedge, Lutren, Belgore, MSF, warp jammer. "
+    "Weapons: left tube, right tube, homing missiles, nukes, EMPs, terahertz. "
     "Locations: Paravera, Calavera, Faraday, Starbase Delta."
 )
 
@@ -284,6 +341,8 @@ def is_hallucination(text: str) -> bool:
     """
     Check if transcription text is a known Whisper hallucination.
 
+    Only filters obvious hallucinations - errs on the side of keeping speech.
+
     Args:
         text: Transcription text to check
 
@@ -298,31 +357,40 @@ def is_hallucination(text: str) -> bool:
     # Remove punctuation for checking
     text_clean = ''.join(c for c in text_lower if c.isalnum() or c.isspace()).strip()
 
-    # Check for very short text that's likely noise
-    if len(text_clean) < 3:
+    # Check for very short text that's likely noise (less than 2 chars)
+    if len(text_clean) < 2:
         return True
 
     # Check for exact match hallucinations (single words/short phrases)
+    # Only filter if the ENTIRE transcription matches
     if text_clean in WHISPER_HALLUCINATIONS_EXACT:
         return True
 
-    # Check for known hallucination patterns (substring match)
+    # Check for known hallucination patterns - only if they're the START of the text
+    # or if they make up most of the text (not just appearing somewhere in speech)
     for hallucination in WHISPER_HALLUCINATIONS:
-        if hallucination in text_lower:
+        # Skip single-word patterns that could be in normal speech
+        if len(hallucination.split()) == 1 and len(hallucination) < 6:
+            continue
+        # Only filter if hallucination is at the start or is >80% of the text
+        if text_lower.startswith(hallucination):
             return True
+        if len(hallucination) > len(text_clean) * 0.8:
+            if hallucination in text_lower:
+                return True
 
-    # Check for repeated characters/words (common hallucination)
+    # Check for repeated single word (e.g., "the the the the")
     words = text_clean.split()
-    if len(words) >= 3 and len(set(words)) == 1:
+    if len(words) >= 4 and len(set(words)) == 1:
         return True
 
-    # Check for excessive repetition (e.g., "right right right right")
-    if len(words) >= 4:
+    # Check for excessive repetition (e.g., "right right right right right")
+    if len(words) >= 5:
         word_counts = {}
         for word in words:
             word_counts[word] = word_counts.get(word, 0) + 1
         max_count = max(word_counts.values())
-        if max_count >= len(words) * 0.75:  # 75% same word
+        if max_count >= len(words) * 0.8:  # 80% same word
             return True
 
     return False
@@ -370,6 +438,7 @@ class WhisperTranscriber:
             )
 
         # Load configuration
+        # Default to 'large-v3' model for best accuracy (YouTube-quality transcription)
         self.model_size = model_size or os.getenv('WHISPER_MODEL_SIZE', 'large-v3')
 
         # Auto-detect GPU if not specified
@@ -390,7 +459,7 @@ class WhisperTranscriber:
         else:
             self.compute_type = 'float16' if self.device == 'cuda' else 'int8'
         self.language = language or os.getenv('TRANSCRIBE_LANGUAGE', 'en')
-        self.num_workers = num_workers or int(os.getenv('TRANSCRIPTION_WORKERS', '2'))
+        self.num_workers = num_workers or int(os.getenv('TRANSCRIPTION_WORKERS', '4'))
 
         # Initial prompt for domain-specific vocabulary
         self.initial_prompt = os.getenv(
@@ -410,7 +479,7 @@ class WhisperTranscriber:
 
         # Transcription queue and workers
         self._transcription_queue = queue.Queue(
-            maxsize=int(os.getenv('MAX_SEGMENT_QUEUE_SIZE', '100'))
+            maxsize=int(os.getenv('MAX_SEGMENT_QUEUE_SIZE', '1000'))
         )
         self._worker_threads: List[threading.Thread] = []
         self._is_running = False
@@ -582,8 +651,11 @@ class WhisperTranscriber:
             worker_id: Worker thread identifier
         """
         logger.info(f"Whisper worker {worker_id} started")
+        segments_processed = 0
+        segments_failed = 0
 
         while self._is_running:
+            item = None
             try:
                 # Get item from queue (timeout to allow checking is_running)
                 item = self._transcription_queue.get(timeout=1)
@@ -604,16 +676,27 @@ class WhisperTranscriber:
                 if result:
                     with self._results_lock:
                         self._pending_results.append(result)
-
-                # Mark task done
-                self._transcription_queue.task_done()
+                    segments_processed += 1
+                else:
+                    segments_failed += 1
 
             except queue.Empty:
                 continue
             except Exception as e:
-                logger.error(f"Worker {worker_id} error: {e}")
+                logger.error(f"Worker {worker_id} error: {e}", exc_info=True)
+                segments_failed += 1
+            finally:
+                # ALWAYS mark task done to prevent queue from getting stuck
+                if item is not None:
+                    try:
+                        self._transcription_queue.task_done()
+                    except ValueError:
+                        pass  # Already marked done
 
-        logger.info(f"Whisper worker {worker_id} stopped")
+        logger.info(
+            f"Whisper worker {worker_id} stopped - "
+            f"processed: {segments_processed}, failed: {segments_failed}"
+        )
 
     def _transcribe_segment(
         self,
@@ -638,15 +721,19 @@ class WhisperTranscriber:
             start_time = time.time()
 
             # Transcribe with Whisper
+            # Settings optimized for maximum accuracy with large-v3 model
             segments, info = self._model.transcribe(
                 audio_data,
                 language=None if self.language == 'auto' else self.language,
                 initial_prompt=self.initial_prompt,  # Domain vocabulary
-                vad_filter=True,  # Use built-in VAD
+                vad_filter=False,  # Disable - we already do VAD upstream
                 word_timestamps=True,
                 condition_on_previous_text=False,  # Prevent hallucination propagation
-                no_speech_threshold=0.6,  # Higher threshold to avoid hallucinations
+                no_speech_threshold=0.6,  # Higher = more lenient speech detection
                 log_prob_threshold=-1.0,  # Filter low-confidence output
+                beam_size=5,  # Larger beam = better accuracy (default is 5)
+                best_of=5,  # Consider more candidates for better accuracy
+                temperature=0.0,  # Deterministic output for consistency
             )
 
             # Extract text and words
@@ -685,7 +772,7 @@ class WhisperTranscriber:
             ]) if word_segments else 0.0
 
             # Check confidence threshold
-            min_confidence = float(os.getenv('MIN_TRANSCRIPTION_CONFIDENCE', '0.5'))
+            min_confidence = float(os.getenv('MIN_TRANSCRIPTION_CONFIDENCE', '0.3'))
             if avg_confidence < min_confidence:
                 logger.debug(
                     f"Transcription confidence too low: {avg_confidence:.2f} < {min_confidence}"
