@@ -49,3 +49,15 @@ scipy>=1.10.0
 
 # HTTP client for API requests (may already be installed)
 requests>=2.31.0
+
+# ============================================
+# Web Server
+# ============================================
+
+# FastAPI framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6
+
+# Audio format conversion
+pydub>=0.25.1

@@ -17,6 +17,8 @@ from src.metrics.quality_verifier import QualityVerifier
 from src.metrics.speaker_scorecard import SpeakerScorecardGenerator
 from src.metrics.communication_quality import CommunicationQualityAnalyzer
 from src.metrics.learning_evaluator import LearningEvaluator
+from src.metrics.seven_habits import SevenHabitsAnalyzer
+from src.metrics.training_recommendations import TrainingRecommendationEngine
 
 logger = logging.getLogger(__name__)
 
@@ -55,9 +57,13 @@ class EnhancedReportBuilder:
         self.quality_verifier = QualityVerifier(transcripts, events, mission_data)
         self.communication_analyzer = CommunicationQualityAnalyzer(transcripts)
         self.learning_evaluator = LearningEvaluator(events, transcripts)
+        self.seven_habits_analyzer = SevenHabitsAnalyzer(transcripts)
 
         # Role assignments will be computed and shared
         self._role_results = None
+
+        # Training recommendation engine (initialized later with analysis results)
+        self._recommendation_engine = None
 
     def _get_role_assignments(self) -> Dict[str, str]:
         """Get role assignments for all speakers."""
@@ -93,6 +99,20 @@ class EnhancedReportBuilder:
         # Learning evaluator results
         learning_results = self.learning_evaluator.evaluate_all()
 
+        # 7 Habits analysis
+        habits_results = self.seven_habits_analyzer.get_structured_results()
+
+        # Training recommendation engine (needs analysis results)
+        self._recommendation_engine = TrainingRecommendationEngine(
+            self.transcripts,
+            analysis_results={
+                'communication_quality': communication_results,
+                'confidence_analysis': confidence_results,
+                'role_analysis': role_results,
+            }
+        )
+        recommendation_results = self._recommendation_engine.get_structured_results()
+
         return {
             'role_analysis': role_results,
             'confidence_analysis': confidence_results,
@@ -101,6 +121,8 @@ class EnhancedReportBuilder:
             'communication_quality': communication_results,
             'speaker_scorecards': scorecard_results,
             'learning_evaluation': learning_results,
+            'seven_habits': habits_results,
+            'training_recommendations': recommendation_results,
         }
 
     def build_mission_statistics(self) -> Dict[str, Any]:
@@ -303,6 +325,20 @@ class EnhancedReportBuilder:
             lines.append(f"- {impl}")
         lines.append("")
 
+        # 7 Habits summary
+        habits_results = self.seven_habits_analyzer.get_structured_results()
+        overall_score = habits_results.get('overall_effectiveness_score', 0)
+        lines.append(f"**Leadership Development (7 Habits):** Overall effectiveness score: {overall_score}/5")
+
+        # Top strength and growth area
+        strengths = habits_results.get('strengths', [])
+        growth = habits_results.get('growth_areas', [])
+        if strengths:
+            lines.append(f"- *Strength:* {strengths[0]['name']} ({strengths[0]['score']}/5)")
+        if growth:
+            lines.append(f"- *Growth Area:* {growth[0]['name']} ({growth[0]['score']}/5)")
+        lines.append("")
+
         return "\n".join(lines)
 
     def generate_full_report(self) -> str:
@@ -328,6 +364,21 @@ class EnhancedReportBuilder:
             role_assignments=role_assignments
         )
 
+        # Get 7 Habits section
+        habits_section = self.seven_habits_analyzer.generate_habits_section()
+        development_plan = self.seven_habits_analyzer.generate_personal_development_plan()
+
+        # Get comprehensive training recommendations
+        recommendation_engine = TrainingRecommendationEngine(
+            self.transcripts,
+            analysis_results={
+                'communication_quality': communication_results,
+                'confidence_analysis': confidence_results,
+                'role_analysis': role_results,
+            }
+        )
+        recommendations_section = recommendation_engine.generate_recommendations_section()
+
         sections = [
             f"# Mission Debrief: {mission_name}",
             "",
@@ -350,7 +401,11 @@ class EnhancedReportBuilder:
             "",
             self.generate_objectives_section(),
             "",
-            self._generate_training_recommendations(),
+            habits_section,
+            "",
+            development_plan,
+            "",
+            recommendations_section,
             "",
             quality_results['verification_section'],
             "",
@@ -359,77 +414,18 @@ class EnhancedReportBuilder:
 
         return "\n".join(sections)
 
-    def _generate_training_recommendations(self) -> str:
-        """Generate training recommendations section."""
-        communication_results = self.communication_analyzer.get_structured_results()
-        confidence_results = self.confidence_analyzer.get_structured_results()
+    def _generate_training_recommendations_legacy(self) -> str:
+        """
+        Legacy training recommendations section.
 
-        lines = [
-            "## Training Recommendations",
-            "",
-            "### Immediate Actions for This Crew",
-            "",
-        ]
-
-        # Based on communication quality
-        improvement_patterns = communication_results.get('pattern_counts', {}).get('needs_improvement', {})
-
-        if improvement_patterns.get('filler_words', 0) > 5:
-            lines.append(
-                "1. **Communication Clarity Drill:** Practice completing full sentences "
-                "without filler words (uh, um). The high rate of filler words disrupts information flow."
-            )
-            lines.append("")
-
-        if improvement_patterns.get('single_word_response', 0) > 10:
-            lines.append(
-                "2. **Acknowledgment Protocol Training:** Establish standard three-part "
-                "acknowledgments (repeat order, confirm understanding, report completion) "
-                "instead of single-word responses."
-            )
-            lines.append("")
-
-        if improvement_patterns.get('incomplete_sentence', 0) > 5:
-            lines.append(
-                "3. **Complete Communication Practice:** Practice completing thoughts "
-                "before transitioning to new topics. Trailing sentences disrupt crew coordination."
-            )
-            lines.append("")
-
-        # Based on confidence analysis
-        if confidence_results.get('statistics', {}).get('average_confidence', 1) < 0.7:
-            lines.append(
-                "4. **Voice Projection Training:** Practice clear enunciation and voice "
-                "projection to improve transcription accuracy and crew understanding."
-            )
-            lines.append("")
-
-        lines.extend([
-            "### Protocol Improvements",
-            "",
-            "**Standard Bridge Callouts:**",
-            "- Distance reports should include \"Distance to [target], [number] kilometers\"",
-            "- Status reports should include \"[System] at [percentage], [status]\"",
-            "- Navigation should include \"Course set for [destination], ETA [time]\"",
-            "",
-            "**Acknowledgment Procedures:**",
-            "- Replace single word responses with \"[Order], acknowledged, executing\"",
-            "- Status changes should be proactively reported without prompting",
-            "",
-            "### Team Exercises",
-            "",
-            "1. **Closed-Loop Communication Drill:** Practice the full command cycle with "
-            "mandatory readback of all orders before execution.",
-            "",
-            "2. **Role Isolation Exercise:** Run scenarios where each station must handle "
-            "their specialty without command intervention to build role confidence.",
-            "",
-            "3. **Time Pressure Scenarios:** Practice operations under time constraints "
-            "to improve response times and decision-making under stress.",
-            "",
-        ])
-
-        return "\n".join(lines)
+        This method is preserved for reference but replaced by
+        TrainingRecommendationEngine.generate_recommendations_section()
+        which provides comprehensive, framework-aligned recommendations
+        suitable for educational contexts.
+        """
+        # This method is no longer used in generate_full_report()
+        # but preserved for backwards compatibility if needed
+        return "## Training Recommendations\n\nSee comprehensive recommendations section above."
 
     def _generate_report_metadata(self) -> str:
         """Generate report metadata section."""

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Analyzer - Starship Horizons</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Audio Analyzer</h1>
+            <p class="subtitle">Transcription &amp; Communication Analysis</p>
+        </header>
+
+        <!-- Status Banner -->
+        <div id="status-banner" class="status-banner hidden">
+            <span id="status-text"></span>
+        </div>
+
+        <!-- Audio Input Section -->
+        <section class="input-section">
+            <h2>Audio Input</h2>
+            <div class="input-controls">
+                <div class="record-controls">
+                    <button id="record-btn" class="btn btn-record">
+                        <span class="icon">&#9679;</span> Record
+                    </button>
+                    <span id="record-time" class="record-time">00:00</span>
+                </div>
+                <div class="divider">or</div>
+                <div class="upload-controls">
+                    <input type="file" id="file-input" accept="audio/*,.webm,.wav,.mp3,.m4a,.ogg,.flac" hidden>
+                    <button id="upload-btn" class="btn btn-upload">
+                        <span class="icon">&#128193;</span> Upload File
+                    </button>
+                    <span id="file-name" class="file-name"></span>
+                </div>
+            </div>
+
+            <!-- Audio Preview -->
+            <div id="audio-preview" class="audio-preview hidden">
+                <audio id="audio-player" controls></audio>
+                <button id="analyze-btn" class="btn btn-analyze">
+                    Analyze Audio
+                </button>
+            </div>
+        </section>
+
+        <!-- Processing Indicator with Steps -->
+        <section id="processing" class="processing-section hidden">
+            <h2>Analyzing Audio</h2>
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+                </div>
+                <span id="progress-percent" class="progress-percent">0%</span>
+            </div>
+            <div id="progress-steps" class="progress-steps">
+                <div class="step" data-step="convert">
+                    <span class="step-icon">&#9675;</span>
+                    <span class="step-label">Converting audio</span>
+                </div>
+                <div class="step" data-step="transcribe">
+                    <span class="step-icon">&#9675;</span>
+                    <span class="step-label">Transcribing with Whisper</span>
+                </div>
+                <div class="step" data-step="diarize">
+                    <span class="step-icon">&#9675;</span>
+                    <span class="step-label">Identifying speakers</span>
+                </div>
+                <div class="step" data-step="roles">
+                    <span class="step-icon">&#9675;</span>
+                    <span class="step-label">Inferring roles</span>
+                </div>
+                <div class="step" data-step="quality">
+                    <span class="step-icon">&#9675;</span>
+                    <span class="step-label">Analyzing communication quality</span>
+                </div>
+                <div class="step" data-step="scorecards">
+                    <span class="step-icon">&#9675;</span>
+                    <span class="step-label">Generating scorecards</span>
+                </div>
+                <div class="step" data-step="confidence">
+                    <span class="step-icon">&#9675;</span>
+                    <span class="step-label">Analyzing confidence</span>
+                </div>
+                <div class="step" data-step="learning">
+                    <span class="step-icon">&#9675;</span>
+                    <span class="step-label">Evaluating learning metrics</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section id="results-section" class="results-section hidden">
+            <div class="results-header">
+                <h2>Analysis Results</h2>
+                <button id="download-btn" class="btn btn-download">
+                    <span class="icon">&#8595;</span> Download Report
+                </button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab active" data-tab="transcript">Transcript</button>
+                <button class="tab" data-tab="speakers">Speakers</button>
+                <button class="tab" data-tab="scorecards">Scorecards</button>
+                <button class="tab" data-tab="quality">Quality</button>
+                <button class="tab" data-tab="learning">Learning</button>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="tab-content">
+                <!-- Transcript Tab -->
+                <div id="tab-transcript" class="tab-panel active">
+                    <div class="stats-bar">
+                        <span>Duration: <strong id="duration">--</strong></span>
+                        <span>Segments: <strong id="segment-count">--</strong></span>
+                        <span>Processing: <strong id="proc-time">--</strong></span>
+                    </div>
+                    <div id="transcript-content" class="transcript-content">
+                        <!-- Transcript segments will be rendered here -->
+                    </div>
+                    <div class="full-text-section">
+                        <h3>Full Text</h3>
+                        <div id="full-text" class="full-text"></div>
+                    </div>
+                </div>
+
+                <!-- Speakers Tab -->
+                <div id="tab-speakers" class="tab-panel hidden">
+                    <div id="speakers-content" class="speakers-content">
+                        <!-- Speaker cards will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- Scorecards Tab -->
+                <div id="tab-scorecards" class="tab-panel hidden">
+                    <div id="scorecards-content" class="scorecards-content">
+                        <!-- Speaker scorecards will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- Quality Tab -->
+                <div id="tab-quality" class="tab-panel hidden">
+                    <div id="quality-content" class="quality-content">
+                        <!-- Quality analysis will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- Learning Tab -->
+                <div id="tab-learning" class="tab-panel hidden">
+                    <div id="learning-content" class="learning-content">
+                        <!-- Learning evaluation will be rendered here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <p>Starship Horizons Learning AI</p>
+        </footer>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

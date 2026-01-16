@@ -12,6 +12,9 @@ Enhanced version includes integration with:
 - Quality verification
 - Speaker scorecards
 - Communication quality analysis
+- 7 Habits of Highly Effective People analysis
+- Scout Law and EDGE Method alignment
+- Educational framework recommendations
 """
 
 import json

@@ -13,6 +13,8 @@ This package provides:
 - Quality verification
 - Speaker scorecards
 - Communication quality analysis
+- 7 Habits of Highly Effective People analysis
+- Comprehensive training recommendations for educational contexts
 """
 
 from src.metrics.event_recorder import EventRecorder
@@ -60,6 +62,19 @@ from src.metrics.communication_quality import (
     IMPROVEMENT_PATTERNS,
 )
 from src.metrics.enhanced_report_builder import EnhancedReportBuilder
+from src.metrics.seven_habits import (
+    SevenHabitsAnalyzer,
+    SevenHabit,
+    HabitAssessment,
+    HabitIndicators,
+)
+from src.metrics.training_recommendations import (
+    TrainingRecommendationEngine,
+    TrainingRecommendation,
+    DrillActivity,
+    RecommendationPriority,
+    SkillCategory,
+)
 
 __all__ = [
     # Core modules
@@ -101,4 +116,15 @@ __all__ = [
     'IMPROVEMENT_PATTERNS',
     # Enhanced report builder
     'EnhancedReportBuilder',
+    # 7 Habits analysis
+    'SevenHabitsAnalyzer',
+    'SevenHabit',
+    'HabitAssessment',
+    'HabitIndicators',
+    # Training recommendations
+    'TrainingRecommendationEngine',
+    'TrainingRecommendation',
+    'DrillActivity',
+    'RecommendationPriority',
+    'SkillCategory',
 ]
