@@ -44,6 +44,14 @@ except ImportError:
     DIARIZATION_AVAILABLE = False
     SpeakerDiarizer = None
     EngagementAnalyzer = None
+    SpeakerSegment = None
+
+try:
+    from src.audio.neural_diarization import NeuralSpeakerDiarizer, PYANNOTE_AVAILABLE
+    NEURAL_DIARIZATION_AVAILABLE = PYANNOTE_AVAILABLE
+except ImportError:
+    NEURAL_DIARIZATION_AVAILABLE = False
+    NeuralSpeakerDiarizer = None
 
 try:
     from src.metrics.communication_quality import CommunicationQualityAnalyzer
@@ -614,19 +622,7 @@ class AudioProcessor:
                         for w in segment.words
                     ]
 
-            segments.append(seg_data)
-
-                # Report granular progress based on how far through audio we are
-                if progress_callback and total_duration > 0:
-                    # Transcription is steps 5-35%, so map segment progress to that range
-                    segment_progress = min(segment.end / total_duration, 1.0)
-                    # Map 0-100% of audio to 5-35% overall progress
-                    overall_progress = 5 + int(segment_progress * 30)
-                    progress_callback(
-                        "transcribe",
-                        f"Transcribing... {segment.end:.1f}s / {total_duration:.1f}s",
-                        overall_progress
-                    )
+                segments.append(seg_data)
 
             info_dict = {
                 'language': info.language,
@@ -635,6 +631,197 @@ class AudioProcessor:
             }
 
             return segments, info_dict
+
+        except Exception as e:
+            logger.error(f"Transcription failed: {e}")
+            raise RuntimeError(f"Transcription failed: {e}")
+
+    def transcribe_with_segments(
+        self,
+        audio_path: str,
+        progress_callback: Optional[callable] = None
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        """
+        Transcribe audio file with segment-level details.
+
+        For long files (>10 minutes), uses chunked processing to prevent
+        Whisper hallucination loops.
+
+        Args:
+            audio_path: Path to audio file (WAV preferred)
+            progress_callback: Optional callback(step_id, label, progress_pct)
+
+        Returns:
+            Tuple of (segments_list, info_dict)
+            - segments: List of {start, end, text, confidence, words}
+            - info: {language, duration, language_probability}
+        """
+        if not self._model_loaded:
+            self.load_model()
+
+        if not self._transcriber:
+            raise RuntimeError("Whisper transcriber not available")
+
+        # Check audio duration to decide on chunked vs direct processing
+        audio_duration = self.get_audio_duration(audio_path)
+        logger.info(f"Audio duration: {audio_duration:.1f}s ({audio_duration/60:.1f} minutes)")
+
+        # Threshold: 10 minutes (600 seconds) - use chunked processing for longer files
+        CHUNK_THRESHOLD_SECONDS = 600
+
+        if audio_duration > CHUNK_THRESHOLD_SECONDS:
+            # Use chunked processing for long files
+            logger.info(
+                f"Audio exceeds {CHUNK_THRESHOLD_SECONDS}s threshold, "
+                "using chunked transcription to prevent hallucination loops"
+            )
+            return self._transcribe_chunked(audio_path, audio_duration, progress_callback)
+        else:
+            # Use direct processing for shorter files
+            return self._transcribe_direct(audio_path, progress_callback)
+
+    def _transcribe_chunked(
+        self,
+        audio_path: str,
+        audio_duration: float,
+        progress_callback: Optional[callable] = None
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        """
+        Transcribe using chunked processing for long files.
+
+        Args:
+            audio_path: Path to audio file
+            audio_duration: Duration in seconds
+            progress_callback: Optional progress callback
+
+        Returns:
+            Tuple of (segments_list, info_dict)
+        """
+        # Wrapper for progress callback that adapts to chunked format
+        def chunk_progress_wrapper(chunk_num: int, total_chunks: int, chunk_pct: int):
+            if progress_callback:
+                # Map chunk progress to 5-35% range
+                overall_progress = 5 + int(chunk_pct * 0.30)
+                progress_callback(
+                    "transcribe",
+                    f"Transcribing chunk {chunk_num}/{total_chunks}...",
+                    overall_progress
+                )
+
+        # Call the chunked transcription method from whisper_transcriber
+        result = self._transcriber.transcribe_file_chunked(
+            audio_path,
+            chunk_duration=300,  # 5 minute chunks
+            min_chunk_duration=120,  # 2 minute minimum
+            max_chunk_duration=420,  # 7 minute maximum
+            progress_callback=chunk_progress_wrapper
+        )
+
+        # Convert chunked result to expected format
+        segments = result.get('segments', [])
+
+        # Filter hallucinations from combined result
+        from src.audio.whisper_transcriber import is_hallucination
+        filtered_segments = [
+            seg for seg in segments
+            if seg.get('text') and not is_hallucination(seg['text'])
+        ]
+
+        info_dict = {
+            'language': result.get('language', 'en'),
+            'language_probability': 1.0,  # Not available in chunked mode
+            'duration': result.get('duration', audio_duration),
+            'chunk_count': result.get('chunk_count', 1),
+            'chunked': True
+        }
+
+        logger.info(
+            f"Chunked transcription produced {len(filtered_segments)} segments "
+            f"from {info_dict.get('chunk_count', 1)} chunks"
+        )
+
+        return filtered_segments, info_dict
+
+    def _transcribe_direct(
+        self,
+        audio_path: str,
+        progress_callback: Optional[callable] = None
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        """
+        Transcribe using direct single-pass processing.
+
+        Args:
+            audio_path: Path to audio file
+            progress_callback: Optional progress callback
+
+        Returns:
+            Tuple of (segments_list, info_dict)
+        """
+        # Access the underlying model directly for segment info
+        segments_gen, info = self._transcriber._model.transcribe(
+            audio_path,
+            language='en',  # Force English for Starship Horizons
+            initial_prompt=self._transcriber.initial_prompt,
+            vad_filter=True,
+            word_timestamps=True,
+            beam_size=5,  # Better accuracy with beam search
+            best_of=5,    # Consider more candidates
+            temperature=0.0,  # Deterministic output for consistency
+            condition_on_previous_text=False,  # Prevent hallucination propagation
+            no_speech_threshold=0.6,  # Filter out non-speech
+            repetition_penalty=1.5,  # Penalize repeated tokens
+            no_repeat_ngram_size=3,  # Prevent 3+ word phrases from repeating
+        )
+
+        total_duration = info.duration
+        segments = []
+
+        for segment in segments_gen:
+            # Filter hallucinations
+            from src.audio.whisper_transcriber import is_hallucination
+            if is_hallucination(segment.text):
+                continue
+
+            seg_data = {
+                'start': segment.start,
+                'end': segment.end,
+                'text': segment.text.strip(),
+                'confidence': segment.avg_logprob,
+                'words': []
+            }
+
+            # Add word-level timestamps if available
+            if segment.words:
+                seg_data['words'] = [
+                    {
+                        'word': w.word,
+                        'start': w.start,
+                        'end': w.end,
+                        'probability': w.probability
+                    }
+                    for w in segment.words
+                ]
+
+            segments.append(seg_data)
+
+            # Report granular progress based on how far through audio we are
+            if progress_callback and total_duration > 0:
+                segment_progress = min(segment.end / total_duration, 1.0)
+                overall_progress = 5 + int(segment_progress * 30)
+                progress_callback(
+                    "transcribe",
+                    f"Transcribing... {segment.end:.1f}s / {total_duration:.1f}s",
+                    overall_progress
+                )
+
+        info_dict = {
+            'language': info.language,
+            'language_probability': info.language_probability,
+            'duration': info.duration,
+            'chunked': False
+        }
+
+        return segments, info_dict
 
     def analyze_audio(
         self,
@@ -1037,31 +1224,69 @@ class AudioProcessor:
         wav_path: str,
         segments: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
-        """Add speaker identification to segments using neural diarization."""
+        """
+        Add speaker identification to segments using neural diarization.
+
+        Uses batch processing with clustering for improved accuracy and
+        consistency across the entire recording.
+        """
         try:
             # Load audio for diarization
             audio = AudioSegment.from_wav(wav_path)
             samples = np.array(audio.get_array_of_samples(), dtype=np.float32)
             samples = samples / 32768.0  # Normalize to -1 to 1
 
-            # Use higher threshold (0.75) for better speaker separation
-            # Lower threshold = speakers merge together, higher = more distinct speakers
-            diarizer = SpeakerDiarizer(similarity_threshold=0.75)
-            engagement = EngagementAnalyzer()
+            # Use neural diarization if available (much better accuracy)
+            if NEURAL_DIARIZATION_AVAILABLE and self.use_neural_diarization:
+                logger.info("Using enhanced neural speaker diarization (pyannote.audio)")
+                diarizer = NeuralSpeakerDiarizer(
+                    similarity_threshold=self.speaker_embedding_threshold,
+                    min_speakers=self.min_expected_speakers,
+                    max_speakers=self.max_expected_speakers
+                )
+
+                # Use batch processing for better consistency across segments
+                if len(segments) > 5:
+                    logger.info(f"Using batch processing for {len(segments)} segments")
+                    segments = diarizer.process_segments_batch(
+                        segments,
+                        samples,
+                        sample_rate=self.sample_rate
+                    )
+                else:
+                    # For small number of segments, use sequential processing
+                    for seg in segments:
+                        start_sample = int(seg['start'] * self.sample_rate)
+                        end_sample = int(seg['end'] * self.sample_rate)
+                        segment_audio = samples[start_sample:end_sample]
+
+                        if len(segment_audio) > 0:
+                            speaker_id, confidence = diarizer.identify_speaker(
+                                segment_audio,
+                                start_time=seg['start'],
+                                end_time=seg['end']
+                            )
+                            seg['speaker_id'] = speaker_id
+                            seg['speaker_confidence'] = confidence
+            else:
+                logger.info("Using simple speaker diarization")
+                diarizer = SpeakerDiarizer(similarity_threshold=self.speaker_similarity_threshold)
 
                 for seg in segments:
                     start_sample = int(seg['start'] * self.sample_rate)
                     end_sample = int(seg['end'] * self.sample_rate)
                     segment_audio = samples[start_sample:end_sample]
 
-                if len(segment_audio) > 0:
-                    speaker_id, confidence = diarizer.identify_speaker(
-                        segment_audio
-                    )
-                    seg['speaker_id'] = speaker_id
-                    seg['speaker_confidence'] = confidence
-                    # speaker_roles only available on simple diarizer
-                    speaker_roles = getattr(diarizer, 'speaker_roles', {})
+                    if len(segment_audio) > 0:
+                        speaker_id, confidence = diarizer.identify_speaker(segment_audio)
+                        seg['speaker_id'] = speaker_id
+                        seg['speaker_confidence'] = confidence
+
+            # Add speaker roles if available
+            speaker_roles = getattr(diarizer, 'speaker_roles', {})
+            for seg in segments:
+                speaker_id = seg.get('speaker_id')
+                if speaker_id:
                     seg['speaker_role'] = speaker_roles.get(speaker_id)
 
             # Track engagement metrics
@@ -1082,12 +1307,21 @@ class AudioProcessor:
                     )
                     engagement.update_speaker_stats(seg['speaker_id'], speaker_seg)
 
+            # Count unique speakers
             unique_speakers = set(s.get('speaker_id') for s in segments if s.get('speaker_id'))
             logger.info(f"Speaker diarization complete: {len(unique_speakers)} speakers detected")
+
+            # Log speaker distribution for debugging
+            speaker_counts = {}
+            for seg in segments:
+                sid = seg.get('speaker_id', 'unknown')
+                speaker_counts[sid] = speaker_counts.get(sid, 0) + 1
+            logger.info(f"Speaker distribution: {speaker_counts}")
+
             return segments
 
         except Exception as e:
-            logger.error(f"Speaker diarization failed: {e}")
+            logger.error(f"Speaker diarization failed: {e}", exc_info=True)
             return segments
 
     def _calculate_speaker_stats(
