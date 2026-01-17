@@ -37,8 +37,11 @@ try:
     from scipy.cluster.hierarchy import linkage, fcluster
     import torch
     PYANNOTE_AVAILABLE = True
-except ImportError:
+except (ImportError, TypeError, Exception) as e:
+    # TypeError can occur with lightning/pyannote version conflicts
     PYANNOTE_AVAILABLE = False
+    torch = None
+    logging.getLogger(__name__).warning(f"Pyannote not available: {e}")
 
 try:
     from pydub import AudioSegment as _PydubCheck
@@ -147,8 +150,50 @@ def _get_device():
             return torch.device("cuda")
         else:
             logger.info("CUDA not available for pyannote, using CPU")
+            _configure_cpu_optimizations()
             return torch.device("cpu")
     return None
+
+
+def _configure_cpu_optimizations():
+    """
+    Configure PyTorch for optimal CPU performance.
+
+    Sets thread counts and enables CPU-specific optimizations
+    for faster inference on CPU-only systems.
+    """
+    if not PYANNOTE_AVAILABLE:
+        return
+
+    try:
+        import os
+
+        # Get CPU count
+        cpu_count = os.cpu_count() or 4
+
+        # Set optimal thread counts
+        # Use most cores but leave 1-2 for system
+        num_threads = max(1, cpu_count - 1)
+        num_interop = max(1, num_threads // 2)
+
+        torch.set_num_threads(num_threads)
+        torch.set_num_interop_threads(num_interop)
+
+        # Enable optimizations if available
+        if hasattr(torch, 'set_float32_matmul_precision'):
+            # Use medium precision for faster matmul on CPU
+            torch.set_float32_matmul_precision('medium')
+
+        # Disable gradient computation for inference
+        torch.set_grad_enabled(False)
+
+        logger.info(
+            f"CPU optimizations configured: "
+            f"threads={num_threads}, interop={num_interop}"
+        )
+
+    except Exception as e:
+        logger.warning(f"Could not configure CPU optimizations: {e}")
 
 
 class NeuralSpeakerDiarizer:

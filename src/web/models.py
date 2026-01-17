@@ -49,6 +49,17 @@ class SpeakerInfo(BaseModel):
     )
 
 
+class PatternEvidence(BaseModel):
+    """Evidence for a single pattern match."""
+
+    text: str = Field(description="The text that matched the pattern")
+    speaker: Optional[str] = Field(default=None, description="Speaker who said this")
+    timestamp: Optional[float] = Field(default=None, description="Start time in seconds")
+    matched_substring: Optional[str] = Field(
+        default=None, description="The specific substring that triggered the match"
+    )
+
+
 class CommunicationPatternMatch(BaseModel):
     """A matched communication pattern."""
 
@@ -56,7 +67,11 @@ class CommunicationPatternMatch(BaseModel):
     category: str  # "effective" or "needs_improvement"
     description: str
     count: int
-    examples: List[str] = Field(default_factory=list)
+    examples: List[Any] = Field(default_factory=list)
+    # Evidence fields
+    evidence_details: List[PatternEvidence] = Field(
+        default_factory=list, description="Detailed evidence for each match"
+    )
 
 
 class CommunicationQuality(BaseModel):
@@ -72,6 +87,14 @@ class CommunicationQuality(BaseModel):
     patterns: List[CommunicationPatternMatch] = Field(
         default_factory=list, description="Matched patterns with details"
     )
+    # Evidence fields
+    total_utterances_assessed: int = Field(
+        default=0, description="Total number of utterances assessed"
+    )
+    calculation_summary: Optional[str] = Field(
+        default=None,
+        description="Summary of how the metrics were calculated"
+    )
 
 
 class MetricScore(BaseModel):
@@ -81,6 +104,16 @@ class MetricScore(BaseModel):
     display_name: str = Field(description="Human-readable name")
     score: int = Field(description="Score from 1-5", ge=1, le=5)
     evidence: str = Field(description="Supporting evidence for the score")
+    # Evidence fields
+    supporting_quotes: List[str] = Field(
+        default_factory=list, description="Supporting quotes from transcript"
+    )
+    threshold_info: Optional[str] = Field(
+        default=None, description="Score thresholds used for this metric"
+    )
+    calculation_details: Optional[str] = Field(
+        default=None, description="Details of how score was calculated"
+    )
 
 
 class SpeakerScorecard(BaseModel):
@@ -166,7 +199,17 @@ class HabitScore(BaseModel):
     observation_count: int = Field(description="Number of observations")
     interpretation: str = Field(description="Assessment interpretation")
     development_tip: str = Field(description="Tip for developing this habit")
-    examples: List[str] = Field(default_factory=list, description="Example quotes")
+    examples: List[Any] = Field(default_factory=list, description="Example quotes with speaker info")
+    # Evidence fields
+    pattern_breakdown: Dict[str, int] = Field(
+        default_factory=dict, description="Count of each pattern type matched"
+    )
+    speaker_contributions: Dict[str, int] = Field(
+        default_factory=dict, description="Contributions per speaker"
+    )
+    gap_to_next_score: Optional[str] = Field(
+        default=None, description="What's needed to reach the next score level"
+    )
 
 
 class SevenHabitsAssessment(BaseModel):
@@ -197,6 +240,19 @@ class TrainingRecommendationItem(BaseModel):
         default=None, description="Connection to 7 Habits"
     )
     success_criteria: str = Field(description="How to measure success")
+    # Evidence fields
+    trigger_metrics: List[str] = Field(
+        default_factory=list, description="Which metrics triggered this recommendation"
+    )
+    current_value: Optional[str] = Field(
+        default=None, description="Current observed value"
+    )
+    target_value: Optional[str] = Field(
+        default=None, description="Target value to achieve"
+    )
+    gap_explanation: Optional[str] = Field(
+        default=None, description="Explanation of the gap to address"
+    )
 
 
 class DrillActivity(BaseModel):
@@ -312,6 +368,22 @@ class HealthResponse(BaseModel):
     whisper_model: Optional[str] = Field(
         default=None, description="Loaded Whisper model size"
     )
+
+
+class ServiceStatus(BaseModel):
+    """Individual service status."""
+
+    available: bool = Field(description="Whether service is available")
+    status: str = Field(description="Status message")
+    details: Optional[str] = Field(default=None, description="Additional details")
+
+
+class ServicesStatusResponse(BaseModel):
+    """Status of all external services."""
+
+    whisper: ServiceStatus = Field(description="Whisper transcription service status")
+    ollama: ServiceStatus = Field(description="Ollama LLM service status")
+    diarization: ServiceStatus = Field(description="Speaker diarization service status")
 
 
 class ErrorResponse(BaseModel):

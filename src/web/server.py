@@ -13,21 +13,25 @@ import threading
 import queue
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Optional, Generator
+from typing import List, Optional, Generator
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, UploadFile, HTTPException, Query
+from fastapi import FastAPI, File, UploadFile, HTTPException, Query, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 from src.web.models import (
     AnalysisResult,
     TranscriptionResult,
     HealthResponse,
     ErrorResponse,
+    ServiceStatus,
+    ServicesStatusResponse,
 )
 from src.web.audio_processor import AudioProcessor, ANALYSIS_STEPS
+from src.web.archive_manager import ArchiveManager
 
 load_dotenv()
 
@@ -40,8 +44,9 @@ MAX_UPLOAD_MB = int(os.getenv('WEB_MAX_UPLOAD_MB', '100'))
 MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
 CORS_ORIGINS = os.getenv('WEB_CORS_ORIGINS', '*').split(',')
 
-# Global processor instance
+# Global processor and archive manager instances
 _processor: Optional[AudioProcessor] = None
+_archive_manager: Optional[ArchiveManager] = None
 
 
 def get_processor() -> AudioProcessor:
@@ -50,6 +55,25 @@ def get_processor() -> AudioProcessor:
     if _processor is None:
         _processor = AudioProcessor()
     return _processor
+
+
+def get_archive_manager() -> ArchiveManager:
+    """Get or create the archive manager instance."""
+    global _archive_manager
+    if _archive_manager is None:
+        _archive_manager = ArchiveManager()
+        # Sync with filesystem on first access
+        _archive_manager.sync_with_filesystem()
+    return _archive_manager
+
+
+# Request model for metadata updates
+class MetadataUpdate(BaseModel):
+    """Request body for updating analysis metadata."""
+    user_title: Optional[str] = None
+    tags: Optional[List[str]] = None
+    notes: Optional[str] = None
+    starred: Optional[bool] = None
 
 
 @asynccontextmanager
@@ -123,6 +147,170 @@ async def health_check():
         status="ok",
         whisper_loaded=processor.is_model_loaded,
         whisper_model=processor.whisper_model_size if processor.is_model_loaded else None
+    )
+
+
+@app.get("/api/services-status", response_model=ServicesStatusResponse)
+async def get_services_status():
+    """
+    Check status of all external services (Whisper, Ollama, Diarization).
+
+    Returns availability and status details for each service.
+    """
+    import httpx
+
+    processor = get_processor()
+
+    # Check Whisper status
+    whisper_status = ServiceStatus(
+        available=False,
+        status="Not loaded",
+        details=None
+    )
+
+    try:
+        from src.audio.whisper_transcriber import WHISPER_AVAILABLE
+        if WHISPER_AVAILABLE:
+            if processor.is_model_loaded:
+                whisper_status = ServiceStatus(
+                    available=True,
+                    status="Ready",
+                    details=f"Model: {processor.whisper_model_size}"
+                )
+            else:
+                whisper_status = ServiceStatus(
+                    available=True,
+                    status="Available (not loaded)",
+                    details=f"Model: {processor.whisper_model_size} (will load on first use)"
+                )
+        else:
+            whisper_status = ServiceStatus(
+                available=False,
+                status="Not installed",
+                details="Install faster-whisper package"
+            )
+    except ImportError:
+        whisper_status = ServiceStatus(
+            available=False,
+            status="Not installed",
+            details="Install faster-whisper package"
+        )
+
+    # Check Ollama status
+    ollama_status = ServiceStatus(
+        available=False,
+        status="Not connected",
+        details=None
+    )
+
+    try:
+        ollama_host = os.getenv('OLLAMA_HOST', 'http://localhost:11434')
+        ollama_model = os.getenv('OLLAMA_MODEL', 'llama3.2')
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            # Check if Ollama is running
+            response = await client.get(f"{ollama_host}/api/tags")
+            if response.status_code == 200:
+                tags_data = response.json()
+                models = tags_data.get('models', [])
+                # Get both full names and base names for matching
+                full_names = [m.get('name', '') for m in models]
+                base_names = [name.split(':')[0] for name in full_names]
+                ollama_model_base = ollama_model.split(':')[0]
+
+                # Check if configured model exists (match full name or base name)
+                model_found = (
+                    ollama_model in full_names or
+                    ollama_model_base in base_names or
+                    any(ollama_model in name for name in full_names)
+                )
+
+                if model_found:
+                    ollama_status = ServiceStatus(
+                        available=True,
+                        status="Ready",
+                        details=f"Model: {ollama_model} ({len(models)} models available)"
+                    )
+                else:
+                    ollama_status = ServiceStatus(
+                        available=True,
+                        status="Running (model not found)",
+                        details=f"Model '{ollama_model}' not found. Available: {', '.join(full_names[:3])}"
+                    )
+            else:
+                ollama_status = ServiceStatus(
+                    available=False,
+                    status="Error",
+                    details=f"HTTP {response.status_code}"
+                )
+    except httpx.ConnectError:
+        ollama_status = ServiceStatus(
+            available=False,
+            status="Not running",
+            details=f"Cannot connect to {os.getenv('OLLAMA_HOST', 'http://localhost:11434')}"
+        )
+    except httpx.TimeoutException:
+        ollama_status = ServiceStatus(
+            available=False,
+            status="Timeout",
+            details="Connection timed out"
+        )
+    except Exception as e:
+        ollama_status = ServiceStatus(
+            available=False,
+            status="Error",
+            details=str(e)[:100]
+        )
+
+    # Check diarization status
+    diarization_status = ServiceStatus(
+        available=False,
+        status="Not available",
+        details=None
+    )
+
+    try:
+        from src.web.audio_processor import (
+            NEURAL_DIARIZATION_AVAILABLE,
+            CPU_DIARIZATION_AVAILABLE,
+            DIARIZATION_AVAILABLE
+        )
+
+        if processor.use_cpu_diarization and CPU_DIARIZATION_AVAILABLE:
+            diarization_status = ServiceStatus(
+                available=True,
+                status="Ready (CPU mode)",
+                details="Using resemblyzer for speaker identification"
+            )
+        elif processor.use_neural_diarization and NEURAL_DIARIZATION_AVAILABLE:
+            diarization_status = ServiceStatus(
+                available=True,
+                status="Ready (Neural mode)",
+                details="Using pyannote for speaker identification"
+            )
+        elif DIARIZATION_AVAILABLE:
+            diarization_status = ServiceStatus(
+                available=True,
+                status="Ready (Simple mode)",
+                details="Using spectral features for speaker identification"
+            )
+        else:
+            diarization_status = ServiceStatus(
+                available=False,
+                status="Not installed",
+                details="Install speaker diarization dependencies"
+            )
+    except ImportError:
+        diarization_status = ServiceStatus(
+            available=False,
+            status="Not installed",
+            details="Speaker diarization module not available"
+        )
+
+    return ServicesStatusResponse(
+        whisper=whisper_status,
+        ollama=ollama_status,
+        diarization=diarization_status
     )
 
 
@@ -383,6 +571,7 @@ async def get_analysis(filename: str):
 async def delete_analysis(filename: str):
     """Delete a saved analysis."""
     processor = get_processor()
+    archive_mgr = get_archive_manager()
 
     # Security: only allow valid filenames
     if '..' in filename or '/' in filename:
@@ -394,9 +583,108 @@ async def delete_analysis(filename: str):
 
     try:
         file_path.unlink()
+        # Also remove from archive index
+        archive_mgr.delete_analysis(filename)
         return {"status": "ok", "message": f"Deleted {filename}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# Archive Index Routes
+# ============================================================================
+
+@app.get("/api/archive-index")
+async def get_archive_index(
+    starred_only: bool = Query(False, description="Only return starred analyses"),
+    tag: Optional[str] = Query(None, description="Filter by tag"),
+    search: Optional[str] = Query(None, description="Search in titles and notes")
+):
+    """
+    Get the full archive index with metadata.
+
+    Returns all analyses with their titles, tags, notes, and other metadata.
+    Supports filtering by starred status, tags, and search query.
+    """
+    archive_mgr = get_archive_manager()
+
+    # Sync with filesystem in case files were added/removed externally
+    archive_mgr.sync_with_filesystem()
+
+    analyses = archive_mgr.list_analyses(
+        starred_only=starred_only,
+        tag_filter=tag,
+        search_query=search
+    )
+
+    return {
+        "analyses": [a.to_dict() for a in analyses],
+        "summary": archive_mgr.get_index_summary(),
+        "tags": archive_mgr.get_all_tags()
+    }
+
+
+@app.patch("/api/analyses/{filename}/metadata")
+async def update_analysis_metadata(
+    filename: str,
+    update: MetadataUpdate
+):
+    """
+    Update metadata for a specific analysis.
+
+    Allows updating:
+    - user_title: Custom title (overrides auto-generated)
+    - tags: List of tags
+    - notes: Free-form notes
+    - starred: Favorite/star status
+    """
+    # Security: only allow valid filenames
+    if '..' in filename or '/' in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    archive_mgr = get_archive_manager()
+
+    # Check if analysis exists
+    metadata = archive_mgr.get_analysis(filename)
+    if not metadata:
+        # Try to sync and check again
+        archive_mgr.sync_with_filesystem()
+        metadata = archive_mgr.get_analysis(filename)
+        if not metadata:
+            raise HTTPException(status_code=404, detail="Analysis not found")
+
+    # Update metadata
+    updated = archive_mgr.update_analysis(
+        filename=filename,
+        user_title=update.user_title,
+        tags=update.tags,
+        notes=update.notes,
+        starred=update.starred
+    )
+
+    if not updated:
+        raise HTTPException(status_code=500, detail="Failed to update metadata")
+
+    return {"status": "ok", "metadata": updated.to_dict()}
+
+
+@app.post("/api/archive-index/sync")
+async def sync_archive_index():
+    """
+    Manually trigger archive index synchronization.
+
+    Syncs the index with the filesystem, adding entries for new files
+    and removing entries for deleted files.
+    """
+    archive_mgr = get_archive_manager()
+    result = archive_mgr.sync_with_filesystem()
+
+    return {
+        "status": "ok",
+        "added": result['added'],
+        "removed": result['removed'],
+        "total": len(archive_mgr.list_analyses())
+    }
 
 
 @app.post("/api/transcribe", response_model=TranscriptionResult)

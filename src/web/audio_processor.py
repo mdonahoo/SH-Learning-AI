@@ -49,9 +49,19 @@ except ImportError:
 try:
     from src.audio.neural_diarization import NeuralSpeakerDiarizer, PYANNOTE_AVAILABLE
     NEURAL_DIARIZATION_AVAILABLE = PYANNOTE_AVAILABLE
-except ImportError:
+except (ImportError, TypeError, Exception) as e:
+    # TypeError can occur with lightning/pyannote version conflicts
     NEURAL_DIARIZATION_AVAILABLE = False
     NeuralSpeakerDiarizer = None
+    logger.warning(f"Neural diarization not available: {e}")
+
+try:
+    from src.audio.cpu_diarization import CPUSpeakerDiarizer, RESEMBLYZER_AVAILABLE
+    CPU_DIARIZATION_AVAILABLE = RESEMBLYZER_AVAILABLE
+except (ImportError, Exception) as e:
+    CPU_DIARIZATION_AVAILABLE = False
+    CPUSpeakerDiarizer = None
+    logger.warning(f"CPU diarization not available: {e}")
 
 try:
     from src.metrics.communication_quality import CommunicationQualityAnalyzer
@@ -103,6 +113,21 @@ try:
 except ImportError:
     TRAINING_RECOMMENDATIONS_AVAILABLE = False
     TrainingRecommendationEngine = None
+
+# Title generator and archive manager imports
+try:
+    from src.web.title_generator import TitleGenerator
+    TITLE_GENERATOR_AVAILABLE = True
+except ImportError:
+    TITLE_GENERATOR_AVAILABLE = False
+    TitleGenerator = None
+
+try:
+    from src.web.archive_manager import ArchiveManager
+    ARCHIVE_MANAGER_AVAILABLE = True
+except ImportError:
+    ARCHIVE_MANAGER_AVAILABLE = False
+    ArchiveManager = None
 
 
 # Progress step definitions
@@ -163,6 +188,16 @@ class AudioProcessor:
             os.getenv('USE_NEURAL_DIARIZATION', 'true').lower() == 'true'
             and NEURAL_DIARIZATION_AVAILABLE
         )
+        # CPU-optimized mode: use resemblyzer instead of pyannote
+        # Auto-detect: use CPU mode if no GPU available and resemblyzer is installed
+        self.use_cpu_diarization = (
+            os.getenv('USE_CPU_DIARIZATION', 'auto').lower() == 'true'
+            or (
+                os.getenv('USE_CPU_DIARIZATION', 'auto').lower() == 'auto'
+                and CPU_DIARIZATION_AVAILABLE
+                and not self._has_gpu()
+            )
+        )
         self.speaker_similarity_threshold = float(
             os.getenv('SPEAKER_SIMILARITY_THRESHOLD', '0.75')
         )
@@ -172,8 +207,17 @@ class AudioProcessor:
         self.min_expected_speakers = int(os.getenv('MIN_EXPECTED_SPEAKERS', '1'))
         self.max_expected_speakers = int(os.getenv('MAX_EXPECTED_SPEAKERS', '6'))
 
-        # Cache for neural diarizer (expensive to initialize)
+        # Cache for diarizers (expensive to initialize)
         self._neural_diarizer: Optional[NeuralSpeakerDiarizer] = None
+        self._cpu_diarizer: Optional[CPUSpeakerDiarizer] = None
+
+        # Log diarization mode
+        if self.use_cpu_diarization and CPU_DIARIZATION_AVAILABLE:
+            logger.info("Speaker diarization: CPU-optimized mode (resemblyzer)")
+        elif self.use_neural_diarization and NEURAL_DIARIZATION_AVAILABLE:
+            logger.info("Speaker diarization: Neural mode (pyannote)")
+        else:
+            logger.info("Speaker diarization: Simple mode (spectral features)")
 
         # Recordings and analyses storage
         self.save_recordings = os.getenv('SAVE_RECORDINGS', 'true').lower() == 'true'
@@ -185,6 +229,14 @@ class AudioProcessor:
             logger.info(f"Recordings will be saved to: {self.recordings_dir}")
             logger.info(f"Analyses will be saved to: {self.analyses_dir}")
 
+        # Initialize archive manager and title generator
+        self._archive_manager: Optional[ArchiveManager] = None
+        self._title_generator: Optional[TitleGenerator] = None
+        if ARCHIVE_MANAGER_AVAILABLE:
+            self._archive_manager = ArchiveManager()
+        if TITLE_GENERATOR_AVAILABLE:
+            self._title_generator = TitleGenerator()
+
         logger.info(
             f"AudioProcessor initialized: model={self.whisper_model_size}, "
             f"sample_rate={self.sample_rate}"
@@ -192,6 +244,14 @@ class AudioProcessor:
 
         if preload_model:
             self.load_model()
+
+    def _has_gpu(self) -> bool:
+        """Check if GPU (CUDA) is available."""
+        try:
+            import torch
+            return torch.cuda.is_available()
+        except ImportError:
+            return False
 
     def load_model(self) -> bool:
         """
@@ -385,7 +445,7 @@ class AudioProcessor:
 
     def save_analysis(self, results: Dict[str, Any], recording_path: Optional[str] = None) -> Optional[str]:
         """
-        Save analysis results to JSON file.
+        Save analysis results to JSON file with auto-generated title.
 
         Args:
             results: Analysis results dictionary
@@ -406,6 +466,24 @@ class AudioProcessor:
             saved_name = f"analysis_{timestamp}.json"
             saved_path = self.analyses_dir / saved_name
 
+            # Generate title using LLM or fallback
+            auto_title = None
+            if self._title_generator:
+                try:
+                    from src.web.title_generator import generate_title_sync
+                    full_text = results.get('full_text', '')
+                    speakers = results.get('speakers', [])
+                    duration = results.get('duration_seconds', 0)
+                    auto_title = generate_title_sync(full_text, speakers, duration)
+                    logger.info(f"Generated title: {auto_title}")
+                except Exception as e:
+                    logger.warning(f"Title generation failed: {e}")
+                    # Fallback: use first sentence of transcript
+                    full_text = results.get('full_text', '')
+                    if full_text:
+                        first_sentence = full_text.split('.')[0][:80]
+                        auto_title = first_sentence if first_sentence else None
+
             # Add metadata
             analysis_data = {
                 'metadata': {
@@ -414,6 +492,7 @@ class AudioProcessor:
                     'duration_seconds': results.get('duration_seconds', 0),
                     'speaker_count': len(results.get('speakers', [])),
                     'segment_count': len(results.get('transcription', [])),
+                    'auto_title': auto_title,
                 },
                 'results': results
             }
@@ -423,6 +502,23 @@ class AudioProcessor:
                 json.dump(analysis_data, f, indent=2, default=str)
 
             logger.info(f"Analysis saved: {saved_path}")
+
+            # Register with archive manager
+            if self._archive_manager:
+                try:
+                    recording_filename = Path(recording_path).name if recording_path else None
+                    self._archive_manager.add_analysis(
+                        filename=saved_name,
+                        recording_filename=recording_filename,
+                        auto_title=auto_title,
+                        duration_seconds=results.get('duration_seconds', 0),
+                        speaker_count=len(results.get('speakers', [])),
+                        segment_count=len(results.get('transcription', []))
+                    )
+                    logger.info(f"Analysis registered in archive index: {saved_name}")
+                except Exception as e:
+                    logger.warning(f"Failed to register analysis in archive: {e}")
+
             return str(saved_path)
 
         except Exception as e:
@@ -1055,31 +1151,41 @@ class AudioProcessor:
         self,
         transcripts: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
-        """Generate speaker scorecards."""
+        """Generate speaker scorecards with evidence."""
         try:
             generator = SpeakerScorecardGenerator(transcripts)
-            scorecards_dict = generator.generate_all_scorecards()
-            scorecards = list(scorecards_dict.values())
 
+            # Use get_structured_results for evidence fields
+            structured = generator.get_structured_results()
             result = []
-            for scorecard in scorecards:
+
+            # speaker_scorecards is a dict keyed by speaker_id
+            speaker_scorecards = structured.get('speaker_scorecards', {})
+
+            for speaker_id, scorecard_data in speaker_scorecards.items():
                 metrics = []
-                for score in scorecard.scores:
+                # scores is a dict keyed by metric_name
+                scores_dict = scorecard_data.get('scores', {})
+                for metric_name, score_data in scores_dict.items():
                     metrics.append({
-                        'name': score.metric_name.replace('_', ' ').title(),
-                        'score': score.score,
-                        'evidence': score.evidence,
-                        'supporting_quotes': getattr(score, 'supporting_quotes', [])
+                        'name': metric_name.replace('_', ' ').title(),
+                        'score': score_data.get('score', 1),
+                        'evidence': score_data.get('evidence', ''),
+                        'supporting_quotes': score_data.get('supporting_quotes', []),
+                        # Evidence fields
+                        'threshold_info': score_data.get('threshold_info', ''),
+                        'pattern_breakdown': score_data.get('pattern_breakdown', {}),
+                        'calculation_details': score_data.get('calculation_details', '')
                     })
 
                 result.append({
-                    'speaker_id': scorecard.speaker,
-                    'role': scorecard.inferred_role,
-                    'utterance_count': scorecard.utterance_count,
-                    'overall_score': scorecard.overall_score,
+                    'speaker_id': speaker_id,
+                    'role': scorecard_data.get('role', 'Crew Member'),
+                    'utterance_count': scorecard_data.get('utterance_count', 0),
+                    'overall_score': scorecard_data.get('overall_score', 1),
                     'metrics': metrics,
-                    'strengths': scorecard.strengths,
-                    'areas_for_improvement': scorecard.development_areas
+                    'strengths': scorecard_data.get('strengths', []),
+                    'areas_for_improvement': scorecard_data.get('development_areas', [])
                 })
 
             return result
@@ -1225,28 +1331,57 @@ class AudioProcessor:
         segments: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
         """
-        Add speaker identification to segments using neural diarization.
+        Add speaker identification to segments.
 
-        Uses pyannote's full pipeline diarization on the entire audio file
-        for maximum accuracy, then aligns with transcription segments.
+        Supports three modes:
+        1. CPU-optimized (resemblyzer): Fast, good for CPU-only systems
+        2. Neural (pyannote): Most accurate, benefits from GPU
+        3. Simple (spectral): Fallback when others unavailable
         """
         try:
-            # Use neural diarization with full pipeline if available (most accurate)
-            if NEURAL_DIARIZATION_AVAILABLE and self.use_neural_diarization:
-                logger.info("Using pyannote full pipeline diarization (most accurate)")
-                diarizer = NeuralSpeakerDiarizer(
-                    similarity_threshold=self.speaker_embedding_threshold,
-                    min_speakers=self.min_expected_speakers,
-                    max_speakers=self.max_expected_speakers
+            diarizer = None
+
+            # Priority 1: CPU-optimized diarization (for CPU-only VMs)
+            if self.use_cpu_diarization and CPU_DIARIZATION_AVAILABLE:
+                logger.info("Using CPU-optimized diarization (resemblyzer)")
+
+                # Initialize CPU diarizer if needed
+                if self._cpu_diarizer is None:
+                    self._cpu_diarizer = CPUSpeakerDiarizer(
+                        similarity_threshold=self.speaker_embedding_threshold,
+                        min_speakers=self.min_expected_speakers,
+                        max_speakers=self.max_expected_speakers
+                    )
+
+                # Load audio and process in batch
+                audio = AudioSegment.from_wav(wav_path)
+                samples = np.array(audio.get_array_of_samples(), dtype=np.float32)
+                samples = samples / 32768.0  # Normalize to -1 to 1
+
+                segments = self._cpu_diarizer.process_segments_batch(
+                    segments, samples, audio.frame_rate
                 )
+                diarizer = self._cpu_diarizer
+
+            # Priority 2: Neural diarization with full pipeline (most accurate)
+            elif NEURAL_DIARIZATION_AVAILABLE and self.use_neural_diarization:
+                logger.info("Using pyannote full pipeline diarization (most accurate)")
+
+                # Initialize neural diarizer if needed
+                if self._neural_diarizer is None:
+                    self._neural_diarizer = NeuralSpeakerDiarizer(
+                        similarity_threshold=self.speaker_embedding_threshold,
+                        min_speakers=self.min_expected_speakers,
+                        max_speakers=self.max_expected_speakers
+                    )
 
                 # Use full pipeline diarization and alignment
-                # This runs pyannote on the entire file, then aligns with transcription
-                segments = diarizer.diarize_and_align(wav_path, segments)
+                segments = self._neural_diarizer.diarize_and_align(wav_path, segments)
+                diarizer = self._neural_diarizer
 
+            # Priority 3: Simple speaker diarization (fallback)
             else:
-                # Fallback to simple speaker diarization
-                logger.info("Using simple speaker diarization (neural not available)")
+                logger.info("Using simple speaker diarization (spectral features)")
                 audio = AudioSegment.from_wav(wav_path)
                 samples = np.array(audio.get_array_of_samples(), dtype=np.float32)
                 samples = samples / 32768.0  # Normalize to -1 to 1
@@ -1351,7 +1486,7 @@ class AudioProcessor:
         self,
         segments: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
-        """Run communication quality analysis."""
+        """Run communication quality analysis with evidence."""
         try:
             # Format for CommunicationQualityAnalyzer
             transcripts = [
@@ -1366,47 +1501,71 @@ class AudioProcessor:
             ]
 
             analyzer = CommunicationQualityAnalyzer(transcripts)
-            results = analyzer.analyze_all()
 
-            effective_count = len(results.get('effective', []))
-            improvement_count = len(results.get('needs_improvement', []))
+            # Use the new get_structured_results for evidence
+            structured = analyzer.get_structured_results()
+            stats = structured.get('statistics', {})
+
+            effective_count = stats.get('effective_count', 0)
+            improvement_count = stats.get('improvement_count', 0)
             total = effective_count + improvement_count
 
-            # Build pattern summary with full examples
+            # Build pattern summary with full examples and evidence
             patterns = []
-            for pattern_name, assessments in results.get('effective_by_pattern', {}).items():
-                examples = []
-                for a in assessments[:5]:  # Up to 5 examples per pattern
-                    examples.append({
-                        'text': a.text,
-                        'speaker': a.speaker,
-                        'timestamp': a.timestamp,
-                        'assessment': a.assessment,
-                        'pattern_description': a.pattern_description
-                    })
+            pattern_counts = structured.get('pattern_counts', {})
+
+            # Process effective patterns
+            for pattern_name, count in pattern_counts.get('effective', {}).items():
+                # Get examples for this pattern
+                examples = [
+                    ex for ex in structured.get('effective_examples', [])
+                    if ex.get('pattern') == pattern_name
+                ][:5]
+
+                # Build evidence details
+                evidence_details = [
+                    {
+                        'text': ex.get('text', ''),
+                        'speaker': ex.get('speaker', 'unknown'),
+                        'timestamp': ex.get('timestamp', ''),
+                        'matched_substring': ex.get('matched_substring', '')
+                    }
+                    for ex in examples
+                ]
+
                 patterns.append({
                     'pattern_name': pattern_name,
                     'category': 'effective',
-                    'description': assessments[0].pattern_description if assessments else '',
-                    'count': len(assessments),
-                    'examples': examples
+                    'description': examples[0].get('assessment', '') if examples else '',
+                    'count': count,
+                    'examples': [ex.get('text', '') for ex in examples],
+                    'evidence_details': evidence_details
                 })
-            for pattern_name, assessments in results.get('improvement_by_pattern', {}).items():
-                examples = []
-                for a in assessments[:5]:  # Up to 5 examples per pattern
-                    examples.append({
-                        'text': a.text,
-                        'speaker': a.speaker,
-                        'timestamp': a.timestamp,
-                        'assessment': a.assessment,
-                        'pattern_description': a.pattern_description
-                    })
+
+            # Process improvement patterns
+            for pattern_name, count in pattern_counts.get('needs_improvement', {}).items():
+                examples = [
+                    ex for ex in structured.get('improvement_examples', [])
+                    if ex.get('pattern') == pattern_name
+                ][:5]
+
+                evidence_details = [
+                    {
+                        'text': ex.get('text', ''),
+                        'speaker': ex.get('speaker', 'unknown'),
+                        'timestamp': ex.get('timestamp', ''),
+                        'matched_substring': ex.get('matched_substring', '')
+                    }
+                    for ex in examples
+                ]
+
                 patterns.append({
                     'pattern_name': pattern_name,
                     'category': 'needs_improvement',
-                    'description': assessments[0].pattern_description if assessments else '',
-                    'count': len(assessments),
-                    'examples': examples
+                    'description': examples[0].get('issue', '') if examples else '',
+                    'count': count,
+                    'examples': [ex.get('text', '') for ex in examples],
+                    'evidence_details': evidence_details
                 })
 
             return {
@@ -1415,7 +1574,11 @@ class AudioProcessor:
                 'effective_percentage': (
                     (effective_count / total * 100) if total > 0 else 0
                 ),
-                'patterns': patterns
+                'patterns': patterns,
+                # New evidence fields
+                'total_utterances_assessed': structured.get('total_utterances_assessed', 0),
+                'calculation_summary': structured.get('calculation_summary', ''),
+                'evidence_details': structured.get('evidence_details', [])[:20]
             }
 
         except Exception as e:
@@ -1424,19 +1587,22 @@ class AudioProcessor:
                 'effective_count': 0,
                 'improvement_count': 0,
                 'effective_percentage': 0,
-                'patterns': []
+                'patterns': [],
+                'total_utterances_assessed': 0,
+                'calculation_summary': '',
+                'evidence_details': []
             }
 
     def _analyze_seven_habits(
         self,
         transcripts: List[Dict[str, Any]]
     ) -> Optional[Dict[str, Any]]:
-        """Analyze transcripts using 7 Habits framework."""
+        """Analyze transcripts using 7 Habits framework with evidence."""
         try:
             analyzer = SevenHabitsAnalyzer(transcripts)
             results = analyzer.get_structured_results()
 
-            # Format habits for frontend
+            # Format habits for frontend with evidence fields
             habits = []
             for habit_name, habit_data in results.get('habits', {}).items():
                 # Include full examples with speaker context
@@ -1456,7 +1622,11 @@ class AudioProcessor:
                     'observation_count': habit_data.get('count', 0),
                     'interpretation': habit_data.get('interpretation', ''),
                     'development_tip': habit_data.get('development_tip', ''),
-                    'examples': formatted_examples
+                    'examples': formatted_examples,
+                    # New evidence fields
+                    'pattern_breakdown': habit_data.get('pattern_breakdown', {}),
+                    'speaker_contributions': habit_data.get('speaker_contributions', {}),
+                    'gap_to_next_score': habit_data.get('gap_to_next_score', '')
                 })
 
             # Sort by habit number
@@ -1466,7 +1636,9 @@ class AudioProcessor:
                 'overall_score': results.get('overall_effectiveness_score', 0),
                 'habits': habits,
                 'strengths': results.get('strengths', []),
-                'growth_areas': results.get('growth_areas', [])
+                'growth_areas': results.get('growth_areas', []),
+                # Include score thresholds for evidence
+                'score_thresholds': results.get('score_thresholds', {})
             }
 
         except Exception as e:

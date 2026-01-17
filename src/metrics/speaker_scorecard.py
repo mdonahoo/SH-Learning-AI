@@ -79,6 +79,9 @@ class SpeakerScore:
     evidence: str
     raw_value: float  # The underlying measurement
     supporting_quotes: List[str] = field(default_factory=list)  # Actual quotes
+    threshold_info: str = ""  # Score thresholds used for this metric
+    pattern_breakdown: Dict[str, int] = field(default_factory=dict)  # Pattern match counts
+    calculation_details: str = ""  # Details of how score was calculated
 
 
 @dataclass
@@ -182,22 +185,24 @@ class SpeakerScorecardGenerator:
 
     def _score_protocol_adherence(self, utterances: List[Dict]) -> SpeakerScore:
         """Score protocol adherence based on formal language usage."""
-        protocol_patterns = [
-            r"(?i)\b(aye|aye aye|acknowledged|understood|copy|roger|affirmative)\b",
-            r"(?i)\b(sir|captain|ma'am)\b",
-            r"(?i)\b(reporting|standing by|ready|on station)\b",
-            r"(?i)\b(confirm|confirmed|negative)\b",
-        ]
+        protocol_patterns = {
+            "acknowledgments": r"(?i)\b(aye|aye aye|acknowledged|understood|copy|roger|affirmative)\b",
+            "titles": r"(?i)\b(sir|captain|ma'am)\b",
+            "status": r"(?i)\b(reporting|standing by|ready|on station)\b",
+            "confirmations": r"(?i)\b(confirm|confirmed|negative)\b",
+        }
 
         matches = 0
         total = len(utterances)
         matching_quotes = []
+        pattern_counts = {name: 0 for name in protocol_patterns}
 
         for u in utterances:
             text = u.get('text', '')
-            for pattern in protocol_patterns:
+            for pattern_name, pattern in protocol_patterns.items():
                 if re.search(pattern, text):
                     matches += 1
+                    pattern_counts[pattern_name] += 1
                     # Collect quote with timestamp if available
                     ts = u.get('timestamp', u.get('start_time', ''))
                     if isinstance(ts, (int, float)):
@@ -212,6 +217,9 @@ class SpeakerScorecardGenerator:
             rate = 0
         else:
             rate = matches / total
+
+        # Score thresholds
+        threshold_info = "Score 5: ≥30% | Score 4: ≥20% | Score 3: ≥10% | Score 2: ≥5% | Score 1: <5%"
 
         # Convert rate to 1-5 score
         if rate >= 0.30:
@@ -230,23 +238,38 @@ class SpeakerScorecardGenerator:
             score = 1
             evidence = "No protocol language detected"
 
+        calculation_details = (
+            f"Counted utterances containing protocol keywords. "
+            f"Rate = {matches}/{total} = {rate*100:.1f}%. "
+            f"Threshold for score {score}: {'>=' if score > 1 else '<'}"
+            f"{[0.30, 0.20, 0.10, 0.05, 0][5-score]*100:.0f}%"
+        )
+
         return SpeakerScore(
             metric_name="protocol_adherence",
             score=score,
             evidence=f"{evidence} ({matches}/{total} utterances, {rate*100:.1f}%)",
             raw_value=rate,
-            supporting_quotes=matching_quotes[:5]  # Limit to 5 examples
+            supporting_quotes=matching_quotes[:5],
+            threshold_info=threshold_info,
+            pattern_breakdown=pattern_counts,
+            calculation_details=calculation_details
         )
 
     def _score_communication_clarity(self, utterances: List[Dict]) -> SpeakerScore:
         """Score communication clarity based on confidence and completeness."""
+        threshold_info = "Score 5: ≥80% | Score 4: ≥70% | Score 3: ≥60% | Score 2: ≥50% | Score 1: <50%"
+
         if not utterances:
             return SpeakerScore(
                 metric_name="communication_clarity",
                 score=1,
                 evidence="No communications to assess",
                 raw_value=0,
-                supporting_quotes=[]
+                supporting_quotes=[],
+                threshold_info=threshold_info,
+                pattern_breakdown={},
+                calculation_details="No utterances to analyze"
             )
 
         # Factors: confidence, sentence completeness, filler words
@@ -311,6 +334,19 @@ class SpeakerScorecardGenerator:
         # Combined clarity score (confidence weighted most heavily)
         clarity = avg_confidence * 0.6 + (1 - incomplete_rate) * 0.2 + (1 - filler_rate) * 0.2
 
+        pattern_breakdown = {
+            "incomplete_sentences": incomplete_count,
+            "filler_words": filler_count,
+            "clear_utterances": len(clear_quotes),
+            "unclear_utterances": len(unclear_quotes)
+        }
+
+        calculation_details = (
+            f"Clarity = (confidence × 0.6) + (completeness × 0.2) + (no-fillers × 0.2). "
+            f"Confidence: {avg_confidence:.2f}, Incomplete: {incomplete_rate*100:.1f}%, "
+            f"Fillers: {filler_rate*100:.1f}%. Final clarity: {clarity*100:.1f}%"
+        )
+
         if clarity >= 0.80:
             score = 5
             evidence = f"Consistently clear (confidence: {avg_confidence:.2f})"
@@ -337,20 +373,27 @@ class SpeakerScorecardGenerator:
             score=score,
             evidence=evidence,
             raw_value=clarity,
-            supporting_quotes=quotes
+            supporting_quotes=quotes,
+            threshold_info=threshold_info,
+            pattern_breakdown=pattern_breakdown,
+            calculation_details=calculation_details
         )
 
     def _score_response_time(self, speaker: str, utterances: List[Dict]) -> SpeakerScore:
         """Score response time based on command-response patterns."""
+        threshold_info = "Score 5: <3s | Score 4: <5s | Score 3: <8s | Score 2: <12s | Score 1: ≥12s"
+
         # Find responses from this speaker to other speakers' commands
         response_times = []
         response_examples = []
 
-        command_patterns = [
-            r"(?i)(helm|tactical|science|engineering|operations),?\s",
-            r"(?i)(report|status|what's|how's)",
-            r"(?i)(set course|engage|fire|launch)",
-        ]
+        command_patterns = {
+            "station_calls": r"(?i)(helm|tactical|science|engineering|operations),?\s",
+            "status_requests": r"(?i)(report|status|what's|how's)",
+            "action_commands": r"(?i)(set course|engage|fire|launch)",
+        }
+
+        pattern_matches = {name: 0 for name in command_patterns}
 
         for i, t in enumerate(self.transcripts):
             # Check if this is a command to our speaker
@@ -359,9 +402,13 @@ class SpeakerScorecardGenerator:
                 continue
 
             text = t.get('text', '')
-            is_command = any(re.search(p, text) for p in command_patterns)
+            matched_pattern = None
+            for pattern_name, pattern in command_patterns.items():
+                if re.search(pattern, text):
+                    matched_pattern = pattern_name
+                    break
 
-            if not is_command:
+            if not matched_pattern:
                 continue
 
             # Look for response from our speaker in next few utterances
@@ -378,6 +425,7 @@ class SpeakerScorecardGenerator:
                             delta = (t2 - t1).total_seconds()
                             if 0 < delta < 30:
                                 response_times.append(delta)
+                                pattern_matches[matched_pattern] += 1
                                 # Record the command-response pair
                                 cmd_text = text[:50] + "..." if len(text) > 50 else text
                                 resp_text = next_t.get('text', '')[:50]
@@ -403,6 +451,11 @@ class SpeakerScorecardGenerator:
                     quote = f"[{ts}] {quote}"
                 example_quotes.append(quote)
 
+            calculation_details = (
+                f"No command-response pairs detected. Using engagement rate: "
+                f"{len(utterances)}/{self.total_utterances} = {utterance_rate*100:.1f}%"
+            )
+
             if utterance_rate >= 0.20:
                 score = 4
                 evidence = f"High engagement ({len(utterances)} utterances, no command-response pairs detected)"
@@ -418,10 +471,19 @@ class SpeakerScorecardGenerator:
                 score=score,
                 evidence=evidence,
                 raw_value=utterance_rate,
-                supporting_quotes=example_quotes
+                supporting_quotes=example_quotes,
+                threshold_info="Engagement-based: Score 4: ≥20% | Score 3: ≥10% | Score 2: <10%",
+                pattern_breakdown={"utterance_count": len(utterances), "total_utterances": self.total_utterances},
+                calculation_details=calculation_details
             )
 
         avg_response = sum(response_times) / len(response_times)
+
+        calculation_details = (
+            f"Measured {len(response_times)} command-response pairs. "
+            f"Response times: min={min(response_times):.1f}s, max={max(response_times):.1f}s, "
+            f"avg={avg_response:.1f}s"
+        )
 
         if avg_response < 3:
             score = 5
@@ -444,29 +506,36 @@ class SpeakerScorecardGenerator:
             score=score,
             evidence=evidence,
             raw_value=avg_response,
-            supporting_quotes=response_examples[:3]
+            supporting_quotes=response_examples[:3],
+            threshold_info=threshold_info,
+            pattern_breakdown=pattern_matches,
+            calculation_details=calculation_details
         )
 
     def _score_technical_accuracy(self, utterances: List[Dict]) -> SpeakerScore:
         """Score technical accuracy based on terminology usage."""
-        technical_patterns = [
-            r"(?i)\b(kilometers|km|meters|range|bearing|heading)\b",
-            r"(?i)\b(shields?|hull|power|reactor|warp|impulse)\b",
-            r"(?i)\b(phasers?|torpedoes?|weapons?|missiles?)\b",
-            r"(?i)\b(sensors?|scanning|detecting|readings?)\b",
-            r"(?i)\b(coordinates?|sector|quadrant|orbit)\b",
-            r"(?i)\b(eta|arrival|departure|docking)\b",
-        ]
+        technical_patterns = {
+            "navigation": r"(?i)\b(kilometers|km|meters|range|bearing|heading)\b",
+            "systems": r"(?i)\b(shields?|hull|power|reactor|warp|impulse)\b",
+            "weapons": r"(?i)\b(phasers?|torpedoes?|weapons?|missiles?)\b",
+            "sensors": r"(?i)\b(sensors?|scanning|detecting|readings?)\b",
+            "spatial": r"(?i)\b(coordinates?|sector|quadrant|orbit)\b",
+            "timing": r"(?i)\b(eta|arrival|departure|docking)\b",
+        }
+
+        threshold_info = "Score 5: ≥40% | Score 4: ≥25% | Score 3: ≥15% | Score 2: ≥5% | Score 1: <5%"
 
         matches = 0
         total = len(utterances)
         technical_quotes = []
+        pattern_counts = {name: 0 for name in technical_patterns}
 
         for u in utterances:
             text = u.get('text', '')
-            for pattern in technical_patterns:
+            for pattern_name, pattern in technical_patterns.items():
                 if re.search(pattern, text):
                     matches += 1
+                    pattern_counts[pattern_name] += 1
                     # Collect quote with timestamp
                     ts = u.get('timestamp', u.get('start_time', ''))
                     if isinstance(ts, (int, float)):
@@ -481,6 +550,12 @@ class SpeakerScorecardGenerator:
             rate = 0
         else:
             rate = matches / total
+
+        calculation_details = (
+            f"Counted utterances with technical terminology. "
+            f"Rate = {matches}/{total} = {rate*100:.1f}%. "
+            f"Categories: {', '.join(f'{k}={v}' for k, v in pattern_counts.items() if v > 0)}"
+        )
 
         if rate >= 0.40:
             score = 5
@@ -503,28 +578,35 @@ class SpeakerScorecardGenerator:
             score=score,
             evidence=evidence,
             raw_value=rate,
-            supporting_quotes=technical_quotes[:5]
+            supporting_quotes=technical_quotes[:5],
+            threshold_info=threshold_info,
+            pattern_breakdown=pattern_counts,
+            calculation_details=calculation_details
         )
 
     def _score_team_coordination(self, utterances: List[Dict]) -> SpeakerScore:
         """Score team coordination based on collaborative patterns."""
-        coordination_patterns = [
-            r"(?i)\b(help|assist|support|backup|cover)\b",
-            r"(?i)\b(ready|standing by|on it|got it)\b",
-            r"(?i)\b(confirm|acknowledged|copy|roger)\b",
-            r"(?i)\b(together|team|we need|let's)\b",
-            r"(?i)\b(status|report|update)\b",
-        ]
+        coordination_patterns = {
+            "assistance": r"(?i)\b(help|assist|support|backup|cover)\b",
+            "readiness": r"(?i)\b(ready|standing by|on it|got it)\b",
+            "acknowledgment": r"(?i)\b(confirm|acknowledged|copy|roger)\b",
+            "team_language": r"(?i)\b(together|team|we need|let's)\b",
+            "status_sharing": r"(?i)\b(status|report|update)\b",
+        }
+
+        threshold_info = "Score 5: ≥35% | Score 4: ≥25% | Score 3: ≥15% | Score 2: ≥5% | Score 1: <5%"
 
         matches = 0
         total = len(utterances)
         coordination_quotes = []
+        pattern_counts = {name: 0 for name in coordination_patterns}
 
         for u in utterances:
             text = u.get('text', '')
-            for pattern in coordination_patterns:
+            for pattern_name, pattern in coordination_patterns.items():
                 if re.search(pattern, text):
                     matches += 1
+                    pattern_counts[pattern_name] += 1
                     # Collect quote with timestamp
                     ts = u.get('timestamp', u.get('start_time', ''))
                     if isinstance(ts, (int, float)):
@@ -539,6 +621,12 @@ class SpeakerScorecardGenerator:
             rate = 0
         else:
             rate = matches / total
+
+        calculation_details = (
+            f"Counted utterances with coordination language. "
+            f"Rate = {matches}/{total} = {rate*100:.1f}%. "
+            f"Types: {', '.join(f'{k}={v}' for k, v in pattern_counts.items() if v > 0)}"
+        )
 
         if rate >= 0.35:
             score = 5
@@ -561,7 +649,10 @@ class SpeakerScorecardGenerator:
             score=score,
             evidence=evidence,
             raw_value=rate,
-            supporting_quotes=coordination_quotes[:5]
+            supporting_quotes=coordination_quotes[:5],
+            threshold_info=threshold_info,
+            pattern_breakdown=pattern_counts,
+            calculation_details=calculation_details
         )
 
     def _parse_timestamp(self, ts: Any) -> Optional[datetime]:
@@ -736,7 +827,11 @@ class SpeakerScorecardGenerator:
                         s.metric_name: {
                             'score': s.score,
                             'evidence': s.evidence,
-                            'raw_value': s.raw_value
+                            'raw_value': s.raw_value,
+                            'supporting_quotes': s.supporting_quotes,
+                            'threshold_info': s.threshold_info,
+                            'pattern_breakdown': s.pattern_breakdown,
+                            'calculation_details': s.calculation_details
                         }
                         for s in sc.scores
                     },

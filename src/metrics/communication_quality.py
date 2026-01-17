@@ -167,6 +167,7 @@ class CommunicationAssessment:
     pattern_name: str
     pattern_description: str
     assessment: str
+    matched_substring: str = ""  # The specific text that triggered the match
 
 
 class CommunicationQualityAnalyzer:
@@ -250,7 +251,8 @@ class CommunicationQualityAnalyzer:
         # Check for improvement patterns first (they're more specific)
         for pattern in self.improvement_patterns:
             for regex in pattern.patterns:
-                if re.search(regex, text):
+                match = re.search(regex, text)
+                if match:
                     return CommunicationAssessment(
                         timestamp=timestamp,
                         speaker=speaker,
@@ -259,13 +261,15 @@ class CommunicationQualityAnalyzer:
                         category="needs_improvement",
                         pattern_name=pattern.name,
                         pattern_description=pattern.description,
-                        assessment=self._generate_improvement_assessment(pattern, text)
+                        assessment=self._generate_improvement_assessment(pattern, text),
+                        matched_substring=match.group(0)
                     )
 
         # Check for effective patterns
         for pattern in self.effective_patterns:
             for regex in pattern.patterns:
-                if re.search(regex, text):
+                match = re.search(regex, text)
+                if match:
                     return CommunicationAssessment(
                         timestamp=timestamp,
                         speaker=speaker,
@@ -274,7 +278,8 @@ class CommunicationQualityAnalyzer:
                         category="effective",
                         pattern_name=pattern.name,
                         pattern_description=pattern.description,
-                        assessment=self._generate_effective_assessment(pattern, text)
+                        assessment=self._generate_effective_assessment(pattern, text),
+                        matched_substring=match.group(0)
                     )
 
         return None
@@ -461,18 +466,37 @@ class CommunicationQualityAnalyzer:
             Dictionary with all communication quality data
         """
         results = self.analyze_all()
+        stats = results['statistics']
+
+        # Calculate pattern breakdown for evidence
+        effective_pattern_counts = {k: len(v) for k, v in results['effective_by_pattern'].items()}
+        improvement_pattern_counts = {k: len(v) for k, v in results['improvement_by_pattern'].items()}
+
+        total_categorized = stats['effective_count'] + stats['improvement_count']
+
+        # Generate calculation summary
+        calculation_summary = (
+            f"Assessed {stats['total_utterances']} utterances. "
+            f"Matched {total_categorized} to patterns "
+            f"({stats['effective_count']} effective, {stats['improvement_count']} needs improvement). "
+            f"Effective % = {stats['effective_count']}/{total_categorized if total_categorized > 0 else 1} = "
+            f"{stats['effective_percentage']}%"
+        )
 
         return {
             'command_control_section': self.generate_command_control_section(),
             'notable_communications_section': self.generate_notable_communications_section(),
-            'statistics': results['statistics'],
+            'statistics': stats,
+            'total_utterances_assessed': stats['total_utterances'],
+            'calculation_summary': calculation_summary,
             'effective_examples': [
                 {
                     'timestamp': a.timestamp,
                     'speaker': a.speaker,
                     'text': a.text,
                     'assessment': a.assessment,
-                    'pattern': a.pattern_name
+                    'pattern': a.pattern_name,
+                    'matched_substring': a.matched_substring
                 }
                 for a in sorted(results['effective'], key=lambda x: x.confidence, reverse=True)[:10]
             ],
@@ -482,12 +506,24 @@ class CommunicationQualityAnalyzer:
                     'speaker': a.speaker,
                     'text': a.text,
                     'issue': a.assessment,
-                    'pattern': a.pattern_name
+                    'pattern': a.pattern_name,
+                    'matched_substring': a.matched_substring
                 }
                 for a in sorted(results['needs_improvement'], key=lambda x: x.confidence, reverse=True)[:10]
             ],
             'pattern_counts': {
-                'effective': {k: len(v) for k, v in results['effective_by_pattern'].items()},
-                'needs_improvement': {k: len(v) for k, v in results['improvement_by_pattern'].items()}
-            }
+                'effective': effective_pattern_counts,
+                'needs_improvement': improvement_pattern_counts
+            },
+            'evidence_details': [
+                {
+                    'text': a.text,
+                    'speaker': a.speaker,
+                    'timestamp': a.timestamp,
+                    'matched_substring': a.matched_substring,
+                    'pattern_name': a.pattern_name,
+                    'category': a.category
+                }
+                for a in (results['effective'] + results['needs_improvement'])[:20]
+            ]
         }

@@ -108,6 +108,9 @@ class HabitAssessment:
     interpretation: str
     youth_friendly_name: str
     development_tip: str
+    pattern_breakdown: Dict[str, int] = field(default_factory=dict)  # Count per pattern
+    speaker_contributions: Dict[str, int] = field(default_factory=dict)  # Count per speaker
+    gap_to_next_score: str = ""  # What's needed to reach next score level
 
 
 class SevenHabitsAnalyzer:
@@ -203,15 +206,19 @@ class SevenHabitsAnalyzer:
             patterns = self._habit_pattern_map[habit]
             count = 0
             examples = []
+            pattern_breakdown = {f"pattern_{i}": 0 for i in range(len(patterns))}
+            speaker_contributions = defaultdict(int)
 
             for t in self.transcripts:
                 text = t.get('text', '')
                 speaker = t.get('speaker') or t.get('speaker_id') or 'unknown'
                 timestamp = t.get('timestamp', '')
 
-                for pattern in patterns:
+                for i, pattern in enumerate(patterns):
                     if re.search(pattern, text):
                         count += 1
+                        pattern_breakdown[f"pattern_{i}"] += 1
+                        speaker_contributions[speaker] += 1
                         if len(examples) < 5:
                             examples.append({
                                 'timestamp': timestamp,
@@ -224,6 +231,9 @@ class SevenHabitsAnalyzer:
             score = self._calculate_score(frequency)
             interpretation = self._interpret_score(habit, score, count)
 
+            # Calculate gap to next score
+            gap_to_next_score = self._calculate_gap_to_next(score, frequency, total_utterances)
+
             results[habit] = HabitAssessment(
                 habit=habit,
                 score=score,
@@ -233,9 +243,34 @@ class SevenHabitsAnalyzer:
                 interpretation=interpretation,
                 youth_friendly_name=self.YOUTH_NAMES[habit],
                 development_tip=self.DEVELOPMENT_TIPS[habit],
+                pattern_breakdown={k: v for k, v in pattern_breakdown.items() if v > 0},
+                speaker_contributions=dict(speaker_contributions),
+                gap_to_next_score=gap_to_next_score,
             )
 
         return results
+
+    def _calculate_gap_to_next(self, current_score: int, frequency: float, total: int) -> str:
+        """Calculate what's needed to reach the next score level."""
+        thresholds = {
+            1: 0.05,  # To reach score 2
+            2: 0.10,  # To reach score 3
+            3: 0.20,  # To reach score 4
+            4: 0.30,  # To reach score 5
+        }
+
+        if current_score >= 5:
+            return "Maximum score achieved"
+
+        target_freq = thresholds.get(current_score, 0.30)
+        current_count = int(frequency * total)
+        needed_count = int(target_freq * total) + 1
+        additional_needed = max(0, needed_count - current_count)
+
+        return (
+            f"Need {additional_needed} more observations to reach score {current_score + 1} "
+            f"(target: {target_freq*100:.0f}% frequency)"
+        )
 
     def _calculate_score(self, frequency: float) -> int:
         """Convert frequency to 1-5 score."""
@@ -407,6 +442,9 @@ class SevenHabitsAnalyzer:
                     'interpretation': assessment.interpretation,
                     'development_tip': assessment.development_tip,
                     'examples': assessment.examples,
+                    'pattern_breakdown': assessment.pattern_breakdown,
+                    'speaker_contributions': assessment.speaker_contributions,
+                    'gap_to_next_score': assessment.gap_to_next_score,
                 }
                 for habit, assessment in results.items()
             },
@@ -416,6 +454,7 @@ class SevenHabitsAnalyzer:
                     'name': s.youth_friendly_name,
                     'score': s.score,
                     'interpretation': s.interpretation,
+                    'speaker_contributions': s.speaker_contributions,
                 }
                 for s in self.get_strongest_habits(3)
             ],
@@ -425,10 +464,12 @@ class SevenHabitsAnalyzer:
                     'name': g.youth_friendly_name,
                     'score': g.score,
                     'development_tip': g.development_tip,
+                    'gap_to_next_score': g.gap_to_next_score,
                 }
                 for g in self.get_growth_areas(3)
             ],
             'overall_effectiveness_score': round(
                 sum(a.score for a in results.values()) / len(results), 1
             ),
+            'score_thresholds': "Score 5: ≥30% | Score 4: ≥20% | Score 3: ≥10% | Score 2: ≥5% | Score 1: <5%",
         }
