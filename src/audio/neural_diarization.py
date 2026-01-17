@@ -217,13 +217,15 @@ class NeuralSpeakerDiarizer:
         self.speaker_embeddings: Dict[str, List[np.ndarray]] = {}
 
         # Minimum segment duration for reliable embedding (seconds)
-        self.min_embedding_duration = 0.8  # Reduced from 1.0 for more coverage
+        # Short segments produce unreliable embeddings - prefer temporal context
+        self.min_embedding_duration = 1.2  # Increased for more reliable embeddings
 
         # Maximum embeddings to keep per speaker (for memory efficiency)
         self.max_embeddings_per_speaker = 20  # Increased for better profile
 
         # Context window for short segment handling (seconds)
-        self.context_window = 2.0
+        # Increased to better capture continuous speech that gets segmented
+        self.context_window = 5.0
 
         # Batch processing cache
         self._batch_embeddings: List[Tuple[int, np.ndarray, float, float]] = []  # (idx, emb, start, end)
@@ -693,6 +695,11 @@ class NeuralSpeakerDiarizer:
                     seg['speaker_confidence'] = 0.0
                     logger.debug(f"Segment {seg_start:.1f}-{seg_end:.1f}s -> no speaker overlap found")
 
+            # Apply post-processing to fix speaker inconsistencies
+            # This catches short segment errors and text continuity issues
+            logger.info("Applying post-processing to fix speaker inconsistencies")
+            transcription_segments = self._apply_postprocessing_to_segments(transcription_segments)
+
             # Log speaker distribution
             speaker_counts = defaultdict(int)
             for seg in transcription_segments:
@@ -706,6 +713,56 @@ class NeuralSpeakerDiarizer:
             # Fall back to segment-by-segment processing
             logger.info("Falling back to segment-by-segment diarization")
             return self._fallback_segment_diarization(audio_path, transcription_segments)
+
+    def _apply_postprocessing_to_segments(
+        self,
+        segments: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        Apply post-processing fixes to segment speaker assignments.
+
+        Converts segment format, runs post-processing, and updates segments.
+
+        Args:
+            segments: List of segments with 'speaker_id', 'speaker_confidence',
+                     'start', 'end', 'text' keys
+
+        Returns:
+            Segments with corrected speaker assignments
+        """
+        if len(segments) < 3:
+            return segments
+
+        # Convert to format expected by post-processing
+        segment_speakers = {}
+        for i, seg in enumerate(segments):
+            speaker_id = seg.get('speaker_id', 'unknown')
+            confidence = seg.get('speaker_confidence', 0.5)
+            segment_speakers[i] = (speaker_id, confidence)
+
+        # Apply all post-processing passes
+        corrected = self._postprocess_speaker_assignments(segments, segment_speakers)
+
+        # Update segments with corrected assignments
+        corrections_made = 0
+        for i, seg in enumerate(segments):
+            if i in corrected:
+                new_speaker, new_conf = corrected[i]
+                old_speaker = seg.get('speaker_id')
+                if new_speaker != old_speaker:
+                    corrections_made += 1
+                    logger.debug(
+                        f"Post-processing corrected segment {i} "
+                        f"({seg['start']:.1f}-{seg['end']:.1f}s): "
+                        f"{old_speaker} -> {new_speaker}"
+                    )
+                seg['speaker_id'] = new_speaker
+                seg['speaker_confidence'] = new_conf
+
+        if corrections_made > 0:
+            logger.info(f"Post-processing made {corrections_made} speaker corrections")
+
+        return segments
 
     def _fallback_segment_diarization(
         self,
@@ -792,7 +849,8 @@ class NeuralSpeakerDiarizer:
         Handle short segments that can't produce reliable embeddings.
 
         Uses temporal context and speaker profile statistics to make
-        the best assignment decision.
+        the best assignment decision. Prioritizes continuity - short
+        segments in the middle of speech are almost always the same speaker.
 
         Args:
             audio_data: Audio samples
@@ -817,11 +875,24 @@ class NeuralSpeakerDiarizer:
         recent_speaker = self._get_most_recent_speaker(timestamp)
 
         if recent_speaker:
-            # Assign to recent speaker with moderate confidence
-            logger.debug(
-                f"Short segment ({duration:.2f}s) assigned to recent speaker: {recent_speaker}"
-            )
-            return (recent_speaker, 0.6)
+            # Calculate time since last utterance from this speaker
+            recent_profile = self.speaker_profiles[recent_speaker]
+            time_gap = timestamp - recent_profile.last_seen_time
+
+            # Higher confidence if very recent (within 2 seconds - likely same utterance)
+            if time_gap < 2.0:
+                confidence = 0.75
+                logger.debug(
+                    f"Short segment ({duration:.2f}s) assigned to very recent speaker: "
+                    f"{recent_speaker} (gap={time_gap:.2f}s)"
+                )
+            else:
+                confidence = 0.6
+                logger.debug(
+                    f"Short segment ({duration:.2f}s) assigned to recent speaker: "
+                    f"{recent_speaker} (gap={time_gap:.2f}s)"
+                )
+            return (recent_speaker, confidence)
 
         # No recent speaker - assign to the speaker with most segments
         # (likely the most active/dominant speaker)
@@ -1210,7 +1281,9 @@ class NeuralSpeakerDiarizer:
         Post-process speaker assignments to fix obvious errors.
 
         Applies:
-        - Smoothing: isolated single-segment speaker changes
+        - Smoothing: isolated single-segment speaker changes (A-B-A)
+        - Consecutive short segments: fix A-B-B-A and similar patterns
+        - Text continuity: segments that appear to be mid-sentence continuations
         - Merging: very short segments assigned to different speaker than surroundings
 
         Args:
@@ -1235,20 +1308,30 @@ class NeuralSpeakerDiarizer:
             next_speaker, _ = corrected[i + 1]
 
             if prev_speaker == next_speaker and curr_speaker != prev_speaker:
-                # Isolated change - check confidence
-                if curr_conf < 0.7:
+                # Isolated change - check confidence and duration
+                seg = segments[i]
+                duration = seg['end'] - seg['start']
+
+                # More aggressive correction for short segments
+                confidence_threshold = 0.85 if duration < 1.5 else 0.7
+
+                if curr_conf < confidence_threshold:
                     # Low confidence isolated segment - reassign to surrounding speaker
                     corrected[i] = (prev_speaker, 0.6)
                     logger.debug(
                         f"Corrected isolated segment {i}: {curr_speaker} -> {prev_speaker}"
                     )
 
-        # Pass 2: Check very short segments surrounded by same speaker
+        # Pass 2: Fix consecutive short segment errors (A-B-B-A, A-B-B-B-A patterns)
+        # This catches cases where multiple short segments in a row are misidentified
+        corrected = self._fix_consecutive_short_segments(segments, corrected)
+
+        # Pass 3: Check very short segments surrounded by same speaker
         for i in range(1, len(segments) - 1):
             seg = segments[i]
             duration = seg['end'] - seg['start']
 
-            if duration < 1.0:  # Very short segment
+            if duration < 2.0:  # Increased from 1.0 to 2.0 seconds
                 if i not in corrected or i - 1 not in corrected or i + 1 not in corrected:
                     continue
 
@@ -1261,6 +1344,184 @@ class NeuralSpeakerDiarizer:
                     corrected[i] = (prev_speaker, 0.5)
                     logger.debug(
                         f"Corrected short segment {i} ({duration:.2f}s): "
+                        f"{curr_speaker} -> {prev_speaker}"
+                    )
+
+        # Pass 4: Text continuity check - segments starting with lowercase or
+        # continuation words are likely from the same speaker as previous
+        corrected = self._fix_text_continuity(segments, corrected)
+
+        return corrected
+
+    def _fix_consecutive_short_segments(
+        self,
+        segments: List[Dict],
+        segment_speakers: Dict[int, Tuple[str, float]]
+    ) -> Dict[int, Tuple[str, float]]:
+        """
+        Fix consecutive short segments that are likely misidentified.
+
+        Detects patterns like A-B-B-A or A-B-B-B-A where the B segments
+        are all short and should probably be A.
+
+        Args:
+            segments: All segments
+            segment_speakers: Current speaker assignments
+
+        Returns:
+            Corrected speaker assignments
+        """
+        corrected = dict(segment_speakers)
+        n = len(segments)
+
+        if n < 4:
+            return corrected
+
+        # Look for runs of short segments with different speaker than surroundings
+        i = 1
+        while i < n - 1:
+            if i not in corrected or i - 1 not in corrected:
+                i += 1
+                continue
+
+            anchor_speaker, _ = corrected[i - 1]
+            curr_speaker, curr_conf = corrected[i]
+
+            # Check if current segment differs from previous
+            if curr_speaker != anchor_speaker:
+                seg = segments[i]
+                duration = seg['end'] - seg['start']
+
+                # Only consider short segments (< 2.5 seconds)
+                if duration < 2.5:
+                    # Find the run of consecutive segments with this "different" speaker
+                    run_end = i
+                    run_total_duration = duration
+
+                    for j in range(i + 1, n):
+                        if j not in corrected:
+                            break
+                        next_speaker, _ = corrected[j]
+                        next_seg = segments[j]
+                        next_duration = next_seg['end'] - next_seg['start']
+
+                        if next_speaker == curr_speaker and next_duration < 2.5:
+                            run_end = j
+                            run_total_duration += next_duration
+                        else:
+                            break
+
+                    # Check what comes after the run
+                    after_run_idx = run_end + 1
+                    if after_run_idx < n and after_run_idx in corrected:
+                        after_speaker, _ = corrected[after_run_idx]
+
+                        # If anchor speaker returns after the run, correct the run
+                        if after_speaker == anchor_speaker:
+                            run_length = run_end - i + 1
+                            avg_duration = run_total_duration / run_length
+
+                            # Correct if: short average duration OR low average confidence
+                            avg_conf = sum(corrected[k][1] for k in range(i, run_end + 1)) / run_length
+
+                            if avg_duration < 2.0 or avg_conf < 0.75:
+                                logger.debug(
+                                    f"Correcting consecutive run {i}-{run_end}: "
+                                    f"{curr_speaker} -> {anchor_speaker} "
+                                    f"(avg_dur={avg_duration:.2f}s, avg_conf={avg_conf:.2f})"
+                                )
+                                for k in range(i, run_end + 1):
+                                    corrected[k] = (anchor_speaker, 0.55)
+
+                                # Skip past the corrected run
+                                i = run_end + 1
+                                continue
+
+            i += 1
+
+        return corrected
+
+    def _fix_text_continuity(
+        self,
+        segments: List[Dict],
+        segment_speakers: Dict[int, Tuple[str, float]]
+    ) -> Dict[int, Tuple[str, float]]:
+        """
+        Fix speaker assignments based on text continuity signals.
+
+        If a segment appears to be a continuation of the previous segment
+        (starts with lowercase, starts with continuation of previous text,
+        or starts with common continuation words), assign to same speaker.
+
+        Args:
+            segments: All segments with 'text' field
+            segment_speakers: Current speaker assignments
+
+        Returns:
+            Corrected speaker assignments
+        """
+        corrected = dict(segment_speakers)
+
+        # Words that often indicate sentence continuation
+        continuation_starters = {
+            'and', 'or', 'but', 'so', 'then', 'that', 'which', 'who', 'where',
+            'when', 'if', 'because', 'although', 'however', 'therefore',
+            'furthermore', 'additionally', 'also', 'too', 'either', 'neither'
+        }
+
+        for i in range(1, len(segments)):
+            if i not in corrected or i - 1 not in corrected:
+                continue
+
+            prev_speaker, _ = corrected[i - 1]
+            curr_speaker, curr_conf = corrected[i]
+
+            if curr_speaker != prev_speaker:
+                curr_seg = segments[i]
+                prev_seg = segments[i - 1]
+
+                curr_text = curr_seg.get('text', '').strip()
+                prev_text = prev_seg.get('text', '').strip()
+
+                if not curr_text or not prev_text:
+                    continue
+
+                is_continuation = False
+
+                # Check 1: Current segment starts with lowercase (mid-sentence)
+                if curr_text[0].islower():
+                    is_continuation = True
+                    logger.debug(f"Segment {i} starts lowercase, likely continuation")
+
+                # Check 2: Current segment starts with continuation word
+                first_word = curr_text.split()[0].lower().rstrip('.,!?')
+                if first_word in continuation_starters:
+                    is_continuation = True
+                    logger.debug(f"Segment {i} starts with '{first_word}', likely continuation")
+
+                # Check 3: Previous segment ends without punctuation
+                if prev_text and prev_text[-1] not in '.!?':
+                    is_continuation = True
+                    logger.debug(f"Segment {i-1} has no ending punctuation, segment {i} likely continuation")
+
+                # Check 4: Current text starts with word from end of previous
+                # (catches splits like "Investigate damage" -> "damage, transmit...")
+                prev_words = prev_text.lower().split()
+                if prev_words:
+                    last_prev_word = prev_words[-1].rstrip('.,!?')
+                    curr_first_word = curr_text.split()[0].lower().rstrip('.,!?')
+                    if last_prev_word == curr_first_word and len(last_prev_word) > 3:
+                        is_continuation = True
+                        logger.debug(
+                            f"Segment {i} repeats last word '{last_prev_word}' from segment {i-1}, "
+                            "likely transcription overlap - same speaker"
+                        )
+
+                # If continuation detected and confidence isn't very high, correct
+                if is_continuation and curr_conf < 0.85:
+                    corrected[i] = (prev_speaker, 0.65)
+                    logger.debug(
+                        f"Text continuity correction: segment {i} "
                         f"{curr_speaker} -> {prev_speaker}"
                     )
 
