@@ -900,24 +900,24 @@ class WhisperTranscriber:
             start_time = time.time()
 
             # Transcribe with Whisper
-            # Settings optimized for maximum accuracy with large-v3 model
-            # Anti-hallucination settings prevent looping on long/unclear audio
+            # Settings balanced for accuracy while preventing hallucinations
+            # Less aggressive filtering to avoid truncating legitimate speech
             segments, info = self._model.transcribe(
                 audio_data,
                 language=None if self.language == 'auto' else self.language,
                 initial_prompt=self.initial_prompt,  # Domain vocabulary
                 vad_filter=False,  # Disable - we already do VAD upstream
                 word_timestamps=True,
-                condition_on_previous_text=False,  # Critical: prevents loop propagation
+                condition_on_previous_text=True,  # Enable context for better accuracy
                 no_speech_threshold=0.6,  # Higher = more lenient speech detection
                 log_prob_threshold=-1.0,  # Filter low-confidence output
                 compression_ratio_threshold=2.4,  # Reject highly repetitive segments
                 beam_size=5,  # Larger beam = better accuracy (default is 5)
                 best_of=5,  # Consider more candidates for better accuracy
                 temperature=0.0,  # Deterministic output for consistency
-                repetition_penalty=1.5,  # Stronger penalty for repeated phrases
-                no_repeat_ngram_size=3,  # Prevent 3+ word phrases from repeating
-                hallucination_silence_threshold=0.5,  # Skip text during detected silence
+                repetition_penalty=1.0,  # Normal penalty - allow natural repetition
+                no_repeat_ngram_size=0,  # Disabled - allow natural speech patterns
+                hallucination_silence_threshold=0.8,  # Less aggressive silence detection
             )
 
             # Extract text and words
@@ -1027,15 +1027,15 @@ class WhisperTranscriber:
                 initial_prompt=self.initial_prompt,  # Domain vocabulary
                 vad_filter=True,
                 word_timestamps=True,
-                # Anti-hallucination settings for long recordings
-                condition_on_previous_text=False,  # Critical: prevents loop propagation
-                repetition_penalty=1.5,  # Penalize repeated tokens
-                no_repeat_ngram_size=3,  # Prevent 3+ word phrases from repeating
+                # Balanced settings for accuracy while preventing hallucinations
+                condition_on_previous_text=True,  # Enable context for better accuracy
+                repetition_penalty=1.0,  # Normal penalty - allow natural repetition
+                no_repeat_ngram_size=0,  # Disabled - allow natural speech patterns
                 compression_ratio_threshold=2.4,  # Reject highly repetitive segments
                 log_prob_threshold=-1.0,  # Filter low-confidence output
                 no_speech_threshold=0.6,
                 temperature=0.0,  # Deterministic output
-                hallucination_silence_threshold=0.5,  # Skip text during silence (prevents loops)
+                hallucination_silence_threshold=0.8,  # Less aggressive silence detection
             )
 
             # Filter out repetitive/hallucinated segments

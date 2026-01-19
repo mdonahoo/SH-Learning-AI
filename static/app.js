@@ -348,10 +348,24 @@ class ResultsRenderer {
 
         if (results.training_recommendations?.immediate_actions?.length > 0) {
             const actions = results.training_recommendations.immediate_actions.slice(0, 3);
+            const getPriorityIcon = (priority) => {
+                switch(priority.toUpperCase()) {
+                    case 'CRITICAL': return '🚨';
+                    case 'HIGH': return '⚠️';
+                    case 'MEDIUM': return '📋';
+                    default: return '💡';
+                }
+            };
             recsPreview.innerHTML = actions.map(action => `
                 <div class="rec-preview-item priority-${action.priority.toLowerCase()}">
-                    <span class="rec-priority-badge">${action.priority}</span>
-                    <span class="rec-preview-title">${action.title}</span>
+                    <div class="rec-priority-indicator">
+                        <span class="rec-priority-icon">${getPriorityIcon(action.priority)}</span>
+                        <span class="rec-priority-badge priority-${action.priority.toLowerCase()}">${action.priority}</span>
+                    </div>
+                    <div class="rec-content">
+                        <span class="rec-preview-title">${action.title}</span>
+                        ${action.description ? `<span class="rec-preview-desc">${action.description.substring(0, 100)}${action.description.length > 100 ? '...' : ''}</span>` : ''}
+                    </div>
                 </div>
             `).join('');
             topRecs.classList.remove('hidden');
@@ -437,81 +451,183 @@ class ResultsRenderer {
             return;
         }
 
+        // Calculate effective rate for color coding
+        const effectiveRate = quality.effective_percentage || 0;
+        const getScoreColor = (pct) => {
+            if (pct >= 70) return '#22c55e';
+            if (pct >= 40) return '#f59e0b';
+            return '#ef4444';
+        };
+        const getScoreClass = (pct) => {
+            if (pct >= 70) return 'high';
+            if (pct >= 40) return 'medium';
+            return 'low';
+        };
+
+        // Separate patterns by category
+        const effectivePatterns = (quality.patterns || []).filter(p => p.category === 'effective');
+        const improvementPatterns = (quality.patterns || []).filter(p => p.category === 'needs_improvement');
+
         container.innerHTML = `
-            <div class="quality-summary">
-                <div class="quality-metric effective">
-                    <div class="value">${quality.effective_count}</div>
-                    <div class="label">Effective</div>
+            <div class="quality-header">
+                <h2>Communication Quality Assessment</h2>
+                <div class="quality-score-ring">
+                    <svg viewBox="0 0 100 100" class="score-ring">
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="8"/>
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="${getScoreColor(effectiveRate)}" stroke-width="8"
+                            stroke-dasharray="${(effectiveRate / 100) * 283} 283"
+                            stroke-linecap="round" transform="rotate(-90 50 50)"/>
+                    </svg>
+                    <div class="score-ring-text">
+                        <span class="score-big">${effectiveRate.toFixed(0)}%</span>
+                    </div>
                 </div>
-                <div class="quality-metric improvement">
-                    <div class="value">${quality.improvement_count}</div>
-                    <div class="label">Needs Improvement</div>
+                <div class="overall-label">Effective Communication Rate</div>
+            </div>
+
+            <div class="quality-metrics-grid">
+                <div class="quality-metric-card effective">
+                    <div class="metric-icon">✓</div>
+                    <div class="metric-value">${quality.effective_count}</div>
+                    <div class="metric-label">Effective</div>
+                    <div class="metric-sublabel">Clear, actionable communications</div>
                 </div>
-                <div class="quality-metric">
-                    <div class="value">${quality.effective_percentage.toFixed(0)}%</div>
-                    <div class="label">Effective Rate</div>
+                <div class="quality-metric-card improvement">
+                    <div class="metric-icon">↗</div>
+                    <div class="metric-value">${quality.improvement_count}</div>
+                    <div class="metric-label">Needs Improvement</div>
+                    <div class="metric-sublabel">Opportunities for growth</div>
+                </div>
+                <div class="quality-metric-card total">
+                    <div class="metric-icon">📊</div>
+                    <div class="metric-value">${quality.total_utterances_assessed || (quality.effective_count + quality.improvement_count)}</div>
+                    <div class="metric-label">Total Assessed</div>
+                    <div class="metric-sublabel">Utterances analyzed</div>
                 </div>
             </div>
 
             ${quality.calculation_summary ? `
-                <div class="evidence-panel">
-                    <details>
-                        <summary>Show Calculation Evidence</summary>
-                        <div class="evidence-content">
-                            <p>${quality.calculation_summary}</p>
-                            <p>Total utterances assessed: ${quality.total_utterances_assessed || 'N/A'}</p>
-                        </div>
-                    </details>
-                </div>
+                <details class="calculation-details">
+                    <summary>
+                        <span class="details-icon">▶</span>
+                        Show Calculation Details
+                    </summary>
+                    <div class="calculation-content">
+                        <p>${quality.calculation_summary}</p>
+                    </div>
+                </details>
             ` : ''}
 
             ${confidenceDistribution ? `
-                <div class="confidence-section">
-                    <h3>Confidence Distribution</h3>
-                    <div class="confidence-stats">
-                        <span>Average: <strong>${(confidenceDistribution.average_confidence * 100).toFixed(0)}%</strong></span>
-                        <span>Median: <strong>${(confidenceDistribution.median_confidence * 100).toFixed(0)}%</strong></span>
+                <div class="confidence-panel">
+                    <div class="confidence-header">
+                        <h3>
+                            <span class="section-icon">🎯</span>
+                            Transcription Confidence
+                        </h3>
+                        <div class="confidence-summary">
+                            <span class="conf-stat">
+                                <span class="conf-label">Average</span>
+                                <span class="conf-value ${getScoreClass(confidenceDistribution.average_confidence * 100)}">${(confidenceDistribution.average_confidence * 100).toFixed(0)}%</span>
+                            </span>
+                            <span class="conf-stat">
+                                <span class="conf-label">Median</span>
+                                <span class="conf-value">${(confidenceDistribution.median_confidence * 100).toFixed(0)}%</span>
+                            </span>
+                        </div>
                     </div>
-                    <div class="confidence-buckets">
-                        ${confidenceDistribution.buckets.map(b => `
-                            <div class="confidence-bucket">
-                                <div class="bucket-bar" style="height: ${Math.min(100, b.percentage * 2)}%"></div>
-                                <div class="bucket-label">${b.label}</div>
-                                <div class="bucket-count">${b.count}</div>
+                    <div class="confidence-bars">
+                        ${confidenceDistribution.buckets.map(b => {
+                            const maxCount = Math.max(...confidenceDistribution.buckets.map(x => x.count));
+                            const barWidth = maxCount > 0 ? (b.count / maxCount) * 100 : 0;
+                            const isHighest = b.count === maxCount && b.count > 0;
+                            return `
+                            <div class="conf-bar-row ${isHighest ? 'highest' : ''}">
+                                <span class="conf-bar-label">${b.label}</span>
+                                <div class="conf-bar-container">
+                                    <div class="conf-bar-fill" style="width: ${barWidth}%"></div>
+                                </div>
+                                <span class="conf-bar-count">${b.count}</span>
+                            </div>
+                        `}).join('')}
+                    </div>
+                    ${confidenceDistribution.quality_assessment ? `
+                        <div class="confidence-assessment ${getScoreClass(confidenceDistribution.average_confidence * 100)}">
+                            ${confidenceDistribution.quality_assessment}
+                        </div>
+                    ` : ''}
+                </div>
+            ` : ''}
+
+            ${effectivePatterns.length > 0 ? `
+                <div class="patterns-panel effective-patterns">
+                    <h3>
+                        <span class="section-icon">✓</span>
+                        Effective Patterns
+                    </h3>
+                    <div class="patterns-grid">
+                        ${effectivePatterns.map(p => `
+                            <div class="pattern-card-new effective">
+                                <div class="pattern-card-header">
+                                    <span class="pattern-title">${this.formatPatternName(p.pattern_name)}</span>
+                                    <span class="pattern-badge effective">${p.count}</span>
+                                </div>
+                                ${p.description ? `<p class="pattern-desc">${p.description}</p>` : ''}
+                                ${p.examples?.length > 0 ? `
+                                    <details class="pattern-evidence">
+                                        <summary>
+                                            <span class="details-icon">▶</span>
+                                            View Examples (${p.examples.length})
+                                        </summary>
+                                        <div class="examples-content">
+                                            ${p.examples.map(ex => `
+                                                <div class="example-quote">
+                                                    <span class="quote-speaker">${ex.speaker || 'Speaker'}</span>
+                                                    <span class="quote-text">"${this.escapeHtml(ex.text || ex)}"</span>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </details>
+                                ` : ''}
                             </div>
                         `).join('')}
                     </div>
                 </div>
             ` : ''}
 
-            ${quality.patterns && quality.patterns.length > 0 ? `
-                <div class="patterns-section">
-                    <h3>Detected Patterns</h3>
-                    ${quality.patterns.map(p => `
-                        <div class="pattern-card ${p.category}">
-                            <div class="pattern-header">
-                                <span class="pattern-name">${this.formatPatternName(p.pattern_name)}</span>
-                                <span class="pattern-count ${p.category}">${p.count} instances</span>
-                            </div>
-                            ${p.description ? `<p class="pattern-description">${p.description}</p>` : ''}
-                            ${p.examples?.length > 0 ? `
-                                <div class="pattern-examples">
-                                    <details>
-                                        <summary>View Examples (${p.examples.length})</summary>
-                                        <ul class="quote-list">
-                                            ${p.examples.map(ex => `
-                                                <li class="quote-item">
-                                                    <span class="quote-speaker">${ex.speaker || 'Speaker'}:</span>
-                                                    <span class="quote-text">"${this.escapeHtml(ex.text || ex)}"</span>
-                                                    ${ex.assessment ? `<span class="quote-assessment">${ex.assessment}</span>` : ''}
-                                                </li>
-                                            `).join('')}
-                                        </ul>
-                                    </details>
+            ${improvementPatterns.length > 0 ? `
+                <div class="patterns-panel improvement-patterns">
+                    <h3>
+                        <span class="section-icon">↗</span>
+                        Areas for Improvement
+                    </h3>
+                    <div class="patterns-grid">
+                        ${improvementPatterns.map(p => `
+                            <div class="pattern-card-new improvement">
+                                <div class="pattern-card-header">
+                                    <span class="pattern-title">${this.formatPatternName(p.pattern_name)}</span>
+                                    <span class="pattern-badge improvement">${p.count}</span>
                                 </div>
-                            ` : ''}
-                        </div>
-                    `).join('')}
+                                ${p.description ? `<p class="pattern-desc">${p.description}</p>` : ''}
+                                ${p.examples?.length > 0 ? `
+                                    <details class="pattern-evidence">
+                                        <summary>
+                                            <span class="details-icon">▶</span>
+                                            View Examples (${p.examples.length})
+                                        </summary>
+                                        <div class="examples-content">
+                                            ${p.examples.map(ex => `
+                                                <div class="example-quote">
+                                                    <span class="quote-speaker">${ex.speaker || 'Speaker'}</span>
+                                                    <span class="quote-text">"${this.escapeHtml(ex.text || ex)}"</span>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </details>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
                 </div>
             ` : ''}
         `;
@@ -597,80 +713,101 @@ class ResultsRenderer {
 
         container.innerHTML = `
             ${learning.kirkpatrick_levels ? `
-                <div class="learning-section">
+                <div class="kirkpatrick-section">
                     <h3>Kirkpatrick 4-Level Model</h3>
-                    <div class="kirkpatrick-levels">
-                        ${learning.kirkpatrick_levels.map(lvl => `
-                            <div class="kirk-level">
-                                <div class="level-num">Level ${lvl.level}</div>
-                                <div class="level-name">${lvl.name}</div>
-                                <div class="level-score">${(lvl.score * 100).toFixed(0)}%</div>
+                    <div class="kirkpatrick-grid">
+                        ${learning.kirkpatrick_levels.map((lvl, idx) => `
+                            <div class="kirk-card level-${lvl.level}">
+                                <div class="kirk-header">
+                                    <span class="kirk-level-num">Level ${lvl.level}</span>
+                                </div>
+                                <div class="kirk-name">${lvl.name}</div>
+                                <div class="kirk-score">${(lvl.score * 100).toFixed(0)}%</div>
+                                <div class="kirk-bar">
+                                    <div class="kirk-bar-fill" style="width: ${lvl.score * 100}%"></div>
+                                </div>
                             </div>
                         `).join('')}
                     </div>
                 </div>
             ` : ''}
 
-            <div class="learning-section">
+            <div class="frameworks-section">
                 <h3>Learning Frameworks</h3>
-                <div class="framework-scores">
+                <div class="frameworks-grid">
                     ${learning.blooms_level ? `
-                        <div class="framework-score">
-                            <div class="framework-name">Bloom's Taxonomy</div>
+                        <div class="framework-card blooms">
+                            <div class="framework-icon">🧠</div>
+                            <div class="framework-label">Bloom's Taxonomy</div>
                             <div class="framework-value">${learning.blooms_level}</div>
-                            <div class="framework-label">Cognitive Level</div>
+                            <div class="framework-sublabel">Cognitive Level</div>
                         </div>
                     ` : ''}
                     ${learning.nasa_tlx_score !== undefined ? `
-                        <div class="framework-score">
-                            <div class="framework-name">NASA TLX</div>
+                        <div class="framework-card nasa">
+                            <div class="framework-icon">🚀</div>
+                            <div class="framework-label">NASA TLX</div>
                             <div class="framework-value">${(learning.nasa_tlx_score * 100).toFixed(0)}%</div>
-                            <div class="framework-label">Workload Index</div>
+                            <div class="framework-sublabel">Workload Index</div>
                         </div>
                     ` : ''}
                     ${learning.engagement_score !== undefined ? `
-                        <div class="framework-score">
-                            <div class="framework-name">Engagement</div>
+                        <div class="framework-card engagement">
+                            <div class="framework-icon">📊</div>
+                            <div class="framework-label">Engagement</div>
                             <div class="framework-value">${(learning.engagement_score * 100).toFixed(0)}%</div>
-                            <div class="framework-label">Overall Score</div>
+                            <div class="framework-sublabel">Overall Score</div>
                         </div>
                     ` : ''}
                 </div>
             </div>
 
-            ${learning.recommendations && learning.recommendations.length > 0 ? `
-                <div class="learning-section">
-                    <h3>Recommendations</h3>
-                    <ul class="recommendations-list">
-                        ${learning.recommendations.map(r => `<li>${r}</li>`).join('')}
-                    </ul>
-                </div>
-            ` : ''}
-
             ${learning.top_communications && learning.top_communications.length > 0 ? `
-                <div class="learning-section">
+                <div class="communications-section">
                     <h3>Key Communications</h3>
-                    <p class="section-description">Top utterances by transcription confidence:</p>
-                    <ul class="quote-list">
-                        ${learning.top_communications.map(comm => `
-                            <li class="quote-item">
-                                <span class="quote-speaker">${comm.speaker}:</span>
-                                <span class="quote-text">"${this.escapeHtml(comm.text)}"</span>
-                                <span class="quote-confidence">(${(comm.confidence * 100).toFixed(0)}% confidence)</span>
-                            </li>
-                        `).join('')}
-                    </ul>
+                    <p class="section-subtitle">Top utterances by transcription confidence</p>
+                    <div class="communications-list">
+                        ${learning.top_communications.map(comm => {
+                            const confLevel = comm.confidence >= 0.7 ? 'high' : comm.confidence >= 0.4 ? 'medium' : 'low';
+                            return `
+                            <div class="comm-item">
+                                <span class="comm-speaker">${comm.speaker}</span>
+                                <span class="comm-text">"${this.escapeHtml(comm.text)}"</span>
+                                <span class="comm-confidence ${confLevel}">${(comm.confidence * 100).toFixed(0)}%</span>
+                            </div>
+                        `}).join('')}
+                    </div>
                 </div>
             ` : ''}
 
             ${learning.speaker_statistics && Object.keys(learning.speaker_statistics).length > 0 ? `
-                <div class="learning-section">
+                <div class="speaker-stats-section">
                     <h3>Speaker Statistics</h3>
-                    <div class="speaker-stats-grid">
+                    <div class="speaker-stats-list">
                         ${(Array.isArray(learning.speaker_statistics) ? learning.speaker_statistics : Object.values(learning.speaker_statistics)).map(stat => `
-                            <div class="speaker-stat-card">
-                                <strong>${stat.speaker}</strong>
-                                <span>${stat.utterances} utterances (${stat.percentage}%)</span>
+                            <div class="speaker-stat-row">
+                                <span class="speaker-id">${stat.speaker}</span>
+                                <div class="stat-bar-wrap">
+                                    <div class="stat-bar" style="width: ${stat.percentage}%"></div>
+                                </div>
+                                <span class="stat-info">
+                                    <strong>${stat.utterances}</strong> utterances
+                                    <span class="stat-pct">(${stat.percentage}%)</span>
+                                </span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : ''}
+
+            ${learning.recommendations && learning.recommendations.length > 0 ? `
+                <div class="learning-recs-section">
+                    <h3>Recommendations</h3>
+                    <div class="learning-recs-list">
+                        ${learning.recommendations.map(r => `
+                            <div class="learning-rec-item">
+                                <span class="rec-bullet">→</span>
+                                <span class="rec-text">${r}</span>
                             </div>
                         `).join('')}
                     </div>
@@ -687,91 +824,146 @@ class ResultsRenderer {
             return;
         }
 
+        const getScoreClass = (score) => {
+            if (score >= 4) return 'high';
+            if (score >= 2.5) return 'medium';
+            return 'low';
+        };
+
+        const getScoreColor = (score) => {
+            if (score >= 4) return '#22c55e';
+            if (score >= 2.5) return '#f59e0b';
+            return '#ef4444';
+        };
+
         container.innerHTML = `
-            <div class="habits-overview">
-                <h3>Leadership Effectiveness Assessment</h3>
-                <div class="overall-score-display">
-                    <div class="score-circle" style="--score: ${(habits.overall_score / 5) * 100}%">
-                        <span class="score-value">${habits.overall_score.toFixed(1)}</span>
+            <div class="habits-header">
+                <h2>Leadership Effectiveness Assessment</h2>
+                <div class="overall-score-ring">
+                    <svg viewBox="0 0 100 100" class="score-ring">
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="8"/>
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="${getScoreColor(habits.overall_score)}" stroke-width="8"
+                            stroke-dasharray="${(habits.overall_score / 5) * 283} 283"
+                            stroke-linecap="round" transform="rotate(-90 50 50)"/>
+                    </svg>
+                    <div class="score-ring-text">
+                        <span class="score-big">${habits.overall_score.toFixed(1)}</span>
                         <span class="score-max">/5</span>
                     </div>
-                    <div class="score-label">Overall Effectiveness</div>
                 </div>
+                <div class="overall-label">Overall Effectiveness</div>
             </div>
 
             <div class="habits-grid">
-                ${habits.habits.map(h => `
-                    <div class="habit-card">
-                        <div class="habit-header">
-                            <span class="habit-number">Habit ${h.habit_number}</span>
-                            <span class="habit-score score-${h.score}">${h.score}/5</span>
+                ${habits.habits.map(h => {
+                    const scoreClass = getScoreClass(h.score);
+                    return `
+                    <div class="habit-card ${scoreClass}">
+                        <div class="habit-card-header">
+                            <div class="habit-info">
+                                <span class="habit-num">Habit ${h.habit_number}</span>
+                                <span class="habit-name">${h.youth_friendly_name || h.habit_name}</span>
+                            </div>
+                            <div class="habit-score-display ${scoreClass}">
+                                <span class="score-val">${h.score}/5</span>
+                            </div>
                         </div>
-                        <div class="habit-name">${h.youth_friendly_name || h.habit_name}</div>
-                        <div class="habit-observations">${h.observation_count} observations</div>
+                        <div class="habit-observations">
+                            <span class="obs-count">${h.observation_count}</span> observations
+                        </div>
                         <div class="habit-interpretation">${h.interpretation}</div>
                         ${h.development_tip ? `
-                            <div class="habit-tip">
-                                <strong>Tip:</strong> ${h.development_tip}
+                            <div class="habit-tip-box">
+                                <span class="tip-icon">💡</span>
+                                <div class="tip-content">
+                                    <span class="tip-label">Tip</span>
+                                    <span class="tip-text">${h.development_tip}</span>
+                                </div>
                             </div>
                         ` : ''}
                         ${h.examples?.length > 0 || h.pattern_breakdown ? `
-                            <div class="habit-evidence">
-                                <details>
-                                    <summary>Show Evidence</summary>
+                            <details class="habit-details">
+                                <summary>
+                                    <span class="details-icon">▶</span>
+                                    Show Evidence
+                                </summary>
+                                <div class="habit-evidence-content">
                                     ${h.pattern_breakdown && Object.keys(h.pattern_breakdown).length > 0 ? `
-                                        <div class="pattern-breakdown">
-                                            <strong>Pattern breakdown:</strong>
-                                            <ul>
-                                                ${Object.entries(h.pattern_breakdown).map(([k, v]) => `<li>${k}: ${v} matches</li>`).join('')}
-                                            </ul>
+                                        <div class="pattern-list">
+                                            <span class="evidence-label">Pattern Breakdown</span>
+                                            ${Object.entries(h.pattern_breakdown).map(([k, v]) => `
+                                                <div class="pattern-item">
+                                                    <span class="pattern-name">${k}</span>
+                                                    <span class="pattern-count">${v} matches</span>
+                                                </div>
+                                            `).join('')}
                                         </div>
                                     ` : ''}
-                                    ${h.gap_to_next_score ? `<p class="gap-info"><strong>To improve:</strong> ${h.gap_to_next_score}</p>` : ''}
+                                    ${h.gap_to_next_score ? `
+                                        <div class="gap-info">
+                                            <span class="evidence-label">To Improve</span>
+                                            <p>${h.gap_to_next_score}</p>
+                                        </div>
+                                    ` : ''}
                                     ${h.examples?.length > 0 ? `
-                                        <div class="habit-examples">
-                                            <strong>Evidence:</strong>
-                                            <ul class="quote-list">
-                                                ${h.examples.map(ex => `
-                                                    <li class="quote-item">
-                                                        <span class="quote-speaker">${ex.speaker || 'Speaker'}:</span>
-                                                        <span class="quote-text">"${this.escapeHtml(ex.text || ex)}"</span>
-                                                    </li>
-                                                `).join('')}
-                                            </ul>
+                                        <div class="examples-list">
+                                            <span class="evidence-label">Examples</span>
+                                            ${h.examples.map(ex => `
+                                                <div class="example-item">
+                                                    <span class="ex-speaker">${ex.speaker || 'Speaker'}</span>
+                                                    <span class="ex-text">"${this.escapeHtml(ex.text || ex)}"</span>
+                                                </div>
+                                            `).join('')}
                                         </div>
                                     ` : ''}
-                                </details>
-                            </div>
+                                </div>
+                            </details>
                         ` : ''}
                     </div>
-                `).join('')}
+                `}).join('')}
             </div>
 
             ${habits.strengths && habits.strengths.length > 0 ? `
-                <div class="habits-section strengths">
-                    <h3>Team Strengths</h3>
-                    <ul class="habits-list">
+                <div class="summary-section strengths-section">
+                    <h3>
+                        <span class="section-icon">✓</span>
+                        Team Strengths
+                    </h3>
+                    <div class="summary-list">
                         ${habits.strengths.map(s => `
-                            <li>
-                                <strong>${s.name}</strong> (${s.score}/5)
-                                ${s.interpretation ? `<p>${s.interpretation}</p>` : ''}
-                            </li>
+                            <div class="summary-item strength">
+                                <div class="summary-item-header">
+                                    <span class="summary-name">${s.name}</span>
+                                    <span class="summary-score high">${s.score}/5</span>
+                                </div>
+                                ${s.interpretation ? `<p class="summary-desc">${s.interpretation}</p>` : ''}
+                            </div>
                         `).join('')}
-                    </ul>
+                    </div>
                 </div>
             ` : ''}
 
             ${habits.growth_areas && habits.growth_areas.length > 0 ? `
-                <div class="habits-section growth-areas">
-                    <h3>Growth Opportunities</h3>
-                    <ul class="habits-list">
+                <div class="summary-section growth-section">
+                    <h3>
+                        <span class="section-icon">↗</span>
+                        Growth Opportunities
+                    </h3>
+                    <div class="summary-list">
                         ${habits.growth_areas.map(g => `
-                            <li>
-                                <strong>${g.name}</strong> (${g.score}/5)
-                                ${g.development_tip ? `<p class="dev-tip"><em>Tip:</em> ${g.development_tip}</p>` : ''}
-                            </li>
+                            <div class="summary-item growth">
+                                <div class="summary-item-header">
+                                    <span class="summary-name">${g.name}</span>
+                                    <span class="summary-score low">${g.score}/5</span>
+                                </div>
+                                ${g.development_tip ? `
+                                    <p class="summary-tip">
+                                        <em>Tip:</em> ${g.development_tip}
+                                    </p>
+                                ` : ''}
+                            </div>
                         `).join('')}
-                    </ul>
+                    </div>
                 </div>
             ` : ''}
         `;
@@ -786,49 +978,46 @@ class ResultsRenderer {
         }
 
         container.innerHTML = `
-            <div class="training-header">
-                <h3>Training Recommendations</h3>
-                <span class="total-count">${training.total_recommendations} recommendations</span>
+            <div class="training-header-section">
+                <h2>Training Recommendations</h2>
+                <span class="training-count">${training.total_recommendations} recommendations</span>
             </div>
 
             ${training.immediate_actions && training.immediate_actions.length > 0 ? `
                 <div class="training-section">
                     <h3>Immediate Actions</h3>
-                    <div class="recommendations-grid">
+                    <div class="actions-list">
                         ${training.immediate_actions.map(action => `
-                            <div class="recommendation-card priority-${action.priority.toLowerCase()}">
-                                <div class="rec-header">
-                                    <span class="rec-priority">${action.priority}</span>
-                                    <span class="rec-category">${action.category}</span>
-                                </div>
-                                <h4>${action.title}</h4>
-                                <p>${action.description}</p>
-                                ${action.trigger_metrics?.length > 0 || action.current_value ? `
-                                    <details class="rec-evidence">
-                                        <summary>Show Evidence</summary>
-                                        ${action.trigger_metrics?.length > 0 ? `
-                                            <p><strong>Triggered by:</strong> ${action.trigger_metrics.join(', ')}</p>
+                            <div class="action-card priority-${action.priority.toLowerCase()}">
+                                <div class="action-priority-bar"></div>
+                                <div class="action-content">
+                                    <div class="action-header">
+                                        <span class="priority-tag ${action.priority.toLowerCase()}">${action.priority}</span>
+                                        <span class="action-category">${action.category}</span>
+                                    </div>
+                                    <h4 class="action-title">${action.title}</h4>
+                                    <p class="action-desc">${action.description}</p>
+                                    <div class="action-meta">
+                                        ${action.scout_connection ? `
+                                            <div class="meta-row">
+                                                <span class="meta-label">Scout:</span>
+                                                <span class="meta-value">${action.scout_connection}</span>
+                                            </div>
                                         ` : ''}
-                                        ${action.current_value ? `<p><strong>Current:</strong> ${action.current_value}</p>` : ''}
-                                        ${action.target_value ? `<p><strong>Target:</strong> ${action.target_value}</p>` : ''}
-                                        ${action.gap_explanation ? `<p><strong>Gap:</strong> ${action.gap_explanation}</p>` : ''}
-                                    </details>
-                                ` : ''}
-                                ${action.scout_connection ? `
-                                    <div class="rec-connection scout">
-                                        <strong>Scout:</strong> ${action.scout_connection}
+                                        ${action.habit_connection ? `
+                                            <div class="meta-row">
+                                                <span class="meta-label">7 Habits:</span>
+                                                <span class="meta-value">${action.habit_connection}</span>
+                                            </div>
+                                        ` : ''}
+                                        ${action.success_criteria ? `
+                                            <div class="meta-row success">
+                                                <span class="meta-label">Success:</span>
+                                                <span class="meta-value">${action.success_criteria}</span>
+                                            </div>
+                                        ` : ''}
                                     </div>
-                                ` : ''}
-                                ${action.habit_connection ? `
-                                    <div class="rec-connection habit">
-                                        <strong>7 Habits:</strong> ${action.habit_connection}
-                                    </div>
-                                ` : ''}
-                                ${action.success_criteria ? `
-                                    <div class="rec-success">
-                                        <strong>Success:</strong> ${action.success_criteria}
-                                    </div>
-                                ` : ''}
+                                </div>
                             </div>
                         `).join('')}
                     </div>
@@ -841,27 +1030,32 @@ class ResultsRenderer {
                     <div class="drills-list">
                         ${training.drills.map(drill => `
                             <div class="drill-card">
-                                <div class="drill-header">
-                                    <h4>${drill.name}</h4>
-                                    <span class="drill-duration">${drill.duration}</span>
+                                <div class="drill-card-header">
+                                    <span class="drill-title">${drill.name}</span>
+                                    <span class="drill-time">
+                                        <span class="time-icon">⏱</span>
+                                        ${drill.duration}
+                                    </span>
                                 </div>
-                                <p class="drill-purpose">${drill.purpose}</p>
-                                ${drill.steps && drill.steps.length > 0 ? `
-                                    <div class="drill-steps">
-                                        <strong>Steps:</strong>
-                                        <ol>
-                                            ${drill.steps.map(s => `<li>${s}</li>`).join('')}
-                                        </ol>
-                                    </div>
-                                ` : ''}
-                                ${drill.debrief_questions && drill.debrief_questions.length > 0 ? `
-                                    <div class="drill-debrief">
-                                        <strong>Debrief Questions:</strong>
-                                        <ul>
-                                            ${drill.debrief_questions.map(q => `<li>${q}</li>`).join('')}
-                                        </ul>
-                                    </div>
-                                ` : ''}
+                                <div class="drill-body">
+                                    <p class="drill-purpose">${drill.purpose}</p>
+                                    ${drill.steps && drill.steps.length > 0 ? `
+                                        <div class="drill-steps">
+                                            <span class="steps-label">Steps</span>
+                                            <ol class="steps-list">
+                                                ${drill.steps.map(s => `<li>${s}</li>`).join('')}
+                                            </ol>
+                                        </div>
+                                    ` : ''}
+                                    ${drill.debrief_questions && drill.debrief_questions.length > 0 ? `
+                                        <div class="drill-debrief">
+                                            <span class="debrief-label">Debrief Questions</span>
+                                            <ul class="debrief-list">
+                                                ${drill.debrief_questions.map(q => `<li>${q}</li>`).join('')}
+                                            </ul>
+                                        </div>
+                                    ` : ''}
+                                </div>
                             </div>
                         `).join('')}
                     </div>
@@ -871,14 +1065,15 @@ class ResultsRenderer {
             ${training.discussion_topics && training.discussion_topics.length > 0 ? `
                 <div class="training-section">
                     <h3>Discussion Topics</h3>
-                    <div class="topics-list">
+                    <div class="topics-grid">
                         ${training.discussion_topics.map(topic => `
                             <div class="topic-card">
-                                <h4>${topic.topic}</h4>
+                                <h4 class="topic-title">${topic.topic}</h4>
                                 <p class="topic-question">${topic.question}</p>
                                 ${topic.scout_connection ? `
-                                    <div class="topic-scout">
-                                        <strong>Scout Connection:</strong> ${topic.scout_connection}
+                                    <div class="topic-connection">
+                                        <span class="conn-label">Scout Connection:</span>
+                                        <span class="conn-value">${topic.scout_connection}</span>
                                     </div>
                                 ` : ''}
                             </div>
@@ -890,11 +1085,11 @@ class ResultsRenderer {
             ${training.framework_alignment && Object.keys(training.framework_alignment).length > 0 ? `
                 <div class="training-section">
                     <h3>Framework Alignment</h3>
-                    <div class="framework-alignment">
+                    <div class="alignment-grid">
                         ${Object.entries(training.framework_alignment).map(([key, values]) => `
-                            <div class="alignment-group">
-                                <h4>${key}</h4>
-                                <ul>
+                            <div class="alignment-card">
+                                <h4 class="alignment-title">${key}</h4>
+                                <ul class="alignment-list">
                                     ${values.slice(0, 3).map(v => `<li>${v}</li>`).join('')}
                                 </ul>
                             </div>

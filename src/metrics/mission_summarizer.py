@@ -32,7 +32,7 @@ class MissionSummarizer:
         self.mission_id = mission_id
         self.mission_name = mission_name
         self.bridge_id = bridge_id
-        self.llm_model = llm_model or os.getenv('OLLAMA_MODEL', 'qwen2.5:14b')
+        self.llm_model = llm_model or os.getenv('OLLAMA_MODEL', 'llama3.2')
 
         self.events = []
         self.transcripts = []

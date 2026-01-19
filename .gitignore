@@ -102,3 +102,6 @@ claude_prompt.txt
 /output/
 # Ollama models (local LLM)
 .ollama/
+
+
+examples/screenshots/*.PNG

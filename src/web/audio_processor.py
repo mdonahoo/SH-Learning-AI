@@ -229,6 +229,18 @@ class AudioProcessor:
             logger.info(f"Recordings will be saved to: {self.recordings_dir}")
             logger.info(f"Analyses will be saved to: {self.analyses_dir}")
 
+        # Analysis confidence filter
+        # Segments below this threshold are excluded from pattern analysis
+        # to avoid analyzing garbled/low-quality transcriptions
+        self.analysis_confidence_threshold = float(
+            os.getenv('ANALYSIS_CONFIDENCE_THRESHOLD', '0.10')
+        )
+        if self.analysis_confidence_threshold > 0:
+            logger.info(
+                f"Analysis confidence filter: {self.analysis_confidence_threshold:.0%} "
+                "(segments below this excluded from pattern analysis)"
+            )
+
         # Initialize archive manager and title generator
         self._archive_manager: Optional[ArchiveManager] = None
         self._title_generator: Optional[TitleGenerator] = None
@@ -1021,44 +1033,56 @@ class AudioProcessor:
             # Build transcripts list for analysis modules
             transcripts = self._build_transcripts_list(segments)
 
-            # Step 4: Role inference
+            # Filter transcripts for pattern analysis (exclude low-confidence segments)
+            # This prevents garbled/unclear speech from being analyzed as meaningful patterns
+            filtered_transcripts, filter_stats = self._filter_transcripts_for_analysis(
+                transcripts
+            )
+            results['confidence_filter'] = filter_stats
+
+            # Step 4: Role inference (uses ALL transcripts - needs full speech for detection)
             if include_detailed and ROLE_INFERENCE_AVAILABLE and transcripts:
                 update_progress("roles", "Inferring crew roles", progress)
                 results['role_assignments'] = self._analyze_roles(transcripts)
             progress = 60
 
-            # Step 5: Communication quality analysis
-            if include_quality and QUALITY_ANALYZER_AVAILABLE and segments:
+            # Step 5: Communication quality analysis (uses FILTERED transcripts)
+            if include_quality and QUALITY_ANALYZER_AVAILABLE and filtered_transcripts:
                 update_progress("quality", "Analyzing communication quality", progress)
-                results['communication_quality'] = self._analyze_quality(segments)
+                # Build filtered segments for quality analyzer
+                filtered_segments = [
+                    s for s in segments
+                    if min(1.0, max(0.0, (s.get('confidence', 0) + 1) / 2)) >= self.analysis_confidence_threshold
+                ] if self.analysis_confidence_threshold > 0 else segments
+                results['communication_quality'] = self._analyze_quality(filtered_segments)
             progress = 70
 
-            # Step 6: Speaker scorecards
-            if include_detailed and SCORECARD_AVAILABLE and transcripts:
+            # Step 6: Speaker scorecards (uses FILTERED transcripts)
+            if include_detailed and SCORECARD_AVAILABLE and filtered_transcripts:
                 update_progress("scorecards", "Generating speaker scorecards", progress)
-                results['speaker_scorecards'] = self._generate_scorecards(transcripts)
+                results['speaker_scorecards'] = self._generate_scorecards(filtered_transcripts)
             progress = 85
 
-            # Step 7: Confidence distribution
+            # Step 7: Confidence distribution (uses ALL transcripts - shows full distribution)
             if include_detailed and CONFIDENCE_ANALYZER_AVAILABLE and transcripts:
                 update_progress("confidence", "Analyzing confidence distribution", progress)
                 results['confidence_distribution'] = self._analyze_confidence(transcripts)
             progress = 90
 
-            # Step 8: Learning evaluation
-            if include_detailed and LEARNING_EVALUATOR_AVAILABLE and transcripts:
+            # Step 8: Learning evaluation (uses FILTERED transcripts)
+            if include_detailed and LEARNING_EVALUATOR_AVAILABLE and filtered_transcripts:
                 update_progress("learning", "Evaluating learning metrics", progress)
-                results['learning_evaluation'] = self._evaluate_learning(transcripts)
+                results['learning_evaluation'] = self._evaluate_learning(filtered_transcripts)
             progress = 80
 
-            # Step 9: 7 Habits analysis
-            if include_detailed and SEVEN_HABITS_AVAILABLE and transcripts:
+            # Step 9: 7 Habits analysis (uses FILTERED transcripts)
+            if include_detailed and SEVEN_HABITS_AVAILABLE and filtered_transcripts:
                 update_progress("habits", "Analyzing 7 Habits framework", progress)
-                results['seven_habits'] = self._analyze_seven_habits(transcripts)
+                results['seven_habits'] = self._analyze_seven_habits(filtered_transcripts)
             progress = 90
 
-            # Step 10: Training recommendations
-            if include_detailed and TRAINING_RECOMMENDATIONS_AVAILABLE and transcripts:
+            # Step 10: Training recommendations (uses FILTERED transcripts)
+            if include_detailed and TRAINING_RECOMMENDATIONS_AVAILABLE and filtered_transcripts:
                 update_progress("training", "Generating training recommendations", progress)
                 # Pass analysis results wrapped in expected format for training engine
                 comm_quality = results.get('communication_quality') or {}
@@ -1078,7 +1102,7 @@ class AudioProcessor:
                     'role_analysis': results.get('role_assignments') or [],
                 }
                 results['training_recommendations'] = self._generate_training_recommendations(
-                    transcripts, analysis_context
+                    filtered_transcripts, analysis_context
                 )
             progress = 100
 
@@ -1117,6 +1141,80 @@ class AudioProcessor:
             }
             for s in segments
         ]
+
+    def _filter_transcripts_for_analysis(
+        self,
+        transcripts: List[Dict[str, Any]]
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        """
+        Filter transcripts by confidence threshold for pattern analysis.
+
+        Low-confidence segments (garbled/unclear speech) are excluded from
+        pattern analysis (Seven Habits, communication quality, etc.) to avoid
+        analyzing transcription errors as if they were actual speech patterns.
+
+        Args:
+            transcripts: Full list of transcript segments
+
+        Returns:
+            Tuple of (filtered_transcripts, filter_stats)
+        """
+        threshold = self.analysis_confidence_threshold
+
+        # If threshold is 0, no filtering
+        if threshold <= 0:
+            return transcripts, {
+                'enabled': False,
+                'threshold': 0,
+                'total_segments': len(transcripts),
+                'included_segments': len(transcripts),
+                'excluded_segments': 0,
+                'excluded_percentage': 0.0
+            }
+
+        # Filter by confidence
+        filtered = [t for t in transcripts if t.get('confidence', 0) >= threshold]
+        excluded = [t for t in transcripts if t.get('confidence', 0) < threshold]
+
+        total = len(transcripts)
+        included_count = len(filtered)
+        excluded_count = len(excluded)
+        excluded_pct = (excluded_count / total * 100) if total > 0 else 0
+
+        # Log filtering summary
+        if excluded_count > 0:
+            logger.info(
+                f"Confidence filter: {included_count}/{total} segments included "
+                f"({excluded_count} excluded below {threshold:.0%} threshold)"
+            )
+
+            # Log some examples of excluded segments for debugging
+            if excluded and logger.isEnabledFor(logging.DEBUG):
+                examples = excluded[:3]
+                for ex in examples:
+                    logger.debug(
+                        f"  Excluded (conf={ex.get('confidence', 0):.2f}): "
+                        f"\"{ex.get('text', '')[:50]}...\""
+                    )
+
+        stats = {
+            'enabled': True,
+            'threshold': threshold,
+            'total_segments': total,
+            'included_segments': included_count,
+            'excluded_segments': excluded_count,
+            'excluded_percentage': round(excluded_pct, 1),
+            'excluded_examples': [
+                {
+                    'text': t.get('text', '')[:100],
+                    'confidence': round(t.get('confidence', 0), 3),
+                    'timestamp': t.get('timestamp', 0)
+                }
+                for t in excluded[:5]  # Include up to 5 examples
+            ] if excluded else []
+        }
+
+        return filtered, stats
 
     def _analyze_roles(
         self,

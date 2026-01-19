@@ -4,44 +4,44 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0a0e17">
-    <title>Starship Learning AI</title>
+    <title>Mission Analysis System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
     <div class="container">
+        <!-- Header -->
         <header>
-            <h1>Starship Learning AI</h1>
-            <p class="subtitle">Communication Analysis &amp; Training Assessment</p>
+            <div class="logo-section">
+                <div class="logo-icon">🚀</div>
+                <div class="logo-text">
+                    <h1>Mission Analysis System</h1>
+                    <p class="subtitle">Leadership Assessment Platform</p>
+                </div>
+            </div>
+            <div id="service-status" class="service-indicator" onclick="app.toggleServiceStatus()">
+                <span class="status-dot"></span>
+                <span id="service-status-summary">Checking...</span>
+            </div>
         </header>
 
-        <!-- Service Status Panel -->
-        <div id="service-status" class="service-status-panel">
-            <div class="service-status-header" onclick="app.toggleServiceStatus()">
-                <span class="service-status-title">Services</span>
-                <span id="service-status-summary" class="service-status-summary">Checking...</span>
-                <span class="service-status-toggle">&#9660;</span>
+        <!-- Service Status Dropdown (hidden by default) -->
+        <div id="service-status-details" class="service-dropdown hidden">
+            <div class="service-item" id="whisper-status">
+                <span class="service-name">Whisper</span>
+                <span class="service-state" data-state="checking">Checking...</span>
             </div>
-            <div id="service-status-details" class="service-status-details hidden">
-                <div class="service-item" id="whisper-status">
-                    <span class="service-icon">&#127908;</span>
-                    <span class="service-name">Whisper</span>
-                    <span class="service-state" data-state="checking">Checking...</span>
-                    <span class="service-detail"></span>
-                </div>
-                <div class="service-item" id="ollama-status">
-                    <span class="service-icon">&#129302;</span>
-                    <span class="service-name">Ollama</span>
-                    <span class="service-state" data-state="checking">Checking...</span>
-                    <span class="service-detail"></span>
-                </div>
-                <div class="service-item" id="diarization-status">
-                    <span class="service-icon">&#128101;</span>
-                    <span class="service-name">Diarization</span>
-                    <span class="service-state" data-state="checking">Checking...</span>
-                    <span class="service-detail"></span>
-                </div>
-                <button class="btn btn-small" onclick="app.checkServicesStatus()">Refresh</button>
+            <div class="service-item" id="ollama-status">
+                <span class="service-name">Ollama</span>
+                <span class="service-state" data-state="checking">Checking...</span>
             </div>
+            <div class="service-item" id="diarization-status">
+                <span class="service-name">Diarization</span>
+                <span class="service-state" data-state="checking">Checking...</span>
+            </div>
+            <button class="btn-text" onclick="app.checkServicesStatus()">Refresh Status</button>
         </div>
 
         <!-- Status Banner -->
@@ -49,167 +49,122 @@
             <span id="status-text"></span>
         </div>
 
-        <!-- Record/Upload Section (Collapsible) -->
-        <section class="collapsible-section" id="input-section">
-            <div class="section-header" onclick="app.toggleSection('input-section')">
-                <h2>
-                    <span class="collapse-icon">&#9660;</span>
-                    Record / Upload
-                </h2>
-                <span class="section-hint">Add audio to analyze</span>
-            </div>
-            <div class="section-content">
-                <div class="input-controls">
-                    <div class="record-controls">
-                        <button id="record-btn" class="btn btn-record">
-                            <span class="icon">&#9679;</span> Record
-                        </button>
-                        <span id="record-time" class="record-time">00:00</span>
-                    </div>
-                    <div class="divider">or</div>
-                    <div class="upload-controls">
-                        <input type="file" id="file-input" accept="audio/*,.webm,.wav,.mp3,.m4a,.ogg,.flac" hidden>
-                        <button id="upload-btn" class="btn btn-upload">
-                            <span class="icon">&#128193;</span> Upload File
-                        </button>
-                        <span id="file-name" class="file-name"></span>
-                    </div>
+        <!-- Input Section -->
+        <section class="card" id="input-section">
+            <div class="card-header" onclick="app.toggleSection('input-section')">
+                <div class="card-title">
+                    <span class="collapse-icon">▼</span>
+                    <h2>Record or Upload</h2>
                 </div>
-
-                <!-- Audio Preview -->
+            </div>
+            <div class="card-content">
+                <div class="input-row">
+                    <button id="record-btn" class="btn btn-record">
+                        <span class="btn-icon">●</span>
+                        <span>Record</span>
+                    </button>
+                    <span id="record-time" class="record-timer">00:00</span>
+                    <span class="divider-text">or</span>
+                    <input type="file" id="file-input" accept="audio/*,.webm,.wav,.mp3,.m4a,.ogg,.flac" hidden>
+                    <button id="upload-btn" class="btn btn-secondary">
+                        <span class="btn-icon">📁</span>
+                        <span>Upload File</span>
+                    </button>
+                    <span id="file-name" class="file-label"></span>
+                </div>
                 <div id="audio-preview" class="audio-preview hidden">
                     <audio id="audio-player" controls></audio>
-                    <div class="preview-buttons">
-                        <button id="analyze-btn" class="btn btn-analyze">
-                            Analyze Audio
+                    <div class="preview-actions">
+                        <button id="analyze-btn" class="btn btn-primary">
+                            Analyze Mission Audio
                         </button>
-                        <button id="save-audio-btn" class="btn btn-upload hidden">
-                            <span class="icon">&#8595;</span> Save Recording
+                        <button id="save-audio-btn" class="btn btn-secondary hidden">
+                            Save Recording
                         </button>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Processing Indicator with Steps -->
-        <section id="processing" class="processing-section hidden">
-            <h2>Analyzing Audio</h2>
-            <div class="progress-container">
-                <div class="progress-bar">
-                    <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+        <!-- Processing Section -->
+        <section id="processing" class="card processing-card hidden">
+            <div class="processing-header">
+                <h2>Analyzing Mission</h2>
+                <div class="progress-row">
+                    <div class="progress-track">
+                        <div id="progress-fill" class="progress-fill"></div>
+                    </div>
+                    <span id="progress-percent" class="progress-label">0%</span>
                 </div>
-                <span id="progress-percent" class="progress-percent">0%</span>
             </div>
-            <div id="progress-steps" class="progress-steps">
-                <div class="step" data-step="convert">
-                    <span class="step-icon">&#9675;</span>
-                    <span class="step-label">Converting audio</span>
-                </div>
-                <div class="step" data-step="transcribe">
-                    <span class="step-icon">&#9675;</span>
-                    <span class="step-label">Transcribing with Whisper</span>
-                </div>
-                <div class="step" data-step="diarize">
-                    <span class="step-icon">&#9675;</span>
-                    <span class="step-label">Identifying speakers</span>
-                </div>
-                <div class="step" data-step="roles">
-                    <span class="step-icon">&#9675;</span>
-                    <span class="step-label">Inferring roles</span>
-                </div>
-                <div class="step" data-step="quality">
-                    <span class="step-icon">&#9675;</span>
-                    <span class="step-label">Analyzing communication quality</span>
-                </div>
-                <div class="step" data-step="scorecards">
-                    <span class="step-icon">&#9675;</span>
-                    <span class="step-label">Generating scorecards</span>
-                </div>
-                <div class="step" data-step="confidence">
-                    <span class="step-icon">&#9675;</span>
-                    <span class="step-label">Analyzing confidence</span>
-                </div>
-                <div class="step" data-step="learning">
-                    <span class="step-icon">&#9675;</span>
-                    <span class="step-label">Evaluating learning metrics</span>
-                </div>
-                <div class="step" data-step="habits">
-                    <span class="step-icon">&#9675;</span>
-                    <span class="step-label">Analyzing 7 Habits</span>
-                </div>
-                <div class="step" data-step="training">
-                    <span class="step-icon">&#9675;</span>
-                    <span class="step-label">Generating training recommendations</span>
-                </div>
+            <div id="progress-steps" class="steps-grid">
+                <div class="step" data-step="convert"><span class="step-dot"></span>Converting audio</div>
+                <div class="step" data-step="transcribe"><span class="step-dot"></span>Transcribing</div>
+                <div class="step" data-step="diarize"><span class="step-dot"></span>Identifying crew</div>
+                <div class="step" data-step="roles"><span class="step-dot"></span>Inferring roles</div>
+                <div class="step" data-step="quality"><span class="step-dot"></span>Communication quality</div>
+                <div class="step" data-step="scorecards"><span class="step-dot"></span>Generating scorecards</div>
+                <div class="step" data-step="confidence"><span class="step-dot"></span>Analyzing confidence</div>
+                <div class="step" data-step="learning"><span class="step-dot"></span>Learning metrics</div>
+                <div class="step" data-step="habits"><span class="step-dot"></span>7 Habits analysis</div>
+                <div class="step" data-step="training"><span class="step-dot"></span>Recommendations</div>
             </div>
         </section>
 
-        <!-- Archive Section (Collapsible) -->
-        <section class="collapsible-section" id="archive-section">
-            <div class="section-header" onclick="app.toggleSection('archive-section')">
-                <h2>
-                    <span class="collapse-icon">&#9660;</span>
-                    Archive
+        <!-- Archive Section -->
+        <section class="card collapsed" id="archive-section">
+            <div class="card-header" onclick="app.toggleSection('archive-section')">
+                <div class="card-title">
+                    <span class="collapse-icon">▼</span>
+                    <h2>Mission Archive</h2>
                     <span id="archive-count" class="badge">0</span>
-                </h2>
-                <button id="refresh-archive-btn" class="btn btn-small" onclick="event.stopPropagation(); app.loadArchive();">
-                    <span class="icon">&#8635;</span> Refresh
+                </div>
+                <button id="refresh-archive-btn" class="btn-icon-only" onclick="event.stopPropagation(); app.loadArchive();" title="Refresh">
+                    ↻
                 </button>
             </div>
-            <div class="section-content">
-                <!-- Search and Filter -->
-                <div class="archive-filters">
-                    <div class="search-box">
-                        <input type="text" id="archive-search" placeholder="Search analyses..."
-                               oninput="app.filterArchive()">
-                    </div>
-                    <div class="filter-controls">
-                        <label class="filter-checkbox">
-                            <input type="checkbox" id="starred-only" onchange="app.filterArchive()">
-                            <span>Starred only</span>
-                        </label>
-                    </div>
+            <div class="card-content">
+                <div class="archive-controls">
+                    <input type="text" id="archive-search" class="search-input" placeholder="Search missions..." oninput="app.filterArchive()">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="starred-only" onchange="app.filterArchive()">
+                        <span>Starred only</span>
+                    </label>
                 </div>
                 <div id="archive-list" class="archive-list">
-                    <p class="empty">Loading...</p>
+                    <p class="empty-state">Loading...</p>
                 </div>
             </div>
         </section>
 
-        <!-- Results Section (Collapsible) -->
-        <section class="collapsible-section" id="results-section">
-            <div class="section-header" onclick="app.toggleSection('results-section')">
-                <h2>
-                    <span class="collapse-icon">&#9660;</span>
-                    Analysis Results
-                </h2>
-                <div class="download-buttons" onclick="event.stopPropagation()">
-                    <button id="download-audio-btn" class="btn btn-upload hidden">
-                        <span class="icon">&#127911;</span> Audio
+        <!-- Results Section -->
+        <section class="card" id="results-section">
+            <div class="card-header" onclick="app.toggleSection('results-section')">
+                <div class="card-title">
+                    <span class="collapse-icon">▼</span>
+                    <h2>Analysis Results</h2>
+                </div>
+                <div class="header-actions" onclick="event.stopPropagation()">
+                    <button id="download-audio-btn" class="btn btn-secondary btn-sm hidden">
+                        🎧 Audio
                     </button>
-                    <button id="download-btn" class="btn btn-download">
-                        <span class="icon">&#8595;</span> Download Report
+                    <button id="download-btn" class="btn btn-primary btn-sm">
+                        ⬇ Download Report
                     </button>
                 </div>
             </div>
-            <div class="section-content">
-                <!-- Current Analysis Info -->
-                <div id="current-analysis-info" class="current-analysis-info hidden">
-                    <div class="analysis-title-row">
-                        <span class="analysis-title-label">Title:</span>
-                        <input type="text" id="analysis-title-input" class="analysis-title-input"
-                               placeholder="Click to add custom title...">
-                        <button id="star-btn" class="btn-icon star-btn" onclick="app.toggleStar()" title="Star/Unstar">
-                            &#9734;
-                        </button>
-                    </div>
+            <div class="card-content">
+                <!-- Analysis Title Bar -->
+                <div id="current-analysis-info" class="analysis-header hidden">
+                    <input type="text" id="analysis-title-input" class="title-input" placeholder="Enter mission title...">
+                    <button id="star-btn" class="btn-star" onclick="app.toggleStar()" title="Star mission">☆</button>
                 </div>
 
-                <!-- Tabs -->
+                <!-- Tab Navigation -->
                 <div class="tabs">
                     <button class="tab active" data-tab="summary">Summary</button>
                     <button class="tab" data-tab="transcript">Transcript</button>
-                    <button class="tab" data-tab="speakers">Speakers</button>
+                    <button class="tab" data-tab="speakers">Crew</button>
                     <button class="tab" data-tab="scorecards">Scorecards</button>
                     <button class="tab" data-tab="quality">Quality</button>
                     <button class="tab" data-tab="learning">Learning</button>
@@ -217,61 +172,55 @@
                     <button class="tab" data-tab="training">Training</button>
                 </div>
 
-                <!-- Tab Content -->
-                <div class="tab-content">
-                    <!-- Summary Tab (NEW) -->
+                <!-- Tab Panels -->
+                <div class="tab-panels">
+                    <!-- Summary Tab -->
                     <div id="tab-summary" class="tab-panel active">
-                        <div class="summary-grid">
-                            <div class="summary-card">
-                                <div class="summary-icon">&#128337;</div>
-                                <div class="summary-value" id="summary-duration">--</div>
-                                <div class="summary-label">Duration</div>
+                        <div class="metrics-grid">
+                            <div class="metric-card">
+                                <div class="metric-value" id="summary-duration">--</div>
+                                <div class="metric-label">Duration</div>
                             </div>
-                            <div class="summary-card">
-                                <div class="summary-icon">&#128100;</div>
-                                <div class="summary-value" id="summary-speakers">--</div>
-                                <div class="summary-label">Speakers</div>
+                            <div class="metric-card">
+                                <div class="metric-value" id="summary-speakers">--</div>
+                                <div class="metric-label">Crew Members</div>
                             </div>
-                            <div class="summary-card">
-                                <div class="summary-icon">&#128172;</div>
-                                <div class="summary-value" id="summary-segments">--</div>
-                                <div class="summary-label">Segments</div>
+                            <div class="metric-card">
+                                <div class="metric-value" id="summary-segments">--</div>
+                                <div class="metric-label">Segments</div>
                             </div>
-                            <div class="summary-card">
-                                <div class="summary-icon">&#9989;</div>
-                                <div class="summary-value" id="summary-effective">--</div>
-                                <div class="summary-label">Effective Comm</div>
+                            <div class="metric-card highlight">
+                                <div class="metric-value" id="summary-effective">--</div>
+                                <div class="metric-label">Effective Comm</div>
                             </div>
                         </div>
 
-                        <!-- Key Metrics Overview -->
-                        <div class="key-metrics">
-                            <h3>Key Metrics</h3>
-                            <div class="metric-row">
-                                <span class="metric-label">7 Habits Score</span>
-                                <div class="metric-bar-container">
-                                    <div id="metric-habits-bar" class="metric-bar" style="width: 0%"></div>
+                        <div class="scores-section">
+                            <h3>Leadership Scores</h3>
+                            <div class="score-row">
+                                <span class="score-label">7 Habits Score</span>
+                                <div class="score-bar-track">
+                                    <div id="metric-habits-bar" class="score-bar-fill"></div>
                                 </div>
-                                <span id="metric-habits-value" class="metric-value">--</span>
+                                <span id="metric-habits-value" class="score-value">--</span>
                             </div>
-                            <div class="metric-row">
-                                <span class="metric-label">Communication Quality</span>
-                                <div class="metric-bar-container">
-                                    <div id="metric-quality-bar" class="metric-bar" style="width: 0%"></div>
+                            <div class="score-row">
+                                <span class="score-label">Communication Quality</span>
+                                <div class="score-bar-track">
+                                    <div id="metric-quality-bar" class="score-bar-fill"></div>
                                 </div>
-                                <span id="metric-quality-value" class="metric-value">--</span>
+                                <span id="metric-quality-value" class="score-value">--</span>
                             </div>
-                            <div class="metric-row">
-                                <span class="metric-label">Transcription Confidence</span>
-                                <div class="metric-bar-container">
-                                    <div id="metric-confidence-bar" class="metric-bar" style="width: 0%"></div>
+                            <div class="score-row">
+                                <span class="score-label">Transcription Confidence</span>
+                                <div class="score-bar-track">
+                                    <div id="metric-confidence-bar" class="score-bar-fill"></div>
                                 </div>
-                                <span id="metric-confidence-value" class="metric-value">--</span>
+                                <span id="metric-confidence-value" class="score-value">--</span>
                             </div>
                         </div>
 
-                        <!-- Top Recommendations -->
-                        <div id="top-recommendations" class="top-recommendations hidden">
+                        <div id="top-recommendations" class="recommendations-preview hidden">
                             <h3>Priority Recommendations</h3>
                             <div id="recommendations-preview"></div>
                         </div>
@@ -279,67 +228,55 @@
 
                     <!-- Transcript Tab -->
                     <div id="tab-transcript" class="tab-panel hidden">
-                        <div class="stats-bar">
+                        <div class="stats-row">
                             <span>Duration: <strong id="duration">--</strong></span>
                             <span>Segments: <strong id="segment-count">--</strong></span>
                             <span>Processing: <strong id="proc-time">--</strong></span>
                         </div>
-                        <div id="transcript-content" class="transcript-content">
-                            <!-- Transcript segments will be rendered here -->
-                        </div>
-                        <div class="full-text-section">
-                            <h3>Full Text</h3>
-                            <div id="full-text" class="full-text"></div>
-                        </div>
+                        <div id="transcript-content" class="transcript-list"></div>
+                        <details class="full-text-toggle">
+                            <summary>Show Full Text</summary>
+                            <div id="full-text" class="full-text-content"></div>
+                        </details>
                     </div>
 
                     <!-- Speakers Tab -->
                     <div id="tab-speakers" class="tab-panel hidden">
-                        <div id="speakers-content" class="speakers-content">
-                            <!-- Speaker cards will be rendered here -->
-                        </div>
+                        <div id="speakers-content" class="speakers-grid"></div>
                     </div>
 
                     <!-- Scorecards Tab -->
                     <div id="tab-scorecards" class="tab-panel hidden">
-                        <div id="scorecards-content" class="scorecards-content">
-                            <!-- Speaker scorecards will be rendered here -->
-                        </div>
+                        <div id="scorecards-content" class="scorecards-list"></div>
                     </div>
 
                     <!-- Quality Tab -->
                     <div id="tab-quality" class="tab-panel hidden">
-                        <div id="quality-content" class="quality-content">
-                            <!-- Quality analysis will be rendered here -->
-                        </div>
+                        <div id="quality-content" class="quality-content"></div>
                     </div>
 
                     <!-- Learning Tab -->
                     <div id="tab-learning" class="tab-panel hidden">
-                        <div id="learning-content" class="learning-content">
-                            <!-- Learning evaluation will be rendered here -->
-                        </div>
+                        <div id="learning-content" class="learning-content"></div>
                     </div>
 
                     <!-- 7 Habits Tab -->
                     <div id="tab-habits" class="tab-panel hidden">
-                        <div id="habits-content" class="habits-content">
-                            <!-- 7 Habits assessment will be rendered here -->
-                        </div>
+                        <div id="habits-content" class="habits-content"></div>
                     </div>
 
                     <!-- Training Tab -->
                     <div id="tab-training" class="tab-panel hidden">
-                        <div id="training-content" class="training-content">
-                            <!-- Training recommendations will be rendered here -->
-                        </div>
+                        <div id="training-content" class="training-content"></div>
                     </div>
                 </div>
             </div>
         </section>
 
         <footer>
-            <p>Starship Learning AI</p>
+            <span>Mission Analysis System</span>
+            <span class="footer-divider">•</span>
+            <span>Mobile Space Adventures</span>
         </footer>
     </div>
 
