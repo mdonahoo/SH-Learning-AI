@@ -307,10 +307,67 @@ async def get_services_status():
             details="Speaker diarization module not available"
         )
 
+    # Check Horizons game server status
+    horizons_status = ServiceStatus(
+        available=False,
+        status="Not configured",
+        details=None
+    )
+
+    try:
+        game_host = os.getenv('GAME_HOST', '')
+        game_port_ws = os.getenv('GAME_PORT_WS', '1865')
+        game_port_api = os.getenv('GAME_PORT_API', '1864')
+
+        if not game_host:
+            horizons_status = ServiceStatus(
+                available=False,
+                status="Not configured",
+                details="Set GAME_HOST in .env file"
+            )
+        else:
+            import socket
+
+            # Try to connect to WebSocket port
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(2.0)
+            try:
+                result = sock.connect_ex((game_host, int(game_port_ws)))
+                if result == 0:
+                    horizons_status = ServiceStatus(
+                        available=True,
+                        status="Connected",
+                        details=f"{game_host}:{game_port_ws}"
+                    )
+                else:
+                    # Try API port as fallback
+                    result = sock.connect_ex((game_host, int(game_port_api)))
+                    if result == 0:
+                        horizons_status = ServiceStatus(
+                            available=True,
+                            status="API only",
+                            details=f"{game_host}:{game_port_api} (WS port {game_port_ws} not responding)"
+                        )
+                    else:
+                        horizons_status = ServiceStatus(
+                            available=False,
+                            status="Not reachable",
+                            details=f"Cannot connect to {game_host}:{game_port_ws}"
+                        )
+            finally:
+                sock.close()
+    except Exception as e:
+        horizons_status = ServiceStatus(
+            available=False,
+            status="Error",
+            details=str(e)[:100]
+        )
+
     return ServicesStatusResponse(
         whisper=whisper_status,
         ollama=ollama_status,
-        diarization=diarization_status
+        diarization=diarization_status,
+        horizons=horizons_status
     )
 
 
@@ -407,7 +464,9 @@ async def analyze_audio(
 
 @app.post("/api/analyze-stream")
 async def analyze_audio_stream(
-    file: UploadFile = File(..., description="Audio file to analyze")
+    file: UploadFile = File(..., description="Audio file to analyze"),
+    include_narrative: bool = Query(True, description="Include LLM team analysis"),
+    include_story: bool = Query(True, description="Include LLM mission story")
 ):
     """
     Analyze audio file with streaming progress updates.
@@ -416,6 +475,10 @@ async def analyze_audio_stream(
     - Progress updates: {"type": "progress", "step": "...", "label": "...", "progress": N}
     - Final result: {"type": "result", "data": {...}}
     - Error: {"type": "error", "message": "..."}
+
+    Query Parameters:
+    - include_narrative: Include LLM team analysis (default: True)
+    - include_story: Include LLM mission story generation (default: True)
     """
     # Validate file size
     content = await file.read()
@@ -442,6 +505,12 @@ async def analyze_audio_stream(
             'progress': progress
         })
 
+    # Capture options for closure
+    _include_narrative = include_narrative
+    _include_story = include_story
+
+    logger.info(f"Analysis options: include_narrative={_include_narrative}, include_story={_include_story}")
+
     def run_analysis():
         """Run analysis in background thread."""
         try:
@@ -451,6 +520,8 @@ async def analyze_audio_stream(
                 include_diarization=True,
                 include_quality=True,
                 include_detailed=True,
+                include_narrative=_include_narrative,
+                include_story=_include_story,
                 progress_callback=progress_callback
             )
             progress_queue.put({'type': 'result', 'data': results})

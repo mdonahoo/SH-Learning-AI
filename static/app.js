@@ -146,12 +146,25 @@ class ApiClient {
         return response.json();
     }
 
-    analyzeWithProgress(file, onProgress) {
+    analyzeWithProgress(file, options = {}, onProgress) {
         return new Promise((resolve, reject) => {
             const formData = new FormData();
             formData.append('file', file);
 
-            fetch(`${this.baseUrl}/api/analyze-stream`, {
+            // Build query string from options
+            const params = new URLSearchParams();
+            if (options.includeNarrative !== undefined) {
+                params.append('include_narrative', options.includeNarrative);
+            }
+            if (options.includeStory !== undefined) {
+                params.append('include_story', options.includeStory);
+            }
+            const queryString = params.toString();
+            const url = queryString
+                ? `${this.baseUrl}/api/analyze-stream?${queryString}`
+                : `${this.baseUrl}/api/analyze-stream`;
+
+            fetch(url, {
                 method: 'POST',
                 body: formData
             }).then(response => {
@@ -451,11 +464,19 @@ class ResultsRenderer {
                 const displayName = this.getSpeakerDisplayName(seg.speaker_id, true);
                 const roleInfo = this.speakerRoles[seg.speaker_id];
                 const roleClass = roleInfo ? 'has-role' : '';
+                // Show transcription confidence with color coding
+                const conf = seg.confidence || 0;
+                const confPct = (conf * 100).toFixed(0);
+                const confClass = conf >= 0.7 ? 'conf-high' : conf >= 0.4 ? 'conf-medium' : 'conf-low';
+                const confTitle = 'Transcription accuracy confidence';
                 return `
                 <div class="segment ${roleClass}">
                     <div class="segment-header">
                         <span class="segment-speaker">${displayName}</span>
-                        <span class="segment-time">${this.formatTime(seg.start_time)} - ${this.formatTime(seg.end_time)}</span>
+                        <span class="segment-meta">
+                            <span class="segment-time">${this.formatTime(seg.start_time)} - ${this.formatTime(seg.end_time)}</span>
+                            <span class="segment-confidence ${confClass}" title="${confTitle}">${confPct}%</span>
+                        </span>
                     </div>
                     <div class="segment-text">${this.escapeHtml(seg.text)}</div>
                 </div>
@@ -1433,70 +1454,418 @@ class ResultsRenderer {
 
     generateMarkdown(results) {
         const now = new Date().toISOString().split('T')[0];
-        let md = `# Audio Analysis Report\n\n`;
+        let md = `# Mission Analysis Report\n\n`;
         md += `**Generated:** ${now}\n\n`;
         md += `---\n\n`;
 
-        // Summary
-        md += `## Summary\n\n`;
+        // ========== EXECUTIVE SUMMARY ==========
+        md += `## Executive Summary\n\n`;
         md += `| Metric | Value |\n`;
         md += `|--------|-------|\n`;
         md += `| Duration | ${this.formatDuration(results.duration_seconds)} |\n`;
-        md += `| Segments | ${results.transcription.length} |\n`;
-        md += `| Speakers | ${results.speakers.length} |\n`;
-        md += `| Processing Time | ${results.processing_time_seconds.toFixed(1)}s |\n`;
+        md += `| Segments | ${results.transcription?.length || 0} |\n`;
+        md += `| Speakers | ${results.speakers?.length || 0} |\n`;
+
+        const effectivePct = results.communication_quality?.effective_percentage || 0;
+        md += `| Effective Communication | ${effectivePct.toFixed(0)}% |\n`;
+
+        const habitsScore = results.seven_habits?.overall_score || 0;
+        md += `| 7 Habits Score | ${habitsScore.toFixed(1)}/5 |\n`;
+
+        const avgConfidence = results.confidence_distribution?.average_confidence || 0;
+        md += `| Transcription Confidence | ${(avgConfidence * 100).toFixed(0)}% |\n`;
+
+        md += `| Processing Time | ${results.processing_time_seconds?.toFixed(1) || 0}s |\n`;
         md += `\n`;
 
-        // AI Narrative Summary
+        // ========== LOW CONFIDENCE WARNING ==========
+        if (avgConfidence < 0.40) {
+            md += `> ⚠️ **Low Transcription Confidence Warning**\n>\n`;
+            md += `> Transcription confidence is ${(avgConfidence * 100).toFixed(0)}%, which is below the 40% reliability threshold.\n`;
+            md += `> Assessment accuracy may be significantly affected. Consider:\n`;
+            md += `> - Re-recording with better audio quality\n`;
+            md += `> - Using a closer microphone placement\n`;
+            md += `> - Reducing background noise\n>\n`;
+            md += `> Detailed assessments below should be interpreted with caution.\n\n`;
+        } else if (avgConfidence < 0.60) {
+            md += `> ℹ️ **Moderate Transcription Confidence**\n>\n`;
+            md += `> Transcription confidence is ${(avgConfidence * 100).toFixed(0)}%. Some assessments may be affected by transcription errors.\n\n`;
+        }
+
+        // ========== AI MISSION DEBRIEF ==========
         if (results.narrative_summary?.narrative) {
             md += `## AI Mission Debrief\n\n`;
-            md += `*Generated by ${results.narrative_summary.model || 'AI'}*\n\n`;
+            md += `*Generated by ${results.narrative_summary.model || 'AI'}`;
+            if (results.narrative_summary.generation_time) {
+                md += ` in ${results.narrative_summary.generation_time}s`;
+            }
+            md += `*\n\n`;
             md += `${results.narrative_summary.narrative}\n\n`;
         }
 
-        // Speakers with Role Assignments
-        if (results.speakers && results.speakers.length > 0) {
-            md += `## Speakers\n\n`;
-            md += `| Speaker | Role | Speaking Time | Utterances | Avg Duration |\n`;
-            md += `|---------|------|---------------|------------|-------------|\n`;
+        // ========== AI MISSION STORY ==========
+        if (results.story_narrative?.story) {
+            md += `## Mission Story\n\n`;
+            md += `*Generated by ${results.story_narrative.model || 'AI'}`;
+            if (results.story_narrative.generation_time) {
+                md += ` in ${results.story_narrative.generation_time}s`;
+            }
+            md += `*\n\n`;
+            md += `${results.story_narrative.story}\n\n`;
+        }
 
-            // Build role map from role_assignments
+        // ========== CREW & ROLES ==========
+        if (results.speakers && results.speakers.length > 0) {
+            md += `## Crew & Role Assignments\n\n`;
+
+            // Build role map with confidence details
             const roleMap = {};
             if (results.role_assignments) {
                 for (const ra of results.role_assignments) {
-                    roleMap[ra.speaker_id] = ra.role;
+                    roleMap[ra.speaker_id] = ra;
                 }
             }
 
+            md += `| Speaker | Role | Confidence | Voice | Telemetry | Speaking Time | Utterances |\n`;
+            md += `|---------|------|------------|-------|-----------|---------------|------------|\n`;
+
             for (const s of results.speakers) {
-                const role = roleMap[s.speaker_id] || s.role || '-';
+                const ra = roleMap[s.speaker_id];
+                const role = ra?.role || s.role || '-';
+                const confidence = ra?.confidence ? `${(ra.confidence * 100).toFixed(0)}%` : '-';
+                const voiceConf = ra?.voice_confidence ? `${(ra.voice_confidence * 100).toFixed(0)}%` : '-';
+                const telemetryConf = ra?.telemetry_confidence ? `${(ra.telemetry_confidence * 100).toFixed(0)}%` : '-';
                 const displayName = this.getSpeakerDisplayName(s.speaker_id);
-                md += `| ${displayName} | ${role} | ${this.formatDuration(s.total_speaking_time)} | ${s.utterance_count} | ${s.avg_utterance_duration.toFixed(1)}s |\n`;
+                md += `| ${displayName} | ${role} | ${confidence} | ${voiceConf} | ${telemetryConf} | ${this.formatDuration(s.total_speaking_time)} | ${s.utterance_count} |\n`;
             }
             md += `\n`;
+
+            // Role methodology notes
+            const methodologies = results.role_assignments?.filter(ra => ra.methodology_note);
+            if (methodologies?.length > 0) {
+                md += `**Role Detection Notes:**\n\n`;
+                for (const ra of methodologies) {
+                    md += `- **${this.getSpeakerDisplayName(ra.speaker_id)}:** ${ra.methodology_note}\n`;
+                }
+                md += `\n`;
+            }
         }
 
-        // Continue with other sections...
-        // (keeping the existing markdown generation for other sections)
+        // ========== 7 HABITS ASSESSMENT ==========
+        if (results.seven_habits) {
+            const habits = results.seven_habits;
+            md += `## 7 Habits of Highly Effective People\n\n`;
+            md += `**Overall Score: ${habits.overall_score.toFixed(1)}/5**\n\n`;
 
-        // Transcript
-        md += `## Transcript\n\n`;
+            if (habits.habits && habits.habits.length > 0) {
+                md += `| # | Habit | Score | Assessment |\n`;
+                md += `|---|-------|-------|------------|\n`;
+
+                const getLabel = (score) => {
+                    if (score >= 4) return 'Excellent';
+                    if (score >= 3) return 'Good';
+                    if (score >= 2) return 'Developing';
+                    return 'Needs Focus';
+                };
+
+                for (const h of habits.habits) {
+                    const habitName = h.youth_friendly_name || h.habit_name || 'Unknown';
+                    md += `| ${h.habit_number || ''} | ${habitName} | ${h.score.toFixed(1)}/5 | ${getLabel(h.score)} |\n`;
+                }
+                md += `\n`;
+
+                // Detailed habit breakdown
+                for (const h of habits.habits) {
+                    const habitName = h.youth_friendly_name || h.habit_name || 'Unknown';
+                    md += `### Habit ${h.habit_number}: ${habitName}\n\n`;
+                    md += `**Score:** ${h.score.toFixed(1)}/5\n\n`;
+
+                    if (h.interpretation) {
+                        md += `${h.interpretation}\n\n`;
+                    }
+
+                    if (h.examples && h.examples.length > 0) {
+                        md += `**Evidence:**\n`;
+                        for (const ex of h.examples.slice(0, 3)) {
+                            const speaker = ex.speaker ? `[${this.getSpeakerDisplayName(ex.speaker)}]` : '';
+                            md += `- ${speaker} "${ex.text}"\n`;
+                        }
+                        md += `\n`;
+                    }
+
+                    if (h.gap_to_next_score) {
+                        md += `**Gap:** ${h.gap_to_next_score}\n\n`;
+                    }
+
+                    if (h.development_tip) {
+                        md += `**Tip:** ${h.development_tip}\n\n`;
+                    }
+                }
+            }
+
+            // Strengths & Growth Areas
+            if (habits.strengths?.length > 0) {
+                md += `### Strengths\n\n`;
+                for (const s of habits.strengths) {
+                    md += `- **${s.name}** (${s.score.toFixed(1)}/5): ${s.interpretation || ''}\n`;
+                }
+                md += `\n`;
+            }
+
+            if (habits.growth_areas?.length > 0) {
+                md += `### Growth Areas\n\n`;
+                for (const g of habits.growth_areas) {
+                    md += `- **${g.name}** (${g.score.toFixed(1)}/5): ${g.development_tip || ''}\n`;
+                }
+                md += `\n`;
+            }
+        }
+
+        // ========== COMMUNICATION QUALITY ==========
+        if (results.communication_quality) {
+            const quality = results.communication_quality;
+            md += `## Communication Quality\n\n`;
+            md += `| Metric | Value |\n`;
+            md += `|--------|-------|\n`;
+            md += `| Effective Rate | ${quality.effective_percentage?.toFixed(0) || 0}% |\n`;
+            md += `| Effective Communications | ${quality.effective_count || 0} |\n`;
+            md += `| Needs Improvement | ${quality.improvement_count || 0} |\n`;
+            md += `| Total Assessed | ${quality.total_utterances_assessed || (quality.effective_count + quality.improvement_count)} |\n`;
+            md += `\n`;
+
+            // Patterns
+            const effectivePatterns = (quality.patterns || []).filter(p => p.category === 'effective');
+            const improvementPatterns = (quality.patterns || []).filter(p => p.category === 'needs_improvement');
+
+            if (effectivePatterns.length > 0) {
+                md += `### Effective Patterns\n\n`;
+                for (const p of effectivePatterns) {
+                    md += `- **${p.name}** (${p.count} instances): ${p.description || ''}\n`;
+                    if (p.examples?.length > 0) {
+                        for (const ex of p.examples.slice(0, 2)) {
+                            md += `  - "${ex.text?.substring(0, 100)}${ex.text?.length > 100 ? '...' : ''}"\n`;
+                        }
+                    }
+                }
+                md += `\n`;
+            }
+
+            if (improvementPatterns.length > 0) {
+                md += `### Areas for Improvement\n\n`;
+                for (const p of improvementPatterns) {
+                    md += `- **${p.name}** (${p.count} instances): ${p.description || ''}\n`;
+                    if (p.examples?.length > 0) {
+                        for (const ex of p.examples.slice(0, 2)) {
+                            md += `  - "${ex.text?.substring(0, 100)}${ex.text?.length > 100 ? '...' : ''}"\n`;
+                        }
+                    }
+                }
+                md += `\n`;
+            }
+        }
+
+        // ========== SPEAKER SCORECARDS ==========
+        if (results.speaker_scorecards && results.speaker_scorecards.length > 0) {
+            md += `## Individual Speaker Scorecards\n\n`;
+
+            for (const card of results.speaker_scorecards) {
+                const displayName = this.getSpeakerDisplayName(card.speaker_id);
+                md += `### ${displayName}`;
+                if (card.role) md += ` (${card.role})`;
+                md += `\n\n`;
+
+                md += `**Overall Score: ${card.overall_score.toFixed(1)}/5**\n\n`;
+
+                if (card.metrics && card.metrics.length > 0) {
+                    md += `| Metric | Score | Evidence |\n`;
+                    md += `|--------|-------|----------|\n`;
+                    for (const m of card.metrics) {
+                        const evidence = m.evidence?.substring(0, 60) || '';
+                        md += `| ${m.name} | ${m.score}/5 | ${evidence}${m.evidence?.length > 60 ? '...' : ''} |\n`;
+                    }
+                    md += `\n`;
+                }
+
+                if (card.strengths?.length > 0) {
+                    md += `**Strengths:** ${card.strengths.join(', ')}\n\n`;
+                }
+
+                if (card.areas_for_improvement?.length > 0) {
+                    md += `**Areas for Improvement:** ${card.areas_for_improvement.join(', ')}\n\n`;
+                }
+            }
+        }
+
+        // ========== TRAINING RECOMMENDATIONS ==========
+        if (results.training_recommendations) {
+            const training = results.training_recommendations;
+            md += `## Training Recommendations\n\n`;
+            md += `*${training.total_recommendations || 0} recommendations identified*\n\n`;
+
+            // Immediate Actions
+            if (training.immediate_actions?.length > 0) {
+                md += `### Immediate Actions\n\n`;
+                for (const action of training.immediate_actions) {
+                    md += `#### ${action.priority}: ${action.title}\n\n`;
+                    md += `**Category:** ${action.category}\n\n`;
+                    md += `${action.description}\n\n`;
+                    if (action.scout_connection) {
+                        md += `- **Scout Connection:** ${action.scout_connection}\n`;
+                    }
+                    if (action.habit_connection) {
+                        md += `- **7 Habits Connection:** ${action.habit_connection}\n`;
+                    }
+                    if (action.success_criteria) {
+                        md += `- **Success Criteria:** ${action.success_criteria}\n`;
+                    }
+                    md += `\n`;
+                }
+            }
+
+            // Training Drills
+            if (training.drills?.length > 0) {
+                md += `### Training Drills\n\n`;
+                for (const drill of training.drills) {
+                    md += `#### ${drill.name}`;
+                    if (drill.duration) md += ` (${drill.duration})`;
+                    md += `\n\n`;
+
+                    if (drill.purpose) {
+                        md += `**Purpose:** ${drill.purpose}\n\n`;
+                    }
+
+                    if (drill.steps?.length > 0) {
+                        md += `**Steps:**\n`;
+                        drill.steps.forEach((step, i) => {
+                            md += `${i + 1}. ${step}\n`;
+                        });
+                        md += `\n`;
+                    }
+
+                    if (drill.debrief_questions?.length > 0) {
+                        md += `**Debrief Questions:**\n`;
+                        for (const q of drill.debrief_questions) {
+                            md += `- ${q}\n`;
+                        }
+                        md += `\n`;
+                    }
+                }
+            }
+
+            // Discussion Topics
+            if (training.discussion_topics?.length > 0) {
+                md += `### Discussion Topics\n\n`;
+                for (const topic of training.discussion_topics) {
+                    md += `- **${topic.title}:** ${topic.opening_question || ''}\n`;
+                    if (topic.connection) {
+                        md += `  - Connection: ${topic.connection}\n`;
+                    }
+                }
+                md += `\n`;
+            }
+        }
+
+        // ========== LEARNING EVALUATION ==========
+        if (results.learning_evaluation) {
+            const learning = results.learning_evaluation;
+            md += `## Learning Evaluation\n\n`;
+
+            // Kirkpatrick Levels
+            if (learning.kirkpatrick_levels?.length > 0) {
+                md += `### Kirkpatrick 4-Level Model\n\n`;
+                md += `| Level | Name | Score |\n`;
+                md += `|-------|------|-------|\n`;
+                for (const lvl of learning.kirkpatrick_levels) {
+                    md += `| ${lvl.level} | ${lvl.name} | ${(lvl.score * 100).toFixed(0)}% |\n`;
+                }
+                md += `\n`;
+            }
+
+            // Frameworks
+            md += `### Learning Frameworks\n\n`;
+            md += `| Framework | Value |\n`;
+            md += `|-----------|-------|\n`;
+            if (learning.blooms_level) {
+                md += `| Bloom's Taxonomy | ${learning.blooms_level} |\n`;
+            }
+            if (learning.nasa_tlx_score !== undefined) {
+                md += `| NASA TLX Workload | ${(learning.nasa_tlx_score * 100).toFixed(0)}% |\n`;
+            }
+            if (learning.engagement_score !== undefined) {
+                md += `| Engagement Score | ${(learning.engagement_score * 100).toFixed(0)}% |\n`;
+            }
+            md += `\n`;
+
+            // Top Communications
+            if (learning.top_communications?.length > 0) {
+                md += `### High-Value Communications\n\n`;
+                for (const comm of learning.top_communications.slice(0, 5)) {
+                    const speaker = comm.speaker_id ? `[${this.getSpeakerDisplayName(comm.speaker_id)}]` : '';
+                    const confidence = comm.learning_confidence ? ` (${(comm.learning_confidence * 100).toFixed(0)}% learning value)` : '';
+                    md += `- ${speaker} "${comm.text}"${confidence}\n`;
+                }
+                md += `\n`;
+            }
+
+            // Learning Recommendations
+            if (learning.recommendations?.length > 0) {
+                md += `### Learning Recommendations\n\n`;
+                for (const rec of learning.recommendations) {
+                    md += `- ${rec}\n`;
+                }
+                md += `\n`;
+            }
+        }
+
+        // ========== CONFIDENCE ANALYSIS ==========
+        if (results.confidence_distribution) {
+            const conf = results.confidence_distribution;
+            md += `## Transcription Confidence\n\n`;
+            md += `| Metric | Value |\n`;
+            md += `|--------|-------|\n`;
+            md += `| Average Confidence | ${(conf.average_confidence * 100).toFixed(0)}% |\n`;
+            const totalSegments = results.transcription?.length || conf.total_segments || 0;
+            md += `| Total Segments | ${totalSegments} |\n`;
+
+            if (conf.high_confidence_count !== undefined) {
+                md += `| High Confidence (>80%) | ${conf.high_confidence_count} |\n`;
+            }
+            if (conf.medium_confidence_count !== undefined) {
+                md += `| Medium Confidence (50-80%) | ${conf.medium_confidence_count} |\n`;
+            }
+            if (conf.low_confidence_count !== undefined) {
+                md += `| Low Confidence (<50%) | ${conf.low_confidence_count} |\n`;
+            }
+            md += `\n`;
+
+            if (conf.assessment) {
+                md += `**Assessment:** ${conf.assessment}\n\n`;
+            }
+        }
+
+        // ========== TRANSCRIPT ==========
+        md += `## Full Transcript\n\n`;
+        md += `> The percentage shown after each speaker indicates **transcription accuracy confidence** - how certain the speech-to-text model is about the transcription. Higher values (70%+) indicate clear audio; lower values (<40%) may contain errors.\n\n`;
         if (results.transcription && results.transcription.length > 0) {
             for (const seg of results.transcription) {
                 const speaker = this.getSpeakerDisplayName(seg.speaker_id) || 'Speaker';
                 const time = this.formatTime(seg.start_time);
-                md += `**[${time}] ${speaker}:** ${seg.text}\n\n`;
+                const confPct = seg.confidence ? (seg.confidence * 100).toFixed(0) : null;
+                const confidence = confPct ? ` [${confPct}% accuracy]` : '';
+                md += `**[${time}] ${speaker}${confidence}:** ${seg.text}\n\n`;
             }
         } else {
             md += `*No transcription available*\n\n`;
         }
 
-        // Full Text
-        md += `## Full Text\n\n`;
+        // ========== FULL TEXT ==========
+        md += `## Full Text (Continuous)\n\n`;
         md += `${results.full_text || '*No text available*'}\n\n`;
 
+        // ========== FOOTER ==========
         md += `---\n\n`;
-        md += `*Generated by AI Audio Analyzer*\n`;
+        md += `*Generated by Bridge Crew Training AI Analyzer*\n`;
+        md += `*Analysis includes: Speaker diarization, Role inference, 7 Habits assessment, Communication quality, Learning evaluation, and Training recommendations*\n`;
 
         return md;
     }
@@ -1640,14 +2009,16 @@ class App {
         this.updateServiceItem('whisper-status', status.whisper);
         this.updateServiceItem('ollama-status', status.ollama);
         this.updateServiceItem('diarization-status', status.diarization);
+        this.updateServiceItem('horizons-status', status.horizons);
 
-        // Update summary
-        const readyCount = [status.whisper, status.ollama, status.diarization]
-            .filter(s => s.available).length;
+        // Update summary (core services: whisper, ollama, diarization)
+        const coreServices = [status.whisper, status.ollama, status.diarization];
+        const readyCount = coreServices.filter(s => s.available).length;
+        const horizonsConnected = status.horizons?.available;
 
         if (summaryEl) {
             if (readyCount === 3) {
-                summaryEl.textContent = 'All services ready';
+                summaryEl.textContent = horizonsConnected ? 'All services ready' : 'Services ready (no game)';
                 summaryEl.style.color = 'var(--success)';
             } else if (readyCount >= 1) {
                 summaryEl.textContent = `${readyCount}/3 services ready`;
@@ -1762,8 +2133,15 @@ class App {
                 file = new File([file], `recording${extension}`, { type: file.type });
             }
 
+            // Read analysis options from checkboxes
+            const includeNarrative = document.getElementById('include-narrative')?.checked ?? true;
+            const includeStory = document.getElementById('include-story')?.checked ?? true;
+
             // Use streaming endpoint with progress updates
-            const results = await this.api.analyzeWithProgress(file, (step, label, progress) => {
+            const results = await this.api.analyzeWithProgress(file, {
+                includeNarrative,
+                includeStory
+            }, (step, label, progress) => {
                 this.updateProgress(step, label, progress);
             });
 
@@ -1797,6 +2175,7 @@ class App {
         } finally {
             this.analyzeBtn.disabled = false;
             this.processing.classList.add('hidden');
+            this.stopElapsedTimer();
         }
     }
 
@@ -1870,19 +2249,45 @@ class App {
         if (progressFill) progressFill.style.width = '0%';
         if (progressPercent) progressPercent.textContent = '0%';
 
+        // Reset current step label and counter
+        const currentStepLabel = document.getElementById('current-step-label');
+        const stepCounter = document.getElementById('step-counter');
+        if (currentStepLabel) currentStepLabel.textContent = 'Starting analysis...';
+        if (stepCounter) stepCounter.textContent = 'Step 0 of 10';
+
+        // Reset time displays
+        const elapsedTime = document.getElementById('elapsed-time');
+        const remainingTime = document.getElementById('remaining-time');
+        if (elapsedTime) elapsedTime.textContent = '0s elapsed';
+        if (remainingTime) remainingTime.textContent = 'estimating...';
+
+        // Start elapsed time tracking
+        this.analysisStartTime = Date.now();
+        this.stopElapsedTimer(); // Clear any existing timer
+        this.elapsedTimerInterval = setInterval(() => {
+            const elapsed = Math.floor((Date.now() - this.analysisStartTime) / 1000);
+            const elapsedEl = document.getElementById('elapsed-time');
+            if (elapsedEl) {
+                elapsedEl.textContent = `${elapsed}s elapsed`;
+            }
+        }, 1000);
+
         // Original step labels
-        const originalLabels = {
+        this.originalLabels = {
             'convert': 'Converting audio',
-            'transcribe': 'Transcribing with Whisper',
-            'diarize': 'Identifying speakers',
+            'transcribe': 'Transcribing',
+            'diarize': 'Identifying crew',
             'roles': 'Inferring roles',
-            'quality': 'Analyzing communication quality',
+            'quality': 'Communication quality',
             'scorecards': 'Generating scorecards',
             'confidence': 'Analyzing confidence',
-            'learning': 'Evaluating learning metrics',
-            'habits': 'Analyzing 7 Habits',
-            'training': 'Generating training recommendations'
+            'learning': 'Learning metrics',
+            'habits': '7 Habits analysis',
+            'training': 'Recommendations'
         };
+
+        // Step order for index tracking
+        this.stepOrder = ['convert', 'transcribe', 'diarize', 'roles', 'quality', 'scorecards', 'confidence', 'learning', 'habits', 'training'];
 
         // Reset all steps
         document.querySelectorAll('#progress-steps .step').forEach(step => {
@@ -1890,12 +2295,19 @@ class App {
             const icon = step.querySelector('.step-icon');
             const stepLabel = step.querySelector('.step-label');
             const stepId = step.dataset.step;
-            if (icon) icon.innerHTML = '&#9675;'; // Empty circle
+            if (icon) icon.textContent = '○'; // Empty circle
             // Restore original label
-            if (stepLabel && originalLabels[stepId]) {
-                stepLabel.textContent = originalLabels[stepId];
+            if (stepLabel && this.originalLabels[stepId]) {
+                stepLabel.textContent = this.originalLabels[stepId];
             }
         });
+    }
+
+    stopElapsedTimer() {
+        if (this.elapsedTimerInterval) {
+            clearInterval(this.elapsedTimerInterval);
+            this.elapsedTimerInterval = null;
+        }
     }
 
     updateProgress(stepId, label, progress) {
@@ -1903,43 +2315,94 @@ class App {
         const progressFill = document.getElementById('progress-fill');
         const progressPercent = document.getElementById('progress-percent');
         if (progressFill) progressFill.style.width = `${progress}%`;
-        if (progressPercent) progressPercent.textContent = `${progress}%`;
+        if (progressPercent) progressPercent.textContent = `${Math.round(progress)}%`;
 
         // Show narrative loading when narrative step starts
         if (stepId === 'narrative') {
             this.showNarrativeLoading();
         } else if (stepId === 'complete') {
             this.stopNarrativeLoading();
+            this.stopElapsedTimer();
         }
 
-        // Update step states
+        // Get step index for "Step X of Y" display
+        const stepIndex = this.stepOrder ? this.stepOrder.indexOf(stepId) : -1;
+        const totalSteps = this.stepOrder ? this.stepOrder.length : 10;
+
+        // Update current step label (prominent display)
+        const currentStepLabelEl = document.getElementById('current-step-label');
+        if (currentStepLabelEl && label) {
+            currentStepLabelEl.textContent = label;
+        }
+
+        // Update step counter
+        const stepCounter = document.getElementById('step-counter');
+        if (stepCounter && stepIndex >= 0) {
+            stepCounter.textContent = `Step ${stepIndex + 1} of ${totalSteps}`;
+        }
+
+        // Update remaining time estimate
+        this.updateRemainingTime(stepIndex, progress);
+
+        // Update step states in the details list
         const steps = document.querySelectorAll('#progress-steps .step');
         let foundCurrent = false;
 
         steps.forEach(step => {
             const currentStepId = step.dataset.step;
             const icon = step.querySelector('.step-icon');
-            const stepLabel = step.querySelector('.step-label');
+            const stepLabelEl = step.querySelector('.step-label');
 
             if (currentStepId === stepId) {
                 // This is the current active step
                 step.classList.add('active');
                 step.classList.remove('completed');
-                if (icon) icon.innerHTML = '&#9679;'; // Filled circle
+                if (icon) icon.textContent = '●'; // Filled circle
                 // Update label with dynamic text (e.g., "Transcribing... 5.2s / 20.5s")
-                if (stepLabel && label) stepLabel.textContent = label;
+                if (stepLabelEl && label) stepLabelEl.textContent = label;
                 foundCurrent = true;
             } else if (!foundCurrent) {
                 // Steps before current are completed
                 step.classList.remove('active');
                 step.classList.add('completed');
-                if (icon) icon.innerHTML = '&#10003;'; // Checkmark
+                if (icon) icon.textContent = '✓'; // Checkmark
+                // Restore original label for completed steps
+                if (stepLabelEl && this.originalLabels && this.originalLabels[currentStepId]) {
+                    stepLabelEl.textContent = this.originalLabels[currentStepId];
+                }
             } else {
                 // Steps after current are pending
                 step.classList.remove('active', 'completed');
-                if (icon) icon.innerHTML = '&#9675;'; // Empty circle
+                if (icon) icon.textContent = '○'; // Empty circle
             }
         });
+    }
+
+    updateRemainingTime(currentStepIndex, progress) {
+        const remainingTimeEl = document.getElementById('remaining-time');
+        if (!remainingTimeEl || !this.analysisStartTime) return;
+
+        const elapsed = (Date.now() - this.analysisStartTime) / 1000;
+
+        // Need at least some progress to estimate
+        if (progress < 5) {
+            remainingTimeEl.textContent = 'estimating...';
+            return;
+        }
+
+        // Calculate remaining time based on progress
+        const estimatedTotal = (elapsed / progress) * 100;
+        const remaining = Math.max(0, Math.round(estimatedTotal - elapsed));
+
+        if (remaining === 0 || progress >= 100) {
+            remainingTimeEl.textContent = 'almost done...';
+        } else if (remaining < 60) {
+            remainingTimeEl.textContent = `~${remaining}s remaining`;
+        } else {
+            const mins = Math.floor(remaining / 60);
+            const secs = remaining % 60;
+            remainingTimeEl.textContent = `~${mins}m ${secs}s remaining`;
+        }
     }
 
     // Show narrative loading with timer

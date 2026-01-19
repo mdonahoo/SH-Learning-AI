@@ -207,9 +207,22 @@ class BatchSpeakerDiarizer:
         # Sample rate expected by resemblyzer
         self.sample_rate = 16000
 
+        # Chunk-based diarization for long audio (prevents speaker drift)
+        # Audio longer than this will be processed in chunks
+        self.chunk_threshold_seconds = float(
+            os.getenv('DIARIZATION_CHUNK_THRESHOLD', '600')  # 10 minutes
+        )
+        self.chunk_duration_seconds = float(
+            os.getenv('DIARIZATION_CHUNK_DURATION', '300')  # 5 minutes per chunk
+        )
+        self.chunk_overlap_seconds = float(
+            os.getenv('DIARIZATION_CHUNK_OVERLAP', '30')  # 30 second overlap
+        )
+
         logger.info(
             f"BatchSpeakerDiarizer initialized: threshold={self.similarity_threshold}, "
-            f"speakers={self.min_speakers}-{self.max_speakers}"
+            f"speakers={self.min_speakers}-{self.max_speakers}, "
+            f"chunk_threshold={self.chunk_threshold_seconds}s"
         )
 
     def diarize_complete(
@@ -224,6 +237,9 @@ class BatchSpeakerDiarizer:
         This is the main entry point. It processes all segments at once
         to ensure consistent speaker IDs.
 
+        For long audio (>10 minutes by default), uses chunk-based processing
+        to prevent speaker drift that occurs when embeddings accumulate errors.
+
         Args:
             audio_data: Full audio samples (float32, normalized -1 to 1)
             segments: List of segments with 'start', 'end', 'text' keys
@@ -237,8 +253,19 @@ class BatchSpeakerDiarizer:
         if not segments:
             return segments, DiarizationResult()
 
-        logger.info(f"Batch diarization: {len(segments)} segments")
+        # Calculate audio duration
+        audio_duration = len(audio_data) / sample_rate
+        logger.info(f"Batch diarization: {len(segments)} segments, {audio_duration:.1f}s audio")
 
+        # Use chunked diarization for long audio to prevent speaker drift
+        if audio_duration > self.chunk_threshold_seconds:
+            logger.info(
+                f"Audio exceeds {self.chunk_threshold_seconds}s threshold, "
+                f"using chunk-based diarization to prevent speaker drift"
+            )
+            return self._diarize_chunked(audio_data, segments, sample_rate)
+
+        # Standard processing for shorter audio
         # Pass 1: Extract all embeddings
         embeddings_data = self._extract_all_embeddings(audio_data, segments, sample_rate)
         logger.info(f"Extracted {len(embeddings_data)} embeddings")
@@ -264,6 +291,257 @@ class BatchSpeakerDiarizer:
 
         logger.info(f"Batch diarization complete: {result.total_speakers} speakers")
         return segments, result
+
+    def _diarize_chunked(
+        self,
+        audio_data: np.ndarray,
+        segments: List[Dict[str, Any]],
+        sample_rate: int
+    ) -> Tuple[List[Dict[str, Any]], DiarizationResult]:
+        """
+        Perform chunk-based diarization for long audio.
+
+        This prevents speaker drift that occurs over long recordings by:
+        1. Splitting audio into overlapping chunks (e.g., 5 min with 30s overlap)
+        2. Diarizing each chunk independently with fresh state
+        3. Merging speaker clusters across chunks using centroid similarity
+
+        Args:
+            audio_data: Full audio samples
+            segments: All transcript segments
+            sample_rate: Audio sample rate
+
+        Returns:
+            Tuple of (updated_segments, DiarizationResult)
+        """
+        audio_duration = len(audio_data) / sample_rate
+        chunk_duration = self.chunk_duration_seconds
+        chunk_overlap = self.chunk_overlap_seconds
+
+        # Calculate chunk boundaries
+        chunk_boundaries = []
+        chunk_start = 0.0
+        while chunk_start < audio_duration:
+            chunk_end = min(chunk_start + chunk_duration, audio_duration)
+            chunk_boundaries.append((chunk_start, chunk_end))
+            chunk_start = chunk_end - chunk_overlap
+            if chunk_start >= audio_duration - chunk_overlap:
+                break
+
+        logger.info(
+            f"Chunked diarization: {len(chunk_boundaries)} chunks of ~{chunk_duration}s "
+            f"with {chunk_overlap}s overlap"
+        )
+
+        # Process each chunk independently
+        chunk_results = []  # List of (chunk_idx, chunk_centroids, chunk_segment_speakers)
+
+        for chunk_idx, (chunk_start, chunk_end) in enumerate(chunk_boundaries):
+            # Get audio for this chunk
+            start_sample = int(chunk_start * sample_rate)
+            end_sample = int(chunk_end * sample_rate)
+            chunk_audio = audio_data[start_sample:end_sample]
+
+            # Get segments within this chunk
+            chunk_segments = []
+            segment_indices = []
+            for seg_idx, seg in enumerate(segments):
+                # Include segment if it overlaps with chunk
+                if seg['start'] < chunk_end and seg['end'] > chunk_start:
+                    # Adjust timestamps relative to chunk start
+                    adjusted_seg = seg.copy()
+                    adjusted_seg['_original_start'] = seg['start']
+                    adjusted_seg['_original_end'] = seg['end']
+                    adjusted_seg['start'] = max(0, seg['start'] - chunk_start)
+                    adjusted_seg['end'] = min(chunk_end - chunk_start, seg['end'] - chunk_start)
+                    chunk_segments.append(adjusted_seg)
+                    segment_indices.append(seg_idx)
+
+            if not chunk_segments:
+                continue
+
+            logger.info(f"Chunk {chunk_idx + 1}/{len(chunk_boundaries)}: {len(chunk_segments)} segments")
+
+            # Extract embeddings for this chunk
+            embeddings_data = self._extract_all_embeddings(chunk_audio, chunk_segments, sample_rate)
+
+            if len(embeddings_data) < 2:
+                # Not enough for clustering, assign all to single speaker
+                for seg in chunk_segments:
+                    seg['speaker_id'] = 'speaker_1'
+                    seg['speaker_confidence'] = 0.5
+                chunk_results.append({
+                    'chunk_idx': chunk_idx,
+                    'centroids': {},
+                    'segment_speakers': {i: 'speaker_1' for i in segment_indices}
+                })
+                continue
+
+            # Cluster this chunk
+            cluster_labels = self._cluster_globally(embeddings_data)
+            speaker_clusters = self._assign_speaker_ids(embeddings_data, cluster_labels, chunk_segments)
+
+            # Compute centroids for merging
+            centroids = {}
+            for speaker_id, cluster in speaker_clusters.items():
+                cluster.compute_centroid()
+                if cluster.centroid is not None:
+                    centroids[speaker_id] = cluster.centroid
+
+            # Map segment indices to speaker IDs
+            segment_speakers = {}
+            for emb_idx, emb, start, end, duration in embeddings_data:
+                # Find which cluster this embedding belongs to
+                for speaker_id, cluster in speaker_clusters.items():
+                    if emb_idx in [e[0] for e in embeddings_data if any(
+                        np.array_equal(e[1], emb_vec) for emb_vec in cluster.embeddings
+                    )]:
+                        segment_speakers[segment_indices[emb_idx]] = speaker_id
+                        break
+
+            # Simpler approach: use cluster assignments directly
+            segment_speakers = {}
+            for data_idx, (emb_idx, emb, start, end, duration) in enumerate(embeddings_data):
+                label = cluster_labels[data_idx]
+                # Find speaker ID for this label
+                for speaker_id, cluster in speaker_clusters.items():
+                    if emb_idx in cluster.segment_indices:
+                        segment_speakers[segment_indices[emb_idx]] = speaker_id
+                        break
+
+            chunk_results.append({
+                'chunk_idx': chunk_idx,
+                'centroids': centroids,
+                'segment_speakers': segment_speakers,
+                'embeddings_data': embeddings_data,
+                'segment_indices': segment_indices
+            })
+
+        # Merge speaker clusters across chunks
+        global_speaker_map = self._merge_chunk_speakers(chunk_results)
+
+        # Apply global speaker IDs to all segments
+        for seg in segments:
+            seg['speaker_id'] = None
+            seg['speaker_confidence'] = 0.0
+
+        for chunk_result in chunk_results:
+            for seg_idx, local_speaker in chunk_result['segment_speakers'].items():
+                chunk_key = (chunk_result['chunk_idx'], local_speaker)
+                global_speaker = global_speaker_map.get(chunk_key, local_speaker)
+                segments[seg_idx]['speaker_id'] = global_speaker
+                segments[seg_idx]['speaker_confidence'] = 0.7  # Chunked confidence
+
+        # Interpolate gaps
+        segments = self._interpolate_gaps_simple(segments)
+
+        # Build result
+        speaker_ids = set(s.get('speaker_id') for s in segments if s.get('speaker_id'))
+        result = DiarizationResult(
+            total_speakers=len(speaker_ids),
+            methodology_note=(
+                f"Chunk-based diarization ({len(chunk_boundaries)} chunks) "
+                f"to prevent speaker drift over {audio_duration:.0f}s audio"
+            )
+        )
+
+        logger.info(
+            f"Chunked diarization complete: {result.total_speakers} speakers "
+            f"from {len(chunk_boundaries)} chunks"
+        )
+        return segments, result
+
+    def _merge_chunk_speakers(
+        self,
+        chunk_results: List[Dict]
+    ) -> Dict[Tuple[int, str], str]:
+        """
+        Merge speaker clusters across chunks using centroid similarity.
+
+        Args:
+            chunk_results: List of chunk results with centroids
+
+        Returns:
+            Mapping from (chunk_idx, local_speaker_id) to global_speaker_id
+        """
+        if not chunk_results:
+            return {}
+
+        # Collect all centroids with their chunk/speaker info
+        all_centroids = []  # (chunk_idx, local_speaker_id, centroid)
+        for cr in chunk_results:
+            for speaker_id, centroid in cr['centroids'].items():
+                all_centroids.append((cr['chunk_idx'], speaker_id, centroid))
+
+        if len(all_centroids) < 2:
+            # Not enough to merge
+            return {(c[0], c[1]): c[1] for c in all_centroids}
+
+        # Cluster centroids across chunks
+        centroid_matrix = np.array([c[2] for c in all_centroids])
+        distances = cdist(centroid_matrix, centroid_matrix, metric='cosine')
+        condensed = distances[np.triu_indices(len(all_centroids), k=1)]
+
+        # Use slightly higher threshold for cross-chunk merging
+        merge_threshold = 1.0 - (self.similarity_threshold * 0.9)  # Slightly stricter
+        linkage_matrix = linkage(condensed, method='average')
+        labels = fcluster(linkage_matrix, t=merge_threshold, criterion='distance')
+
+        # Build global speaker map
+        # Group by cluster label, then assign global IDs by first appearance
+        cluster_to_speakers = defaultdict(list)
+        for idx, (chunk_idx, speaker_id, centroid) in enumerate(all_centroids):
+            cluster_label = labels[idx]
+            cluster_to_speakers[cluster_label].append((chunk_idx, speaker_id))
+
+        # Assign global IDs ordered by first chunk appearance
+        global_map = {}
+        global_id = 1
+        for cluster_label in sorted(cluster_to_speakers.keys()):
+            speakers = sorted(cluster_to_speakers[cluster_label], key=lambda x: x[0])
+            global_speaker_id = f"speaker_{global_id}"
+            for chunk_idx, local_speaker in speakers:
+                global_map[(chunk_idx, local_speaker)] = global_speaker_id
+            global_id += 1
+
+        logger.info(
+            f"Merged {len(all_centroids)} chunk speakers into {global_id - 1} global speakers"
+        )
+        return global_map
+
+    def _interpolate_gaps_simple(
+        self,
+        segments: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        Simple gap interpolation for segments without speaker IDs.
+
+        Assigns unassigned segments to the nearest assigned speaker.
+        """
+        # Find segments without speaker IDs
+        for i, seg in enumerate(segments):
+            if seg.get('speaker_id') is None:
+                # Look for nearest assigned segment
+                prev_speaker = None
+                next_speaker = None
+
+                # Search backwards
+                for j in range(i - 1, -1, -1):
+                    if segments[j].get('speaker_id'):
+                        prev_speaker = segments[j]['speaker_id']
+                        break
+
+                # Search forwards
+                for j in range(i + 1, len(segments)):
+                    if segments[j].get('speaker_id'):
+                        next_speaker = segments[j]['speaker_id']
+                        break
+
+                # Assign to nearest (prefer previous)
+                seg['speaker_id'] = prev_speaker or next_speaker or 'speaker_1'
+                seg['speaker_confidence'] = 0.4  # Low confidence for interpolated
+
+        return segments
 
     def _extract_all_embeddings(
         self,

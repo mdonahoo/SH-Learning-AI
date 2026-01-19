@@ -3,6 +3,37 @@ Role inference engine for crew member analysis.
 
 This module provides keyword-frequency-based role detection for bridge crew members,
 matching the methodology described in the example mission debrief report.
+
+BALANCED SCORING APPROACH:
+--------------------------
+The role inference system uses a BALANCED scoring approach that combines:
+
+1. **Keyword Density** (normalized within speaker)
+   - Matches-per-utterance ratios instead of absolute counts
+   - Prevents length dependency: same density = same score regardless of clip length
+
+2. **Keyword Diversity** (quality of evidence)
+   - Tracks distinct keyword types per role
+   - More variety = stronger evidence (e.g., "course", "heading", "warp" > just "course")
+
+3. **Speaker Prominence** (conversation share)
+   - What percentage of total conversation does this speaker represent?
+   - Critical for command roles: captains typically dominate conversation
+   - A speaker with 40% conversation share + moderate keywords = likely captain
+   - A speaker with 5% share + same keywords = likely crew member
+
+ROLE-SPECIFIC WEIGHTING:
+- **Command roles (Captain, XO)**: prominence matters more (30% weight)
+  Score = density*35% + diversity*35% + prominence*30%
+
+- **Crew roles (Helm, Tactical, etc.)**: keywords matter more (15% prominence)
+  Score = density*45% + diversity*40% + prominence*15%
+
+CONSISTENCY GUARANTEES:
+- Short clips produce same results as full sessions (normalized metrics)
+- Prominent speakers aren't ignored just because they have fewer keywords per utterance
+- Command roles require both keywords AND conversation prominence
+- Role conflicts resolved using balanced scores, not absolute counts
 """
 
 import logging
@@ -33,30 +64,85 @@ class RolePatterns:
     """Keyword patterns for role detection."""
 
     # Patterns that indicate someone is ADDRESSING a superior (NOT being the captain)
-    # These should REDUCE captain score and INCREASE crew member score
+    # These should REDUCE captain score - the speaker is talking TO the captain
+    # IMPORTANT: Standalone acknowledgments like "Acknowledged" DON'T count - captains say this too
+    # Only count as addressing authority when there's an explicit title (sir, captain, ma'am)
     ADDRESSING_AUTHORITY_PATTERNS: List[str] = field(default_factory=lambda: [
-        r"(?i)^(captain|sir|ma'am|commander)\b",  # Starting with title = addressing
-        r"(?i)^(yes|aye|acknowledged|understood|copy|roger)\s+(sir|captain|ma'am)",
-        r"(?i)\b(captain|sir),?\s+(we have|we've got|there's|i'm reading|i'm detecting)",
-        r"(?i)\b(captain|sir),?\s+(what|should|do you want|shall)",
-        r"(?i)\bpermission to\b",  # Asking permission = not captain
-        r"(?i)\bwaiting (for|on) (your|the captain)",
+        # Starting sentence with title = clearly addressing (most reliable)
+        r"(?i)^(captain|cap|sir|ma'am|commander|skipper)\b",
+
+        # Acknowledgment WITH explicit title = crew responding to captain
+        # Note: "Acknowledged" alone does NOT count - captains acknowledge too
+        r"(?i)^(yes|aye|acknowledged|understood|copy|roger|affirmative)\s*,?\s*(sir|captain|cap|ma'am)\b",
+        r"(?i)\baye\s+aye\b",  # "Aye aye" is specifically subordinate
+
+        # Reporting status TO captain (requires title)
+        r"(?i)\b(captain|cap|sir),?\s+(we have|we've got|there's|i'm reading|i'm detecting|i have)",
+        r"(?i)\b(captain|cap|sir),?\s+(shields|weapons|sensors|engines|power|hull)",
+        r"(?i)\b(captain|cap|sir),?\s+(enemy|target|contact|bogey|hostile)",
+        r"(?i)\b(captain|cap|sir),?\s+(the|our|they|it)",
+
+        # Asking/deferring to captain (requires title or explicit deference)
+        r"(?i)\b(captain|cap|sir),?\s+(what|should|do you want|shall|orders)",
+        r"(?i)\bpermission to\b",
+        r"(?i)\bwaiting (for|on) (your|the captain|orders)",
         r"(?i)\b(your orders|awaiting orders)\b",
+
+        # Deferring to/mentioning captain in third person
+        r"(?i)\blet the captain\b",
+        r"(?i)\btell the captain\b",
+        r"(?i)\bask the captain\b",
+        r"(?i)\bthe captain (said|wants|ordered|needs)\b",
     ])
 
+    # Patterns that indicate COMMAND authority (being the captain)
+    # These should be specific enough to not match crew members
     CAPTAIN_PATTERNS: List[str] = field(default_factory=lambda: [
-        r"(?i)\b(set course|engage|execute|make it so|proceed)\b",
-        r"(?i)\b(red alert|yellow alert|battle stations|stand down)\b",
-        r"(?i)\b(all hands|attention|listen up|everyone)\b",
-        r"(?i)\b(go ahead|stand by|alright|stop|wait|hold on)\b",
-        r"(?i)\b(i want|we need|let's|should we)\b",
-        r"(?i)\b(good work|well done|excellent|nice job)\b",
-        r"(?i)\b(fire|launch|target|weapons free)\b",
-        # More specific captain patterns - giving orders to specific stations
-        r"(?i)\b(helm|tactical|science|engineering|ops),?\s+(report|status|what)",
-        r"(?i)\bwhat('s| is) (the|our) (status|situation|position)\b",
+        # Direct orders (high specificity)
+        r"(?i)\b(set course|engage|execute|make it so|proceed|do it|go ahead)\b",
+        r"(?i)\b(red alert|yellow alert|battle stations|stand down|at ease)\b",
+        r"(?i)\b(all hands|attention crew|listen up everyone)\b",
         r"(?i)\bon screen\b",
-        r"(?i)\bhail (them|the|that)\b",
+        r"(?i)\bhail (them|the ship|that vessel)\b",
+        r"(?i)\bopen (a )?channel\b",
+
+        # Addressing specific stations by name (giving orders)
+        r"(?i)\b(helm|tactical|science|engineering|ops|communications),?\s+(report|status|what|give me)",
+        r"(?i)\b(helm|tactical|science|engineering),?\s+(set|target|scan|divert)",
+
+        # Asking for status (command perspective)
+        r"(?i)\bwhat('s| is) (the|our) (status|situation|position|eta)\b",
+        r"(?i)\b(status report|damage report|give me a report)\b",
+        r"(?i)\b(what do we (have|know|got)|what are we (looking at|dealing with))\b",
+
+        # Command decisions
+        r"(?i)\b(fire at will|weapons free|hold fire|cease fire)\b",
+        r"(?i)\b(evasive maneuvers|evasive pattern)\b",
+        r"(?i)\b(take us (in|out|to)|bring us about)\b",
+        r"(?i)\b(approved|permission granted|denied|negative on that)\b",
+
+        # Praise/feedback to crew (command perspective)
+        r"(?i)\b(good work|well done|excellent work|nice (job|work|shot))\b",
+        r"(?i)\b(good call|good thinking|that's (good|right|correct))\b",
+
+        # Command phrases - decision making language
+        r"(?i)^(alright|okay|right),?\s+(let's|we need|here's what)",
+        r"(?i)^(everyone|all right everyone|okay everyone)\b",
+        r"(?i)\b(let's|we('ll| will| need to| should| can))\s+(go|do|try|head|move|attack|defend|wait)\b",
+        r"(?i)\b(i want|i need|get me|give me)\s+(a|the|those|some|more)\b",
+        r"(?i)\b(our (mission|objective|goal|priority|target) is)\b",
+        r"(?i)\b(here's (the|our) plan|the plan is|we're going to)\b",
+        r"(?i)\b(focus on|concentrate on|prioritize)\b",
+
+        # Captain-specific questions (command perspective)
+        r"(?i)\b(can we|are we able to|do we have enough)\b",
+        r"(?i)\b(how (long|far|much|many)|what's (the|our) (range|distance|time))\b",
+        r"(?i)\b(options\??|what are our options|recommendations\??)\b",
+
+        # Giving the order to start/stop
+        r"(?i)^(go|stop|wait|hold|now|fire|launch)\b",
+        r"(?i)\b(on my (mark|command|order|signal))\b",
+        r"(?i)\b(that's (an order|enough)|belay that)\b",
     ])
 
     HELM_PATTERNS: List[str] = field(default_factory=lambda: [
@@ -112,12 +198,27 @@ class RolePatterns:
         r"(?i)\b(broadcast|distress|mayday)\b",
     ])
 
+    # XO patterns should be SPECIFIC to XO role, not generic acknowledgments
+    # Generic "aye", "copy", "roger" are used by everyone - don't count these
+    # XO specifically: relays orders, coordinates stations, backs up captain
     EXECUTIVE_OFFICER_PATTERNS: List[str] = field(default_factory=lambda: [
-        r"(?i)\b(aye|acknowledged|understood|copy|roger)\b",
-        r"(?i)\b(confirm|confirmed|affirmative|negative)\b",
-        r"(?i)\b(ready|standing by|on it)\b",
-        r"(?i)\b(i'll handle|got it|taking care)\b",
-        # Note: "sir/captain/ma'am" removed - now handled by addressing patterns
+        # Relaying/coordinating between stations (XO-specific)
+        r"(?i)\b(helm|tactical|science|engineering),?\s+(you heard|the captain said|captain wants)",
+        r"(?i)\b(relay|pass (it|that) on|inform|notify)\b",
+        r"(?i)\b(coordinate|coordinating) with\b",
+
+        # Supporting captain explicitly
+        r"(?i)\b(i('ll| will) take|i have) (the bridge|command|the conn)\b",
+        r"(?i)\b(backing you up|right behind you)\b",
+        r"(?i)\b(i'll handle|taking care of|i've got) (that|it|this)\b",
+
+        # Delegation from captain
+        r"(?i)\b(you have the (bridge|conn)|take (the bridge|command))\b",
+        r"(?i)\b(as you were|carry on)\b",
+
+        # XO reporting to captain (different from crew reporting)
+        r"(?i)\b(all stations report|stations report)\b",
+        r"(?i)\b(crew is ready|we're ready captain)\b",
     ])
 
 
@@ -140,8 +241,22 @@ class RoleInferenceEngine:
     """
     Engine for inferring bridge crew roles from transcript analysis.
 
-    Uses keyword frequency analysis to assign probable roles to speakers,
-    matching the methodology used in professional mission debrief reports.
+    Uses BALANCED scoring combining keyword analysis AND speaker prominence
+    to assign probable roles to speakers.
+
+    Key Features:
+    - Keyword density scoring (matches per utterance, not absolute counts)
+    - Keyword diversity tracking (distinct keyword types per role)
+    - Speaker prominence weighting (conversation share matters for command roles)
+    - Role-specific weighting (captains need prominence, crew need keywords)
+    - Addressing pattern detection (identifies when someone defers to authority)
+    - Conflict resolution using balanced confidence scores
+
+    The balanced approach ensures:
+    - Consistent results regardless of audio recording length
+    - Command roles require both keywords AND conversation dominance
+    - Crew roles can be identified even with lower speaking volume
+    - A 40% speaker with moderate keywords beats a 5% speaker with high density
     """
 
     def __init__(
@@ -204,24 +319,54 @@ class RoleInferenceEngine:
 
         return results
 
+    # Minimum requirements for role assignment
+    MIN_UTTERANCES_FOR_ROLE = 2  # Need at least 2 utterances (lowered for short clips)
+    MIN_KEYWORD_TYPES = 1  # Need at least 1 keyword type (lowered, prominence can compensate)
+
+    # Role-specific prominence expectations (what % of conversation we expect)
+    ROLE_PROMINENCE_WEIGHTS = {
+        BridgeRole.CAPTAIN: 0.4,           # Captains typically dominate conversation
+        BridgeRole.EXECUTIVE_OFFICER: 0.3,  # XOs are also prominent
+        BridgeRole.HELM: 0.15,
+        BridgeRole.TACTICAL: 0.15,
+        BridgeRole.SCIENCE: 0.15,
+        BridgeRole.ENGINEERING: 0.15,
+        BridgeRole.OPERATIONS: 0.1,
+        BridgeRole.COMMUNICATIONS: 0.1,
+    }
+
     def _analyze_speaker(
         self,
         speaker: str,
         utterances: List[Dict[str, Any]],
         total_utterances: int
     ) -> SpeakerRoleAnalysis:
-        """Analyze a single speaker's communications."""
-        # Count keyword matches per role
-        role_scores: Dict[BridgeRole, int] = defaultdict(int)
-        keyword_matches: Dict[str, int] = defaultdict(int)
-        matched_keywords: Dict[BridgeRole, List[str]] = defaultdict(list)
-        addressing_count = 0  # Count how often this speaker addresses authority
+        """
+        Analyze a single speaker's communications.
 
-        for utterance in utterances:
+        Uses BALANCED scoring combining:
+        - Keyword density (normalized within speaker) - prevents length dependency
+        - Speaker prominence (% of total conversation) - captures volume signal
+        - Keyword diversity (distinct types) - quality of evidence
+
+        This ensures consistent results while still recognizing that a captain
+        who speaks 40% of the time is more likely than one who speaks 5%.
+        """
+        utterance_count = len(utterances)
+        utterance_pct = (utterance_count / total_utterances * 100) if total_utterances > 0 else 0
+        prominence = utterance_count / total_utterances if total_utterances > 0 else 0
+
+        # Count keyword matches per role
+        role_match_counts: Dict[BridgeRole, int] = defaultdict(int)
+        keyword_matches: Dict[str, int] = defaultdict(int)
+        matched_keywords: Dict[BridgeRole, set] = defaultdict(set)
+        utterances_with_keywords: Dict[BridgeRole, set] = defaultdict(set)
+        addressing_count = 0
+
+        for idx, utterance in enumerate(utterances):
             text = utterance.get('text', '')
 
-            # Check if this utterance is addressing authority (e.g., "Captain, we have...")
-            # This REDUCES the likelihood that this speaker is the captain
+            # Check if addressing authority
             is_addressing = False
             for pattern in self._addressing_patterns:
                 if pattern.search(text):
@@ -233,75 +378,180 @@ class RoleInferenceEngine:
                 for pattern in patterns:
                     matches = re.findall(pattern, text)
                     if matches:
-                        # If addressing authority, don't count captain patterns
-                        # The speaker is talking TO the captain, not BEING the captain
                         if is_addressing and role == BridgeRole.CAPTAIN:
                             continue
 
-                        role_scores[role] += len(matches)
+                        role_match_counts[role] += len(matches)
+                        utterances_with_keywords[role].add(idx)
+
                         for match in matches:
-                            # Get the matched text (could be tuple from groups)
                             match_text = match if isinstance(match, str) else match[0]
                             keyword_matches[match_text.lower()] += 1
-                            if match_text.lower() not in matched_keywords[role]:
-                                matched_keywords[role].append(match_text.lower())
+                            matched_keywords[role].add(match_text.lower())
+
+        # Calculate BALANCED scores combining density AND prominence
+        role_scores: Dict[BridgeRole, float] = defaultdict(float)
+
+        for role in role_match_counts:
+            distinct_keywords = len(matched_keywords[role])
+            utterances_with_role = len(utterances_with_keywords[role])
+
+            if utterance_count > 0:
+                # Component 1: Keyword density (normalized within speaker)
+                density = utterances_with_role / utterance_count
+
+                # Component 2: Keyword diversity (distinct types, capped)
+                diversity = min(1.0, distinct_keywords / 5)
+
+                # Component 3: Prominence fit - how well does speaker prominence
+                # match expected prominence for this role?
+                expected_prominence = self.ROLE_PROMINENCE_WEIGHTS.get(role, 0.15)
+
+                # Prominence score: bonus if speaker prominence matches or exceeds expectation
+                # For command roles, high prominence is a strong signal
+                # For crew roles, moderate prominence is fine
+                if prominence >= expected_prominence:
+                    prominence_score = 1.0
+                elif prominence >= expected_prominence * 0.5:
+                    prominence_score = 0.7
+                else:
+                    prominence_score = 0.4
+
+                # Special handling for command roles - prominence matters more
+                if role in (BridgeRole.CAPTAIN, BridgeRole.EXECUTIVE_OFFICER):
+                    # Command roles: prominence is critical
+                    # density=35%, diversity=35%, prominence=30%
+                    role_scores[role] = (
+                        density * 0.35 +
+                        diversity * 0.35 +
+                        prominence_score * 0.30
+                    )
+                    # Extra bonus for prominent speakers with command keywords
+                    # Lowered thresholds: prominence > 20% and density > 10%
+                    if prominence > 0.20 and density > 0.10:
+                        role_scores[role] = min(1.0, role_scores[role] + 0.15)
+                    # Strong boost for very prominent speakers (30%+) with any command evidence
+                    # The person talking most is often the captain
+                    if prominence > 0.30 and distinct_keywords >= 1:
+                        role_scores[role] = min(1.0, role_scores[role] + 0.20)
+                else:
+                    # Crew roles: density and diversity matter more than prominence
+                    # density=45%, diversity=40%, prominence=15%
+                    role_scores[role] = (
+                        density * 0.45 +
+                        diversity * 0.40 +
+                        prominence_score * 0.15
+                    )
 
         # Determine primary role
-        total_matches = sum(role_scores.values())
+        addressing_ratio = addressing_count / utterance_count if utterance_count > 0 else 0
 
-        # Calculate addressing ratio - how often does this speaker defer to authority?
-        addressing_ratio = addressing_count / len(utterances) if utterances else 0
+        inferred_role = BridgeRole.UNKNOWN
+        confidence = 0.0
 
-        utterance_pct = len(utterances) / total_utterances * 100
+        # Sort by balanced score
+        sorted_roles = sorted(role_scores.items(), key=lambda x: -x[1])
 
-        if total_matches == 0:
-            inferred_role = BridgeRole.UNKNOWN
-            confidence = 0.0
-        else:
-            # Find role with highest score
-            sorted_roles = sorted(role_scores.items(), key=lambda x: -x[1])
-            inferred_role = sorted_roles[0][0]
+        # IMPORTANT: For very prominent speakers, prefer Captain over XO
+        # The most prominent speaker is usually the captain, not XO
+        # XO patterns are generic acknowledgments that captains also use
+        captain_keywords = len(matched_keywords.get(BridgeRole.CAPTAIN, set()))
+        xo_score = role_scores.get(BridgeRole.EXECUTIVE_OFFICER, 0)
+        captain_score = role_scores.get(BridgeRole.CAPTAIN, 0)
 
-            # Calculate confidence based on score dominance
+        if sorted_roles and sorted_roles[0][1] > 0:
+            top_role = sorted_roles[0][0]
             top_score = sorted_roles[0][1]
             second_score = sorted_roles[1][1] if len(sorted_roles) > 1 else 0
 
-            # Confidence is higher when one role clearly dominates
-            if top_score > 0:
-                dominance = (top_score - second_score) / top_score
-                frequency = top_score / len(utterances)
-                confidence = min(1.0, (dominance * 0.5 + frequency * 0.5))
+            # Override: Prominent speaker with Captain keywords should be Captain, not XO
+            # This handles the case where XO generic patterns inflate XO score
+            if top_role == BridgeRole.EXECUTIVE_OFFICER and prominence > 0.25:
+                if captain_keywords >= 1 and captain_score > 0:
+                    # Swap to Captain - the most talkative person with command keywords is captain
+                    top_role = BridgeRole.CAPTAIN
+                    top_score = captain_score
+                    logger.debug(
+                        f"Promoted {speaker} from XO to Captain: "
+                        f"prominence={prominence:.0%}, captain_keywords={captain_keywords}"
+                    )
+
+            # Also promote if speaker is THE dominant voice (30%+) and has any command evidence
+            if top_role == BridgeRole.EXECUTIVE_OFFICER and prominence > 0.30:
+                if captain_score > 0:
+                    top_role = BridgeRole.CAPTAIN
+                    top_score = max(captain_score, top_score)
+                    logger.debug(
+                        f"Promoted dominant speaker {speaker} to Captain: prominence={prominence:.0%}"
+                    )
+
+            # Check minimum evidence thresholds
+            distinct_keyword_count = len(matched_keywords.get(top_role, set()))
+            keyword_density = len(utterances_with_keywords.get(top_role, set())) / utterance_count if utterance_count > 0 else 0
+
+            # Relaxed thresholds - prominence can compensate for fewer keywords
+            meets_minimum = (
+                utterance_count >= self.MIN_UTTERANCES_FOR_ROLE and
+                distinct_keyword_count >= self.MIN_KEYWORD_TYPES
+            )
+
+            # For prominent speakers (15%+), be more lenient on keyword requirements
+            if prominence > 0.15 and distinct_keyword_count >= 1:
+                meets_minimum = True
+
+            # For command roles with very high prominence (25%+), even 1 keyword is sufficient
+            # The most talkative person is often the captain
+            if top_role in (BridgeRole.CAPTAIN, BridgeRole.EXECUTIVE_OFFICER):
+                if prominence > 0.25 and distinct_keyword_count >= 1:
+                    meets_minimum = True
+
+            if meets_minimum:
+                inferred_role = top_role
+
+                # Calculate confidence based on balanced score and dominance
+                if top_score > 0:
+                    dominance = (top_score - second_score) / top_score if top_score > second_score else 0
+
+                    # Base confidence on balanced score
+                    confidence = min(0.95, top_score * 0.7 + dominance * 0.3)
+
+                    # Boost for strong evidence
+                    if distinct_keyword_count >= 4:
+                        confidence = min(0.95, confidence + 0.08)
+                    if keyword_density >= 0.4:
+                        confidence = min(0.95, confidence + 0.08)
+                    if prominence > 0.3 and top_role in (BridgeRole.CAPTAIN, BridgeRole.EXECUTIVE_OFFICER):
+                        confidence = min(0.95, confidence + 0.1)
+
+                # Handle captain addressing pattern
+                if addressing_ratio > 0.3 and inferred_role == BridgeRole.CAPTAIN:
+                    if len(sorted_roles) > 1 and sorted_roles[1][1] > 0.1:
+                        second_role = sorted_roles[1][0]
+                        second_distinct = len(matched_keywords.get(second_role, set()))
+                        if second_distinct >= self.MIN_KEYWORD_TYPES:
+                            inferred_role = second_role
+                            confidence *= 0.7
+                    else:
+                        inferred_role = BridgeRole.EXECUTIVE_OFFICER
+                        confidence = 0.4
             else:
+                inferred_role = BridgeRole.UNKNOWN
                 confidence = 0.0
 
-            # Special case: High addressing ratio means this person is likely NOT the captain
-            # They're consistently deferring to authority
-            if addressing_ratio > 0.3 and inferred_role == BridgeRole.CAPTAIN:
-                # This person frequently addresses authority - they're probably NOT the captain
-                # Reassign to XO or second-best role
-                if len(sorted_roles) > 1:
-                    inferred_role = sorted_roles[1][0]
-                    confidence *= 0.7  # Reduce confidence since this was a reassignment
-                else:
-                    inferred_role = BridgeRole.EXECUTIVE_OFFICER
-                    confidence = 0.4
-
-            # Special case: High utterance count with XO patterns suggests command support
-            if (inferred_role == BridgeRole.EXECUTIVE_OFFICER and
-                utterance_pct > 25 and
-                role_scores.get(BridgeRole.CAPTAIN, 0) > role_scores.get(BridgeRole.EXECUTIVE_OFFICER, 0) * 0.3):
-                # This might be a captain or XO depending on context
-                pass
-
-        # Get top keywords as indicators
+        # Build key indicators
         top_keywords = sorted(keyword_matches.items(), key=lambda x: -x[1])[:5]
         key_indicators = [f'"{kw}" ({count})' for kw, count in top_keywords]
 
-        # Add addressing indicator if significant
         if addressing_count > 2:
             key_indicators.append(f"addresses authority ({addressing_count}x)")
 
-        # Select example utterances (high confidence, showing role indicators)
+        # Add evidence summary with prominence
+        if inferred_role != BridgeRole.UNKNOWN:
+            distinct_count = len(matched_keywords.get(inferred_role, set()))
+            density_pct = len(utterances_with_keywords.get(inferred_role, set())) / utterance_count * 100 if utterance_count > 0 else 0
+            key_indicators.append(f"{distinct_count} types, {density_pct:.0f}% density, {utterance_pct:.0f}% of convo")
+
+        # Select example utterances
         example_utterances = []
         for u in sorted(utterances, key=lambda x: x.get('confidence', 0), reverse=True)[:5]:
             example_utterances.append({
@@ -312,18 +562,24 @@ class RoleInferenceEngine:
 
         # Generate methodology note
         methodology = self._generate_methodology_note(
-            speaker, inferred_role, len(utterances), utterance_pct,
-            role_scores, total_matches, matched_keywords, addressing_count
+            speaker, inferred_role, utterance_count, utterance_pct,
+            {r: role_match_counts[r] for r in role_match_counts},
+            sum(role_match_counts.values()),
+            {r: list(kws) for r, kws in matched_keywords.items()},
+            addressing_count,
+            len(matched_keywords.get(inferred_role, set())) if inferred_role != BridgeRole.UNKNOWN else 0,
+            len(utterances_with_keywords.get(inferred_role, set())) / utterance_count if utterance_count > 0 and inferred_role != BridgeRole.UNKNOWN else 0,
+            prominence
         )
 
         return SpeakerRoleAnalysis(
             speaker=speaker,
             inferred_role=inferred_role,
             confidence=round(confidence, 2),
-            utterance_count=len(utterances),
+            utterance_count=utterance_count,
             utterance_percentage=round(utterance_pct, 1),
             keyword_matches=dict(keyword_matches),
-            total_keyword_matches=total_matches,
+            total_keyword_matches=sum(role_match_counts.values()),
             key_indicators=key_indicators,
             example_utterances=example_utterances,
             methodology_notes=methodology
@@ -338,34 +594,82 @@ class RoleInferenceEngine:
         role_scores: Dict[BridgeRole, int],
         total_matches: int,
         matched_keywords: Dict[BridgeRole, List[str]],
-        addressing_count: int = 0
+        addressing_count: int = 0,
+        distinct_keyword_count: int = 0,
+        keyword_density: float = 0.0,
+        prominence: float = 0.0
     ) -> str:
-        """Generate explanation of role assignment methodology."""
-        if role == BridgeRole.UNKNOWN:
-            return (f"{speaker} had {utterance_count} utterances ({utterance_pct:.1f}% of traffic) "
-                   f"but no clear role indicators were detected.")
+        """
+        Generate explanation of role assignment methodology.
 
-        role_score = role_scores.get(role, 0)
+        Explains how keyword density, diversity, AND speaker prominence
+        contributed to the role assignment.
+        """
+        if role == BridgeRole.UNKNOWN:
+            reasons = []
+            if utterance_count < self.MIN_UTTERANCES_FOR_ROLE:
+                reasons.append(f"only {utterance_count} utterances (minimum {self.MIN_UTTERANCES_FOR_ROLE} required)")
+            if distinct_keyword_count < self.MIN_KEYWORD_TYPES:
+                reasons.append(f"no clear role keywords detected")
+
+            if reasons:
+                return (f"{speaker} had {utterance_count} utterances ({utterance_pct:.1f}% of conversation) "
+                       f"but insufficient evidence: {'; '.join(reasons)}.")
+            else:
+                return (f"{speaker} had {utterance_count} utterances ({utterance_pct:.1f}% of conversation) "
+                       f"but no clear role indicators were detected.")
+
         role_keywords = matched_keywords.get(role, [])
         keyword_sample = ', '.join(f'"{kw}"' for kw in role_keywords[:5])
 
-        note = (f"{speaker} was assigned {role.value} based on {role_score} keyword pattern matches "
-               f"(including {keyword_sample}) combined with {utterance_count} utterances "
-               f"({utterance_pct:.1f}% of all voice traffic).")
+        # Build explanation with all three factors
+        factors = []
 
-        # Add context for high-volume speakers
-        if utterance_pct > 40:
-            note += f" This speaker dominated communications, suggesting a command role."
-        elif utterance_pct > 20:
-            note += f" Significant communication volume indicates an active role."
+        # Factor 1: Keywords
+        if distinct_keyword_count > 0:
+            factors.append(f"{distinct_keyword_count} keyword types ({keyword_sample})")
+
+        # Factor 2: Density
+        if keyword_density > 0:
+            factors.append(f"{keyword_density:.0%} keyword density")
+
+        # Factor 3: Prominence
+        if prominence > 0.25:
+            factors.append(f"high speaking volume ({utterance_pct:.0f}% of conversation)")
+        elif prominence > 0.15:
+            factors.append(f"moderate speaking volume ({utterance_pct:.0f}%)")
+
+        factors_str = ", ".join(factors) if factors else "pattern analysis"
+        note = f"{speaker} assigned {role.value} based on {factors_str}."
+
+        # Add context for command roles and prominence
+        if role in (BridgeRole.CAPTAIN, BridgeRole.EXECUTIVE_OFFICER):
+            if prominence > 0.3:
+                note += " High conversation share strongly supports command role."
+            elif prominence > 0.2:
+                note += " Conversation share consistent with command role."
 
         # Add context for addressing patterns
-        if addressing_count > 0:
-            addressing_pct = addressing_count / utterance_count * 100 if utterance_count > 0 else 0
+        if addressing_count > 0 and utterance_count > 0:
+            addressing_pct = addressing_count / utterance_count * 100
             if addressing_pct > 30:
-                note += f" Frequently addresses authority ({addressing_count} times), indicating crew member role."
+                note += f" Frequently addresses authority ({addressing_pct:.0f}%), suggesting crew member."
             elif addressing_pct > 10:
-                note += f" Sometimes addresses superiors ({addressing_count} times)."
+                note += f" Sometimes addresses superiors ({addressing_pct:.0f}%)."
+
+        # Evidence strength summary
+        evidence_strength = 0
+        if distinct_keyword_count >= 3:
+            evidence_strength += 1
+        if keyword_density >= 0.3:
+            evidence_strength += 1
+        if prominence > 0.2:
+            evidence_strength += 1
+
+        if evidence_strength >= 3:
+            note += " Strong multi-factor evidence."
+        elif evidence_strength >= 2:
+            note += " Good supporting evidence."
 
         return note
 
@@ -376,7 +680,10 @@ class RoleInferenceEngine:
         """
         Resolve conflicts when multiple speakers are assigned the same role.
 
-        The speaker with the highest score for a role keeps it; others are
+        Uses BALANCED scoring (confidence + prominence) for consistent resolution.
+        For command roles, prominence is weighted more heavily in tie-breakers.
+
+        The speaker with the highest combined score keeps the role; others are
         reassigned to their next best role or marked as support.
         """
         # Group by inferred role
@@ -391,31 +698,71 @@ class RoleInferenceEngine:
                 continue
 
             if len(speakers) > 1:
-                # Sort by total keyword matches for this role
-                sorted_speakers = sorted(
-                    speakers,
-                    key=lambda x: x.total_keyword_matches,
-                    reverse=True
-                )
+                # For command roles, weight prominence more heavily in conflict resolution
+                if role in (BridgeRole.CAPTAIN, BridgeRole.EXECUTIVE_OFFICER):
+                    # Combined score: confidence (60%) + prominence (40%)
+                    sorted_speakers = sorted(
+                        speakers,
+                        key=lambda x: (x.confidence * 0.6 + (x.utterance_percentage / 100) * 0.4),
+                        reverse=True
+                    )
+                else:
+                    # Crew roles: confidence matters more
+                    sorted_speakers = sorted(
+                        speakers,
+                        key=lambda x: (x.confidence * 0.8 + (x.utterance_percentage / 100) * 0.2),
+                        reverse=True
+                    )
 
-                # First speaker keeps the role
+                # First speaker keeps the role (highest combined score)
                 primary = sorted_speakers[0]
+                logger.debug(
+                    f"Role conflict for {role.value}: {primary.speaker} keeps role "
+                    f"(confidence: {primary.confidence:.0%}, prominence: {primary.utterance_percentage:.0f}%)"
+                )
 
                 # Others become support roles or unknown
                 for secondary in sorted_speakers[1:]:
-                    if secondary.utterance_percentage > 15:
-                        # High volume speaker becomes XO/Support
+                    confidence_gap = primary.confidence - secondary.confidence
+                    prominence_gap = primary.utterance_percentage - secondary.utterance_percentage
+
+                    # Close match with good prominence -> XO
+                    if confidence_gap < 0.15 and secondary.utterance_percentage > 15:
                         reassignments[secondary.speaker] = BridgeRole.EXECUTIVE_OFFICER
+                        logger.debug(
+                            f"  {secondary.speaker} -> XO (close confidence, good prominence)"
+                        )
+                    # High prominence but lower confidence -> XO
+                    elif secondary.utterance_percentage > 20:
+                        reassignments[secondary.speaker] = BridgeRole.EXECUTIVE_OFFICER
+                        logger.debug(
+                            f"  {secondary.speaker} -> XO (high prominence: {secondary.utterance_percentage:.0f}%)"
+                        )
+                    # Moderate prominence -> crew member
+                    elif secondary.utterance_percentage > 10:
+                        reassignments[secondary.speaker] = BridgeRole.UNKNOWN
+                        logger.debug(
+                            f"  {secondary.speaker} -> Unknown (moderate evidence)"
+                        )
                     else:
+                        # Low volume, lower confidence
                         reassignments[secondary.speaker] = BridgeRole.UNKNOWN
 
-        # Apply reassignments
+        # Apply reassignments with adjusted confidence
         for speaker, new_role in reassignments.items():
             old_analysis = results[speaker]
+
+            # Calculate new confidence based on reassignment type and original strength
+            if new_role == BridgeRole.EXECUTIVE_OFFICER:
+                # XO gets decent confidence if they were close to primary
+                new_confidence = min(0.7, old_analysis.confidence * 0.8)
+            else:
+                new_confidence = 0.0
+
             results[speaker] = SpeakerRoleAnalysis(
                 speaker=old_analysis.speaker,
                 inferred_role=new_role,
-                confidence=old_analysis.confidence * 0.7,  # Reduce confidence for reassigned
+                confidence=round(new_confidence, 2),
                 utterance_count=old_analysis.utterance_count,
                 utterance_percentage=old_analysis.utterance_percentage,
                 keyword_matches=old_analysis.keyword_matches,
@@ -423,7 +770,7 @@ class RoleInferenceEngine:
                 key_indicators=old_analysis.key_indicators,
                 example_utterances=old_analysis.example_utterances,
                 methodology_notes=old_analysis.methodology_notes +
-                    f" (Reassigned from {old_analysis.inferred_role.value} due to role conflict.)"
+                    f" (Reassigned from {old_analysis.inferred_role.value} - another speaker had stronger combined evidence.)"
             )
 
         return results

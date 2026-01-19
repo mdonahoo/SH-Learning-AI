@@ -59,7 +59,8 @@ unified_recordings/
 mission_exports/
 data/sessions/
 data/metrics.db
-data/
+data/recordings/
+data/models/
 *.wav
 *.mp3
 
@@ -105,3 +106,4 @@ claude_prompt.txt
 
 
 examples/screenshots/*.PNG
+data/

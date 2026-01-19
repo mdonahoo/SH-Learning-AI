@@ -41,6 +41,10 @@
                 <span class="service-name">Diarization</span>
                 <span class="service-state" data-state="checking">Checking...</span>
             </div>
+            <div class="service-item" id="horizons-status">
+                <span class="service-name">Horizons</span>
+                <span class="service-state" data-state="checking">Checking...</span>
+            </div>
             <button class="btn-text" onclick="app.checkServicesStatus()">Refresh Status</button>
         </div>
 
@@ -145,6 +149,19 @@
                 </div>
                 <div id="audio-preview" class="audio-preview hidden">
                     <audio id="audio-player" controls></audio>
+                    <div class="analysis-options">
+                        <span class="options-label">Analysis Options:</span>
+                        <label class="checkbox-option">
+                            <input type="checkbox" id="include-narrative" checked>
+                            <span>Team Analysis</span>
+                            <span class="option-badge llm">LLM</span>
+                        </label>
+                        <label class="checkbox-option">
+                            <input type="checkbox" id="include-story" checked>
+                            <span>Mission Story</span>
+                            <span class="option-badge llm">LLM</span>
+                        </label>
+                    </div>
                     <div class="preview-actions">
                         <button id="analyze-btn" class="btn btn-primary">
                             Analyze Mission Audio
@@ -159,27 +176,42 @@
 
         <!-- Processing Section -->
         <section id="processing" class="card processing-card hidden">
-            <div class="processing-header">
+            <div class="progress-header">
                 <h2>Analyzing Mission</h2>
+            </div>
+            <div class="progress-summary">
+                <div class="current-step">
+                    <span class="step-indicator">●</span>
+                    <span id="current-step-label">Starting analysis...</span>
+                    <span id="step-counter" class="step-counter">Step 0 of 10</span>
+                </div>
                 <div class="progress-row">
                     <div class="progress-track">
                         <div id="progress-fill" class="progress-fill"></div>
                     </div>
                     <span id="progress-percent" class="progress-label">0%</span>
                 </div>
+                <div class="time-info">
+                    <span id="elapsed-time">0s elapsed</span>
+                    <span class="time-separator">•</span>
+                    <span id="remaining-time">estimating...</span>
+                </div>
             </div>
-            <div id="progress-steps" class="steps-grid">
-                <div class="step" data-step="convert"><span class="step-dot"></span>Converting audio</div>
-                <div class="step" data-step="transcribe"><span class="step-dot"></span>Transcribing</div>
-                <div class="step" data-step="diarize"><span class="step-dot"></span>Identifying crew</div>
-                <div class="step" data-step="roles"><span class="step-dot"></span>Inferring roles</div>
-                <div class="step" data-step="quality"><span class="step-dot"></span>Communication quality</div>
-                <div class="step" data-step="scorecards"><span class="step-dot"></span>Generating scorecards</div>
-                <div class="step" data-step="confidence"><span class="step-dot"></span>Analyzing confidence</div>
-                <div class="step" data-step="learning"><span class="step-dot"></span>Learning metrics</div>
-                <div class="step" data-step="habits"><span class="step-dot"></span>7 Habits analysis</div>
-                <div class="step" data-step="training"><span class="step-dot"></span>Recommendations</div>
-            </div>
+            <details class="progress-details">
+                <summary>Show details</summary>
+                <div id="progress-steps" class="steps-list">
+                    <div class="step" data-step="convert"><span class="step-icon">○</span><span class="step-label">Converting audio</span></div>
+                    <div class="step" data-step="transcribe"><span class="step-icon">○</span><span class="step-label">Transcribing</span></div>
+                    <div class="step" data-step="diarize"><span class="step-icon">○</span><span class="step-label">Identifying crew</span></div>
+                    <div class="step" data-step="roles"><span class="step-icon">○</span><span class="step-label">Inferring roles</span></div>
+                    <div class="step" data-step="quality"><span class="step-icon">○</span><span class="step-label">Communication quality</span></div>
+                    <div class="step" data-step="scorecards"><span class="step-icon">○</span><span class="step-label">Generating scorecards</span></div>
+                    <div class="step" data-step="confidence"><span class="step-icon">○</span><span class="step-label">Analyzing confidence</span></div>
+                    <div class="step" data-step="learning"><span class="step-icon">○</span><span class="step-label">Learning metrics</span></div>
+                    <div class="step" data-step="habits"><span class="step-icon">○</span><span class="step-label">7 Habits analysis</span></div>
+                    <div class="step" data-step="training"><span class="step-icon">○</span><span class="step-label">Recommendations</span></div>
+                </div>
+            </details>
         </section>
 
         <!-- Archive Section -->

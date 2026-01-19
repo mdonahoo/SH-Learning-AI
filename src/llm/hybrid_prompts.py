@@ -21,6 +21,64 @@ import json
 from typing import Dict, Any, List, Optional
 
 
+# Concise debrief prompt for middle school audiences (ages 11-14)
+MISSION_DEBRIEF_PROMPT = """
+You are a flight instructor reviewing a spaceship bridge crew training mission.
+
+Based on the transcript and metrics below, generate a STRUCTURED debrief.
+
+FORMAT REQUIREMENTS:
+- Use the exact headers provided
+- Keep total response under 300 words
+- Be specific and cite examples
+- Write for middle school students (ages 11-14)
+- No motivational fluff or corporate language
+
+METRICS:
+- 7 Habits Score: {habits_score}/5
+- Top Habit: {top_habit} ({top_score}/5)
+- Lowest Habit: {lowest_habit} ({lowest_score}/5)
+- Communication Effectiveness: {comm_score}%
+
+KEY MOMENTS (use these as evidence):
+{key_moments}
+
+OUTPUT FORMAT:
+
+## Mission Debrief
+
+### Performance Summary
+**Overall Grade: [Letter grade] ([one-word descriptor])**
+
+[One sentence explaining the grade based on the metrics above.]
+
+### Top Strength
+**{top_habit} ({top_score}/5)**: [Explain what the crew did well in 1-2 sentences.]
+
+> [Quote one specific exchange from KEY MOMENTS that demonstrates this strength]
+
+[One sentence explaining why this exchange shows the habit in action.]
+
+### Primary Growth Area
+**{lowest_habit} ({lowest_score}/5)**: [Explain what went wrong in 1-2 sentences.]
+
+**What happened:** [Describe the specific issue from KEY MOMENTS]
+
+**Try this next time:** [Give ONE concrete alternative behavior they could use]
+
+### Quick Wins for Next Mission
+1. [Specific action tied to their lowest habit]
+2. [Specific action about communication]
+3. [Specific action about teamwork]
+
+### Individual Callouts
+
+| Role | Highlight | Growth Edge |
+|------|-----------|-------------|
+| [Role] | [One positive observation] | [One improvement area] |
+"""
+
+
 def build_hybrid_narrative_prompt(structured_data: Dict[str, Any], style: str = "professional") -> str:
     """
     Build prompt for narrative formatting of pre-computed facts.
@@ -790,4 +848,77 @@ def build_school_district_report_prompt(
         audience="school",
         include_scout_law=False,
         include_seven_habits=True
+    )
+
+
+def build_concise_debrief_prompt(
+    enhanced_data: Dict[str, Any],
+    key_moments: Optional[List[Dict[str, Any]]] = None
+) -> str:
+    """
+    Build a concise mission debrief prompt for middle school audiences.
+
+    This generates a focused, under-300-word debrief using the 7 Habits
+    framework. Designed for ages 11-14 with no corporate jargon.
+
+    Args:
+        enhanced_data: Complete analysis data from EnhancedReportBuilder
+        key_moments: Optional list of key communication moments to cite
+
+    Returns:
+        Formatted prompt string ready for LLM
+    """
+    seven_habits = enhanced_data.get('seven_habits', {})
+    communication_quality = enhanced_data.get('communication_quality', {})
+
+    # Get overall habits score
+    habits_score = seven_habits.get('overall_effectiveness_score', 'N/A')
+
+    # Find top and lowest habits
+    strengths = seven_habits.get('strengths', [])
+    growth_areas = seven_habits.get('growth_areas', [])
+
+    if strengths:
+        top_habit = strengths[0].get('name', 'Teamwork')
+        top_score = strengths[0].get('score', 3)
+    else:
+        top_habit = 'Teamwork'
+        top_score = 3
+
+    if growth_areas:
+        lowest_habit = growth_areas[0].get('name', 'Taking Initiative')
+        lowest_score = growth_areas[0].get('score', 2)
+    else:
+        lowest_habit = 'Taking Initiative'
+        lowest_score = 2
+
+    # Get communication score
+    comm_stats = communication_quality.get('statistics', {})
+    comm_score = comm_stats.get('effectiveness_percentage', 70)
+
+    # Format key moments
+    if key_moments:
+        moments_text = "\n".join([
+            f"[{m.get('timestamp', 'N/A')}] {m.get('speaker', 'Unknown')}: \"{m.get('text', '')}\""
+            for m in key_moments[:10]
+        ])
+    else:
+        # Fall back to top communications from enhanced data
+        top_comms = enhanced_data.get('top_communications', [])
+        moments_text = "\n".join([
+            f"[{c.get('timestamp', 'N/A')}] {c.get('speaker', 'Unknown')}: \"{c.get('text', '')}\""
+            for c in top_comms[:10]
+        ])
+
+    if not moments_text:
+        moments_text = "(No key moments available)"
+
+    return MISSION_DEBRIEF_PROMPT.format(
+        habits_score=habits_score,
+        top_habit=top_habit,
+        top_score=top_score,
+        lowest_habit=lowest_habit,
+        lowest_score=lowest_score,
+        comm_score=comm_score,
+        key_moments=moments_text
     )

@@ -397,6 +397,7 @@ class ServicesStatusResponse(BaseModel):
     whisper: ServiceStatus = Field(description="Whisper transcription service status")
     ollama: ServiceStatus = Field(description="Ollama LLM service status")
     diarization: ServiceStatus = Field(description="Speaker diarization service status")
+    horizons: ServiceStatus = Field(description="Starship Horizons game server status")
 
 
 class ErrorResponse(BaseModel):

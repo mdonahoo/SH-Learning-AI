@@ -106,7 +106,8 @@ STARSHIP_HORIZONS_PROMPT = (
     # Weapons and tubes - critical for accuracy
     "Tubes: left tube, right tube, load tubes, put in tubes, unload, "
     "install the right tube, launch the missile, launch left tube, launch right tube. "
-    "Missiles: homing missiles, homings, nukes, EMPs, EMP, mines, torpedoes. "
+    "Missiles: homing missiles, homings, nukes, nuke, load nukes, launch the nuke, "
+    "fire the nuke, nuke ready, nukes loaded, EMPs, EMP, mines, torpedoes. "
     "Beam frequency: terahertz (NOT hertz or earths), "
     "800 terahertz, set to 800 terahertz, set your laser to 800 terahertz, set lasers to 800 terahertz, "
     "500 terahertz, 460 terahertz, 100 terahertz, 200 terahertz, 300 terahertz, "
@@ -533,6 +534,155 @@ def clean_repetitive_text(text: str) -> str:
     return result.strip()
 
 
+# Domain-specific vocabulary corrections for post-transcription cleanup
+# These fix common Whisper mishearings in the Starship Horizons context
+# Format: (pattern, replacement, flags) - uses regex
+DOMAIN_CORRECTIONS = [
+    # Ship names - critical for mission context
+    (r'\bhiring\s+this\b', 'Hyperion is', 'i'),  # "hiring this" → "Hyperion is" (most specific first)
+    (r'\bhiring\b', 'Hyperion', 'i'),  # "hiring" → "Hyperion"
+    (r'\bhire\s*in\b', 'Hyperion', 'i'),  # "hire in" → "Hyperion"
+    (r'\bhigh\s*pyrian?\b', 'Hyperion', 'i'),  # "high pyrian" → "Hyperion"
+    (r'\bhyper\s*ion\b', 'Hyperion', 'i'),  # "hyper ion" → "Hyperion"
+    (r'\bhi\s*prion\b', 'Hyperion', 'i'),  # "hi prion" → "Hyperion"
+
+    # Endeavor and Damocles - commonly misheard together
+    (r'\bever\s+endemically\b', 'Endeavor and Damocles', 'i'),
+    (r'\bendeavor\s+and\s+democles\b', 'Endeavor and Damocles', 'i'),
+    (r'\bendeavor\s+and\s+dammitly\b', 'Endeavor and Damocles', 'i'),
+    (r'\bendevor\b', 'Endeavor', 'i'),  # spelling fix
+    (r'\bdamicles\b', 'Damocles', 'i'),  # spelling fix
+    (r'\bdamacles\b', 'Damocles', 'i'),  # spelling fix
+    (r'\bdammitly\b', 'Damocles', 'i'),  # common mishearing
+
+    # Weapons - Nuke is critical
+    (r'\bnew[ck]\b', 'nuke', 'i'),  # "neuk" or "newk" → "nuke"
+    (r'\bnukes?\b', 'nuke', ''),  # normalize to lowercase for consistency
+    (r'\bnuclear\s+missile\b', 'nuke', 'i'),  # shorthand used in game
+    (r'\bknew[ck]\b', 'nuke', 'i'),  # "knewk" → "nuke"
+    (r'\blaunch\s+the\s+new[ck]\b', 'launch the nuke', 'i'),
+    (r'\bload\s+new[ck]s?\b', 'load nukes', 'i'),
+
+    # EMP - commonly misheard
+    (r'\be\.?\s*m\.?\s*p\.?\b', 'EMP', 'i'),  # normalize EMP
+    (r'\bemp\b', 'EMP', ''),  # uppercase
+    (r'\bE M P\b', 'EMP', ''),  # spaced out
+
+    # Homing missiles
+    (r'\bhomings?\b', 'homing', 'i'),  # normalize
+    (r'\bhoming\s+missiles?\b', 'homing missile', 'i'),
+    (r'\bhomeing\b', 'homing', 'i'),  # spelling
+
+    # Warp - critical navigation term (not "work")
+    (r'\bwork\s+drive\b', 'warp drive', 'i'),
+    (r'\bwork\s+to\b', 'warp to', 'i'),
+    (r'\bgo\s+to\s+work\b', 'go to warp', 'i'),
+    (r'\bdrop\s+out\s+of\s+work\b', 'drop out of warp', 'i'),
+    (r'\bworking\s+there\b', 'warping there', 'i'),
+    (r'\bwork\s+jammer\b', 'warp jammer', 'i'),
+    (r'\bwork\s+jammed\b', 'warp jammed', 'i'),
+
+    # Bridge stations and roles
+    (r'\bhelm\s*officer\b', 'Helm Officer', 'i'),
+    (r'\btactical\s*officer\b', 'Tactical Officer', 'i'),
+    (r'\bscience\s*officer\b', 'Science Officer', 'i'),
+    (r'\bengineering\s*officer\b', 'Engineering Officer', 'i'),
+    (r'\boperations\s*officer\b', 'Operations Officer', 'i'),
+
+    # Alien races
+    (r'\bcray\s*lord?s?\b', 'Craylor', 'i'),  # "cray lord" → "Craylor"
+    (r'\bcraylor?d?s?\b', 'Craylor', 'i'),  # normalize Craylor
+    (r'\bkray\s*l[oi]n\b', 'Kralien', 'i'),
+    (r'\bkralian\b', 'Kralien', 'i'),
+    (r'\btorg[oa]th\b', 'Torgoth', 'i'),
+    (r'\bscar[ao]n\b', 'Skaraan', 'i'),
+    (r'\bximney?\b', 'Ximni', 'i'),
+    (r'\barvoni[ae]n\b', 'Arvonian', 'i'),
+
+    # Ship names from the game
+    (r'\bhedge\b', 'Hedge', ''),  # proper capitalization
+    (r'\blutren\b', 'Lutren', 'i'),
+    (r'\bbel\s*gore\b', 'Belgore', 'i'),
+    (r'\bwickert\b', 'Wickert', 'i'),
+    (r'\bphobos\b', 'Phobos', 'i'),
+
+    # Star systems and locations
+    (r'\bpara\s*vera\b', 'Paravera', 'i'),
+    (r'\bcala\s*vera\b', 'Calavera', 'i'),
+    (r'\bfara\s*day\b', 'Faraday', 'i'),
+    (r'\bstar\s*base\s*delta\b', 'Starbase Delta', 'i'),
+
+    # Technical terms
+    (r'\btera\s*hertz\b', 'terahertz', 'i'),
+    (r'\b(\d+)\s*terra?\s*hertz\b', r'\1 terahertz', 'i'),
+    (r'\bearths\b', 'terahertz', 'i'),  # common mishearing
+    (r'\bhertz\b(?!\s*terahertz)', 'terahertz', 'i'),  # in weapons context
+
+    # Commands and responses
+    (r'\bi\s*captain\b', 'Aye captain', 'i'),
+    (r'\bi\s*sir\b', 'Aye sir', 'i'),
+    (r'\bi\s*i\s*sir\b', 'Aye aye sir', 'i'),
+
+    # Common game phrases
+    (r'\bway\s*point\b', 'waypoint', 'i'),
+    (r'\bred\s*alert\b', 'red alert', 'i'),
+    (r'\byellow\s*alert\b', 'yellow alert', 'i'),
+    (r'\bshields?\s*up\b', 'shields up', 'i'),
+    (r'\bshields?\s*down\b', 'shields down', 'i'),
+
+    # Docking and undocking
+    (r'\bun\s*dock\b', 'undock', 'i'),
+    (r'\bspace\s*dock\b', 'Space Dock', 'i'),
+
+    # "Flying" often misheard
+    (r'\bapplying\s+far\s+away\b', 'flying far away', 'i'),
+    (r'\bflying\b', 'flying', 'i'),  # normalize
+]
+
+
+def apply_domain_corrections(text: str) -> str:
+    """
+    Apply domain-specific vocabulary corrections to transcribed text.
+
+    Fixes common Whisper mishearings for Starship Horizons terminology
+    like ship names, weapons, and navigation terms.
+
+    Args:
+        text: Transcribed text to correct
+
+    Returns:
+        Text with domain vocabulary corrections applied
+    """
+    if not text:
+        return text
+
+    import re
+
+    corrected = text
+    corrections_made = []
+
+    for pattern, replacement, flags in DOMAIN_CORRECTIONS:
+        # Build regex flags
+        re_flags = 0
+        if 'i' in flags:
+            re_flags |= re.IGNORECASE
+
+        # Check if pattern matches before replacing (for logging)
+        if re.search(pattern, corrected, re_flags):
+            original = corrected
+            corrected = re.sub(pattern, replacement, corrected, flags=re_flags)
+            if corrected != original:
+                corrections_made.append((pattern, replacement))
+
+    if corrections_made:
+        logger.debug(
+            f"Applied {len(corrections_made)} domain corrections: "
+            f"{corrections_made[:3]}{'...' if len(corrections_made) > 3 else ''}"
+        )
+
+    return corrected
+
+
 class WhisperTranscriber:
     """
     Local AI transcription using Faster-Whisper.
@@ -948,6 +1098,9 @@ class WhisperTranscriber:
                 logger.debug(f"Filtered hallucination: {full_text[:50]}...")
                 return None
 
+            # Apply domain-specific vocabulary corrections
+            full_text = apply_domain_corrections(full_text)
+
             transcription_time = time.time() - start_time
 
             # Calculate average confidence
@@ -1053,6 +1206,8 @@ class WhisperTranscriber:
             full_text = ' '.join(filtered_segments)
             # Final pass to clean any remaining repetition in joined text
             full_text = clean_repetitive_text(full_text)
+            # Apply domain-specific vocabulary corrections
+            full_text = apply_domain_corrections(full_text)
 
             return {
                 'text': full_text,
@@ -1256,6 +1411,8 @@ class WhisperTranscriber:
 
             # Final cleanup pass for any remaining repetition
             full_text = clean_repetitive_text(full_text)
+            # Apply domain-specific vocabulary corrections
+            full_text = apply_domain_corrections(full_text)
 
             logger.info(
                 f"Chunked transcription complete: "
@@ -1388,6 +1545,9 @@ class WhisperTranscriber:
                 # Skip hallucinations
                 if not text or is_hallucination(text):
                     continue
+
+                # Apply domain-specific vocabulary corrections
+                text = apply_domain_corrections(text)
 
                 seg_data = {
                     'start': segment.start,

@@ -101,6 +101,21 @@ class NarrativeSummaryGenerator:
         """
         sections = []
 
+        # Check transcription confidence first
+        conf_dist = analysis.get('confidence_distribution', {})
+        avg_confidence = conf_dist.get('average_confidence', 1.0)
+
+        if avg_confidence < 0.40:
+            sections.append("⚠️ DATA QUALITY WARNING ⚠️")
+            sections.append(f"Transcription confidence is only {avg_confidence*100:.0f}%.")
+            sections.append("The transcript may contain significant errors.")
+            sections.append("Be cautious about specific quotes and use hedging language")
+            sections.append("(e.g., 'appeared to', 'seemed to', 'what sounded like').")
+            sections.append("")
+        elif avg_confidence < 0.60:
+            sections.append("ℹ️ Note: Transcription confidence is {:.0f}% - some details may be imprecise.".format(avg_confidence*100))
+            sections.append("")
+
         # Duration and basic stats
         duration = analysis.get('duration_seconds', 0)
         minutes = int(duration // 60)
@@ -593,7 +608,7 @@ Write your evidence-based team dynamics narrative now:"""
         """
         context = self._build_story_context(analysis)
 
-        prompt = f"""You are a talented storyteller who transforms bridge crew training sessions into compelling narratives. Your stories capture the drama, tension, and triumph of space operations while staying true to what actually happened.
+        prompt = f"""You are a talented storyteller who transforms bridge crew training sessions into compelling narratives. Your stories capture the drama, tension, and triumph of space operations while staying STRICTLY TRUE to the transcript.
 
 ## YOUR TASK
 Write a SHORT, ENGAGING story (300-400 words) about this bridge crew's session. Transform the raw communications into a narrative that brings the mission to life.
@@ -605,31 +620,38 @@ Write a SHORT, ENGAGING story (300-400 words) about this bridge crew's session. 
 ## STORY GUIDELINES
 
 **STRUCTURE YOUR STORY:**
-1. **Opening** (2-3 sentences): Set the scene. What was the situation when we join the crew?
-2. **Rising Action** (1 paragraph): What challenges or tasks did they face? Build some tension.
-3. **Key Moments** (1-2 paragraphs): The heart of the story - what happened? Use actual quotes from the crew to bring authenticity.
-4. **Resolution** (2-3 sentences): How did it end? What was accomplished?
+1. **Opening** (2-3 sentences): Set the scene based on the first communications.
+2. **Rising Action** (1 paragraph): What challenges or tasks did they face? Build tension from actual events.
+3. **Key Moments** (1-2 paragraphs): The heart of the story - use ACTUAL QUOTES from the transcript.
+4. **Resolution** (2-3 sentences): How did the session end based on the final communications?
+
+**CRITICAL RULES - DO NOT VIOLATE:**
+- ONLY reference events, names, and details that appear IN THE TRANSCRIPT
+- Use GENDER-NEUTRAL language for all crew (they/them, "the Captain", "the officer")
+- DO NOT invent ship names, character names, or enemy names not in the transcript
+- DO NOT make up events that didn't happen
+- DO NOT assume genders - never say "he said" or "she ordered"
+- If the transcript is unclear, use vague language rather than inventing specifics
 
 **STORYTELLING RULES:**
 - Write in PAST TENSE, third person ("The Captain ordered..." not "Order given")
-- Use role names as characters (Captain, Helm Officer, Tactical Officer, Science Officer, Engineer)
+- Use role names as characters (the Captain, the Helm Officer, the Tactical Officer)
 - Weave in ACTUAL QUOTES from the transcript - these bring authenticity
 - Create narrative flow - don't just list what happened
-- Add sensory details and atmosphere (the hum of the bridge, tension in voices)
-- Find the drama - even routine operations have moments of focus and teamwork
-- Keep it grounded in what actually happened - don't invent major events
+- Add atmosphere (tension in voices, urgency) but not invented details
+- Find the drama in what actually happened
 
 **TONE:**
 - Engaging and cinematic, like a scene from a space opera
 - Respectful of the crew's efforts
-- Find the heroic in the everyday
+- Grounded in the actual transcript
 
 **FORMAT:**
 - 300-400 words
 - Flowing prose paragraphs (not bullet points)
 - Include 3-5 direct quotes from the crew woven into the narrative
 
-Write your story now:"""
+Write your story now (remember: only use facts from the transcript, gender-neutral language):"""
 
         return prompt
 

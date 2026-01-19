@@ -513,13 +513,21 @@ class AudioProcessor:
             logger.warning(f"Failed to save recording: {e}")
             return None
 
-    def save_analysis(self, results: Dict[str, Any], recording_path: Optional[str] = None) -> Optional[str]:
+    def save_analysis(
+        self,
+        results: Dict[str, Any],
+        recording_path: Optional[str] = None,
+        suffix: str = "",
+        register_archive: bool = True
+    ) -> Optional[str]:
         """
         Save analysis results to JSON file with auto-generated title.
 
         Args:
             results: Analysis results dictionary
             recording_path: Path to associated recording (for linking)
+            suffix: Optional suffix for filename (e.g., "_pre_llm")
+            register_archive: Whether to register in archive index (False for intermediate saves)
 
         Returns:
             Path to saved analysis JSON, or None if saving is disabled
@@ -533,7 +541,7 @@ class AudioProcessor:
 
             # Generate timestamped filename
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            saved_name = f"analysis_{timestamp}.json"
+            saved_name = f"analysis_{timestamp}{suffix}.json"
             saved_path = self.analyses_dir / saved_name
 
             # Generate title using LLM or fallback
@@ -573,8 +581,8 @@ class AudioProcessor:
 
             logger.info(f"Analysis saved: {saved_path}")
 
-            # Register with archive manager
-            if self._archive_manager:
+            # Register with archive manager (skip for intermediate saves like pre-LLM)
+            if self._archive_manager and register_archive:
                 try:
                     recording_filename = Path(recording_path).name if recording_path else None
                     self._archive_manager.add_analysis(
@@ -995,6 +1003,8 @@ class AudioProcessor:
         include_diarization: bool = True,
         include_quality: bool = True,
         include_detailed: bool = True,
+        include_narrative: bool = True,
+        include_story: bool = True,
         progress_callback: Optional[callable] = None,
         events: Optional[List[Dict[str, Any]]] = None
     ) -> Dict[str, Any]:
@@ -1006,6 +1016,8 @@ class AudioProcessor:
             include_diarization: Whether to run speaker diarization
             include_quality: Whether to run communication quality analysis
             include_detailed: Whether to run detailed analysis (scorecards, learning, etc.)
+            include_narrative: Whether to generate LLM team analysis narrative
+            include_story: Whether to generate LLM mission story
             progress_callback: Optional callback function(step_id, step_label, progress_pct)
             events: Optional list of telemetry events for role confidence boosting
 
@@ -1013,6 +1025,7 @@ class AudioProcessor:
             Complete analysis results dictionary
         """
         start_time = time.time()
+        logger.info(f"analyze_audio called with include_narrative={include_narrative}, include_story={include_story}")
 
         def update_progress(step_id: str, step_label: str, progress: int):
             """Helper to call progress callback if provided."""
@@ -1215,8 +1228,19 @@ class AudioProcessor:
                 )
             progress = 95
 
+            # Save analysis BEFORE LLM processing (for debugging/comparison)
+            pre_llm_path = self.save_analysis(
+                results,
+                results.get('saved_recording_path'),
+                suffix="_pre_llm",
+                register_archive=False  # Don't clutter archive with intermediate saves
+            )
+            if pre_llm_path:
+                results['pre_llm_analysis_path'] = pre_llm_path
+                logger.info(f"Pre-LLM analysis saved: {pre_llm_path}")
+
             # Step 11: LLM Team Analysis Narrative
-            if include_detailed and NARRATIVE_GENERATOR_AVAILABLE and transcripts:
+            if include_detailed and include_narrative and NARRATIVE_GENERATOR_AVAILABLE and transcripts:
                 update_progress("narrative", "Generating team analysis (this may take 1-2 minutes)...", progress)
                 try:
                     llm_start = time.time()
@@ -1233,10 +1257,12 @@ class AudioProcessor:
                         logger.info("Team analysis skipped (Ollama unavailable)")
                 except Exception as e:
                     logger.warning(f"Team analysis generation failed: {e}")
+            elif not include_narrative:
+                logger.info("Team analysis skipped (disabled by user)")
             progress = 97
 
             # Step 12: LLM Story Narrative
-            if include_detailed and NARRATIVE_GENERATOR_AVAILABLE and generate_story_sync and transcripts:
+            if include_detailed and include_story and NARRATIVE_GENERATOR_AVAILABLE and generate_story_sync and transcripts:
                 update_progress("story", "Generating mission story (this may take 1-2 minutes)...", progress)
                 try:
                     story_start = time.time()
@@ -1253,6 +1279,8 @@ class AudioProcessor:
                         logger.info("Story narrative skipped (Ollama unavailable)")
                 except Exception as e:
                     logger.warning(f"Story generation failed: {e}")
+            elif not include_story:
+                logger.info("Story narrative skipped (disabled by user)")
             progress = 100
 
             update_progress("complete", "Analysis complete", progress)
