@@ -63,6 +63,20 @@ except (ImportError, Exception) as e:
     CPUSpeakerDiarizer = None
     logger.warning(f"CPU diarization not available: {e}")
 
+# Two-pass batch diarization
+try:
+    from src.audio.batch_diarizer import (
+        BatchSpeakerDiarizer,
+        DiarizationResult,
+        is_batch_diarizer_available
+    )
+    BATCH_DIARIZATION_AVAILABLE = is_batch_diarizer_available()
+except (ImportError, Exception) as e:
+    BATCH_DIARIZATION_AVAILABLE = False
+    BatchSpeakerDiarizer = None
+    DiarizationResult = None
+    logger.warning(f"Batch diarization not available: {e}")
+
 try:
     from src.metrics.communication_quality import CommunicationQualityAnalyzer
     QUALITY_ANALYZER_AVAILABLE = True
@@ -72,11 +86,24 @@ except ImportError:
 
 # New detailed analysis imports
 try:
-    from src.metrics.role_inference import RoleInferenceEngine
+    from src.metrics.role_inference import RoleInferenceEngine, EnhancedRoleInferenceEngine
     ROLE_INFERENCE_AVAILABLE = True
 except ImportError:
     ROLE_INFERENCE_AVAILABLE = False
     RoleInferenceEngine = None
+    EnhancedRoleInferenceEngine = None
+
+# Aggregate role inference with diarization confidence
+try:
+    from src.metrics.aggregate_role_inference import (
+        AggregateRoleInferenceEngine,
+        is_aggregate_inference_available
+    )
+    AGGREGATE_ROLE_INFERENCE_AVAILABLE = is_aggregate_inference_available()
+except (ImportError, Exception) as e:
+    AGGREGATE_ROLE_INFERENCE_AVAILABLE = False
+    AggregateRoleInferenceEngine = None
+    logger.warning(f"Aggregate role inference not available: {e}")
 
 try:
     from src.metrics.speaker_scorecard import SpeakerScorecardGenerator
@@ -114,6 +141,14 @@ except ImportError:
     TRAINING_RECOMMENDATIONS_AVAILABLE = False
     TrainingRecommendationEngine = None
 
+# Telemetry-Audio Correlator for enhanced role confidence
+try:
+    from src.integration.telemetry_audio_correlator import TelemetryAudioCorrelator
+    TELEMETRY_CORRELATOR_AVAILABLE = True
+except ImportError:
+    TELEMETRY_CORRELATOR_AVAILABLE = False
+    TelemetryAudioCorrelator = None
+
 # Title generator and archive manager imports
 try:
     from src.web.title_generator import TitleGenerator
@@ -129,6 +164,19 @@ except ImportError:
     ARCHIVE_MANAGER_AVAILABLE = False
     ArchiveManager = None
 
+try:
+    from src.web.narrative_summary import (
+        NarrativeSummaryGenerator,
+        generate_summary_sync,
+        generate_story_sync
+    )
+    NARRATIVE_GENERATOR_AVAILABLE = True
+except ImportError:
+    NARRATIVE_GENERATOR_AVAILABLE = False
+    NarrativeSummaryGenerator = None
+    generate_summary_sync = None
+    generate_story_sync = None
+
 
 # Progress step definitions
 ANALYSIS_STEPS = [
@@ -141,7 +189,9 @@ ANALYSIS_STEPS = [
     {"id": "confidence", "label": "Analyzing confidence", "weight": 5},
     {"id": "learning", "label": "Evaluating learning metrics", "weight": 7},
     {"id": "habits", "label": "Analyzing 7 Habits", "weight": 10},
-    {"id": "training", "label": "Generating training recommendations", "weight": 10},
+    {"id": "training", "label": "Generating training recommendations", "weight": 5},
+    {"id": "narrative", "label": "Generating team analysis", "weight": 5},
+    {"id": "story", "label": "Generating mission story", "weight": 5},
 ]
 
 
@@ -210,6 +260,14 @@ class AudioProcessor:
         # Cache for diarizers (expensive to initialize)
         self._neural_diarizer: Optional[NeuralSpeakerDiarizer] = None
         self._cpu_diarizer: Optional[CPUSpeakerDiarizer] = None
+        self._batch_diarizer: Optional[BatchSpeakerDiarizer] = None
+
+        # Use two-pass batch diarization by default when available
+        # This provides more consistent speaker IDs across different audio lengths
+        self.use_batch_diarization = (
+            os.getenv('USE_BATCH_DIARIZATION', 'true').lower() == 'true'
+            and BATCH_DIARIZATION_AVAILABLE
+        )
 
         # Log diarization mode
         if self.use_cpu_diarization and CPU_DIARIZATION_AVAILABLE:
@@ -937,7 +995,8 @@ class AudioProcessor:
         include_diarization: bool = True,
         include_quality: bool = True,
         include_detailed: bool = True,
-        progress_callback: Optional[callable] = None
+        progress_callback: Optional[callable] = None,
+        events: Optional[List[Dict[str, Any]]] = None
     ) -> Dict[str, Any]:
         """
         Run full audio analysis pipeline.
@@ -948,6 +1007,7 @@ class AudioProcessor:
             include_quality: Whether to run communication quality analysis
             include_detailed: Whether to run detailed analysis (scorecards, learning, etc.)
             progress_callback: Optional callback function(step_id, step_label, progress_pct)
+            events: Optional list of telemetry events for role confidence boosting
 
         Returns:
             Complete analysis results dictionary
@@ -974,6 +1034,7 @@ class AudioProcessor:
             'learning_evaluation': None,
             'seven_habits': None,
             'training_recommendations': None,
+            'narrative_summary': None,
             'saved_recording_path': None,
             'processing_time_seconds': 0
         }
@@ -1010,10 +1071,15 @@ class AudioProcessor:
             progress = 35
 
             # Step 3: Speaker diarization
+            diarization_result = None
             if include_diarization and DIARIZATION_AVAILABLE and segments:
                 update_progress("diarize", "Identifying speakers", progress)
-                segments = self._add_speaker_info(wav_path, segments)
+                segments, diarization_result = self._add_speaker_info(wav_path, segments)
                 results['speakers'] = self._calculate_speaker_stats(segments)
+
+                # Add diarization methodology to results if available
+                if diarization_result:
+                    results['diarization_methodology'] = diarization_result.methodology_note
             progress = 50
 
             # Format transcription segments for response
@@ -1043,7 +1109,50 @@ class AudioProcessor:
             # Step 4: Role inference (uses ALL transcripts - needs full speech for detection)
             if include_detailed and ROLE_INFERENCE_AVAILABLE and transcripts:
                 update_progress("roles", "Inferring crew roles", progress)
-                results['role_assignments'] = self._analyze_roles(transcripts)
+                results['role_assignments'] = self._analyze_roles(
+                    transcripts,
+                    diarization_result=diarization_result
+                )
+
+                # Step 4b: Telemetry-Audio Correlation (boosts role confidence)
+                if events and TELEMETRY_CORRELATOR_AVAILABLE and TelemetryAudioCorrelator:
+                    try:
+                        correlator = TelemetryAudioCorrelator()
+                        correlator.load_data(events, transcripts)
+                        correlator.correlate_all()
+
+                        # Build speaker_roles dict for correlation
+                        speaker_roles = {}
+                        for ra in results['role_assignments']:
+                            speaker_roles[ra['speaker_id']] = {
+                                'role': ra['role'],
+                                'confidence': ra['confidence'],
+                                'keyword_matches': ra.get('keyword_matches', 0)
+                            }
+
+                        # Update confidences with telemetry evidence
+                        updates = correlator.update_role_confidences(speaker_roles)
+
+                        # Merge enhanced data back into role_assignments
+                        for ra in results['role_assignments']:
+                            speaker_id = ra['speaker_id']
+                            if speaker_id in updates:
+                                update = updates[speaker_id]
+                                ra['voice_confidence'] = update.base_confidence
+                                ra['telemetry_confidence'] = update.telemetry_boost
+                                ra['confidence'] = update.boosted_confidence
+                                ra['evidence_count'] = update.evidence_count
+                                ra['methodology'] = update.methodology_note
+
+                        # Add correlation summary to results
+                        results['telemetry_correlation'] = correlator.get_correlation_summary()
+                        logger.info(
+                            f"Telemetry correlation: {len(updates)} speakers enhanced "
+                            f"with {results['telemetry_correlation']['total_correlations']} correlations"
+                        )
+                    except Exception as e:
+                        logger.warning(f"Telemetry correlation failed: {e}")
+
             progress = 60
 
             # Step 5: Communication quality analysis (uses FILTERED transcripts)
@@ -1104,6 +1213,46 @@ class AudioProcessor:
                 results['training_recommendations'] = self._generate_training_recommendations(
                     filtered_transcripts, analysis_context
                 )
+            progress = 95
+
+            # Step 11: LLM Team Analysis Narrative
+            if include_detailed and NARRATIVE_GENERATOR_AVAILABLE and transcripts:
+                update_progress("narrative", "Generating team analysis (this may take 1-2 minutes)...", progress)
+                try:
+                    llm_start = time.time()
+                    logger.info("Starting LLM team analysis generation...")
+
+                    narrative_result = generate_summary_sync(results)
+
+                    llm_duration = time.time() - llm_start
+                    if narrative_result:
+                        results['narrative_summary'] = narrative_result
+                        results['narrative_summary']['generation_time'] = round(llm_duration, 1)
+                        logger.info(f"Generated team analysis in {llm_duration:.1f}s")
+                    else:
+                        logger.info("Team analysis skipped (Ollama unavailable)")
+                except Exception as e:
+                    logger.warning(f"Team analysis generation failed: {e}")
+            progress = 97
+
+            # Step 12: LLM Story Narrative
+            if include_detailed and NARRATIVE_GENERATOR_AVAILABLE and generate_story_sync and transcripts:
+                update_progress("story", "Generating mission story (this may take 1-2 minutes)...", progress)
+                try:
+                    story_start = time.time()
+                    logger.info("Starting LLM story generation...")
+
+                    story_result = generate_story_sync(results)
+
+                    story_duration = time.time() - story_start
+                    if story_result:
+                        results['story_narrative'] = story_result
+                        results['story_narrative']['generation_time'] = round(story_duration, 1)
+                        logger.info(f"Generated story narrative in {story_duration:.1f}s")
+                    else:
+                        logger.info("Story narrative skipped (Ollama unavailable)")
+                except Exception as e:
+                    logger.warning(f"Story generation failed: {e}")
             progress = 100
 
             update_progress("complete", "Analysis complete", progress)
@@ -1218,17 +1367,80 @@ class AudioProcessor:
 
     def _analyze_roles(
         self,
-        transcripts: List[Dict[str, Any]]
+        transcripts: List[Dict[str, Any]],
+        use_voice_patterns: bool = True,
+        diarization_result: Optional['DiarizationResult'] = None
     ) -> List[Dict[str, Any]]:
-        """Run role inference analysis."""
+        """
+        Run role inference analysis.
+
+        Args:
+            transcripts: List of transcript dictionaries
+            use_voice_patterns: Whether to use voice pattern analysis
+                               in addition to keyword matching
+            diarization_result: Optional result from batch diarization
+                               for enhanced confidence calculation
+
+        Returns:
+            List of role assignment dictionaries
+        """
         try:
-            engine = RoleInferenceEngine(transcripts)
+            role_assignments = []
+
+            # Priority: Use aggregate role inference with diarization confidence
+            if (diarization_result and
+                AGGREGATE_ROLE_INFERENCE_AVAILABLE and
+                AggregateRoleInferenceEngine):
+                logger.info(
+                    "Using aggregate role inference with diarization confidence "
+                    f"({diarization_result.total_speakers} speakers)"
+                )
+
+                engine = AggregateRoleInferenceEngine(
+                    transcripts,
+                    diarization_result=diarization_result
+                )
+                results = engine.infer_roles()
+
+                for speaker_id, analysis in results.items():
+                    role_name = (
+                        analysis.inferred_role.value
+                        if hasattr(analysis.inferred_role, 'value')
+                        else str(analysis.inferred_role)
+                    )
+                    role_assignments.append({
+                        'speaker_id': speaker_id,
+                        'role': role_name,
+                        'confidence': analysis.combined_confidence,
+                        'voice_confidence': analysis.voice_confidence,
+                        'role_confidence': analysis.role_confidence,
+                        'evidence_factor': analysis.evidence_factor,
+                        'keyword_matches': analysis.total_keyword_matches,
+                        'key_indicators': analysis.key_indicators[:5] if analysis.key_indicators else [],
+                        'example_utterances': analysis.example_utterances or [],
+                        'methodology': analysis.methodology_notes
+                    })
+
+                logger.info(f"Aggregate role inference complete: {len(role_assignments)} speakers")
+                return role_assignments
+
+            # Fallback: Use enhanced engine with voice patterns
+            if use_voice_patterns and EnhancedRoleInferenceEngine:
+                engine = EnhancedRoleInferenceEngine(transcripts, use_voice_patterns=True)
+                logger.info("Using enhanced role inference with voice patterns")
+            else:
+                engine = RoleInferenceEngine(transcripts)
+                logger.info("Using keyword-only role inference")
+
             results = engine.analyze_all_speakers()
 
-            role_assignments = []
             for speaker_id, analysis in results.items():
                 # analysis is a SpeakerRoleAnalysis dataclass
-                role_name = analysis.inferred_role.value if hasattr(analysis.inferred_role, 'value') else str(analysis.inferred_role)
+                role_name = (
+                    analysis.inferred_role.value
+                    if hasattr(analysis.inferred_role, 'value')
+                    else str(analysis.inferred_role)
+                )
                 role_assignments.append({
                     'speaker_id': speaker_id,
                     'role': role_name,
@@ -1238,6 +1450,15 @@ class AudioProcessor:
                     'example_utterances': analysis.example_utterances or [],
                     'methodology': analysis.methodology_notes
                 })
+
+            # Add voice pattern summary if available
+            if hasattr(engine, 'get_voice_pattern_summary'):
+                voice_summary = engine.get_voice_pattern_summary()
+                if voice_summary:
+                    logger.debug(
+                        f"Voice pattern summary: "
+                        f"{len(voice_summary.get('speaker_patterns', {}))} speakers analyzed"
+                    )
 
             return role_assignments
 
@@ -1427,20 +1648,50 @@ class AudioProcessor:
         self,
         wav_path: str,
         segments: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+    ) -> Tuple[List[Dict[str, Any]], Optional['DiarizationResult']]:
         """
         Add speaker identification to segments.
 
-        Supports three modes:
-        1. CPU-optimized (resemblyzer): Fast, good for CPU-only systems
-        2. Neural (pyannote): Most accurate, benefits from GPU
-        3. Simple (spectral): Fallback when others unavailable
+        Supports four modes (in priority order):
+        1. Two-pass batch (default): Consistent IDs across audio lengths
+        2. CPU-optimized (resemblyzer): Fast, good for CPU-only systems
+        3. Neural (pyannote): Most accurate, benefits from GPU
+        4. Simple (spectral): Fallback when others unavailable
+
+        Returns:
+            Tuple of (updated_segments, DiarizationResult or None)
+            - segments: Original segments with 'speaker_id' and 'speaker_confidence'
+            - diarization_result: Contains voice confidence data for role inference
         """
+        diarization_result = None
+
         try:
             diarizer = None
 
+            # Load audio once for all methods
+            audio = AudioSegment.from_wav(wav_path)
+            samples = np.array(audio.get_array_of_samples(), dtype=np.float32)
+            samples = samples / 32768.0  # Normalize to -1 to 1
+
+            # Priority 0: Two-pass batch diarization (most consistent across clip lengths)
+            if self.use_batch_diarization and BATCH_DIARIZATION_AVAILABLE:
+                logger.info("Using two-pass batch diarization (consistent speaker IDs)")
+
+                # Initialize batch diarizer if needed
+                if self._batch_diarizer is None:
+                    self._batch_diarizer = BatchSpeakerDiarizer(
+                        similarity_threshold=self.speaker_embedding_threshold,
+                        min_speakers=self.min_expected_speakers,
+                        max_speakers=self.max_expected_speakers
+                    )
+
+                # Perform two-pass diarization
+                segments, diarization_result = self._batch_diarizer.diarize_complete(
+                    samples, segments, audio.frame_rate
+                )
+
             # Priority 1: CPU-optimized diarization (for CPU-only VMs)
-            if self.use_cpu_diarization and CPU_DIARIZATION_AVAILABLE:
+            elif self.use_cpu_diarization and CPU_DIARIZATION_AVAILABLE:
                 logger.info("Using CPU-optimized diarization (resemblyzer)")
 
                 # Initialize CPU diarizer if needed
@@ -1451,14 +1702,19 @@ class AudioProcessor:
                         max_speakers=self.max_expected_speakers
                     )
 
-                # Load audio and process in batch
-                audio = AudioSegment.from_wav(wav_path)
-                samples = np.array(audio.get_array_of_samples(), dtype=np.float32)
-                samples = samples / 32768.0  # Normalize to -1 to 1
-
                 segments = self._cpu_diarizer.process_segments_batch(
                     segments, samples, audio.frame_rate
                 )
+
+                # Get diarization result for role inference if possible
+                if hasattr(self._cpu_diarizer, 'cluster_embeddings_stateless'):
+                    try:
+                        diarization_result = self._cpu_diarizer.cluster_embeddings_stateless(
+                            segments, samples, audio.frame_rate
+                        )
+                    except Exception as e:
+                        logger.warning(f"Stateless clustering failed: {e}")
+
                 diarizer = self._cpu_diarizer
 
             # Priority 2: Neural diarization with full pipeline (most accurate)
@@ -1480,9 +1736,6 @@ class AudioProcessor:
             # Priority 3: Simple speaker diarization (fallback)
             else:
                 logger.info("Using simple speaker diarization (spectral features)")
-                audio = AudioSegment.from_wav(wav_path)
-                samples = np.array(audio.get_array_of_samples(), dtype=np.float32)
-                samples = samples / 32768.0  # Normalize to -1 to 1
 
                 diarizer = SpeakerDiarizer(similarity_threshold=self.speaker_similarity_threshold)
 
@@ -1496,8 +1749,8 @@ class AudioProcessor:
                         seg['speaker_id'] = speaker_id
                         seg['speaker_confidence'] = confidence
 
-            # Add speaker roles if available
-            speaker_roles = getattr(diarizer, 'speaker_roles', {}) if 'diarizer' in dir() else {}
+            # Add speaker roles if available from legacy diarizer
+            speaker_roles = getattr(diarizer, 'speaker_roles', {}) if diarizer else {}
             for seg in segments:
                 speaker_id = seg.get('speaker_id')
                 if speaker_id:
@@ -1505,10 +1758,6 @@ class AudioProcessor:
 
             # Track engagement metrics
             if DIARIZATION_AVAILABLE and EngagementAnalyzer:
-                audio = AudioSegment.from_wav(wav_path)
-                samples = np.array(audio.get_array_of_samples(), dtype=np.float32)
-                samples = samples / 32768.0
-
                 engagement = EngagementAnalyzer()
                 for seg in segments:
                     if seg.get('speaker_id') and SpeakerSegment:
@@ -1537,11 +1786,11 @@ class AudioProcessor:
                 speaker_counts[sid] = speaker_counts.get(sid, 0) + 1
             logger.info(f"Speaker distribution: {speaker_counts}")
 
-            return segments
+            return segments, diarization_result
 
         except Exception as e:
             logger.error(f"Speaker diarization failed: {e}", exc_info=True)
-            return segments
+            return segments, None
 
     def _calculate_speaker_stats(
         self,

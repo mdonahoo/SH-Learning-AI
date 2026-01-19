@@ -135,10 +135,23 @@ class RoleAssignment(BaseModel):
 
     speaker_id: str = Field(description="Speaker identifier")
     role: str = Field(description="Inferred role name")
-    confidence: float = Field(description="Confidence in role assignment (0-1)")
+    confidence: float = Field(description="Combined confidence in role assignment (0-1)")
     keyword_matches: int = Field(description="Number of role-related keywords found")
     key_indicators: List[str] = Field(
         default_factory=list, description="Key phrases that indicate this role"
+    )
+    # Telemetry correlation fields
+    voice_confidence: Optional[float] = Field(
+        default=None, description="Base confidence from keyword/voice analysis (0-1)"
+    )
+    telemetry_confidence: Optional[float] = Field(
+        default=None, description="Confidence boost from telemetry correlation (0-1)"
+    )
+    evidence_count: Optional[int] = Field(
+        default=None, description="Number of supporting telemetry events"
+    )
+    methodology_note: Optional[str] = Field(
+        default=None, description="Explanation of how confidence was calculated"
     )
 
 

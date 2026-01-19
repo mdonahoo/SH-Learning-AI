@@ -715,3 +715,157 @@ class CPUSpeakerDiarizer:
     def get_speaker_count(self) -> int:
         """Get number of speakers detected."""
         return len(self.speaker_profiles) or self.speaker_count
+
+    def cluster_embeddings_stateless(
+        self,
+        segments: List[Dict[str, Any]],
+        audio_data: np.ndarray,
+        sample_rate: int
+    ) -> 'DiarizationResult':
+        """
+        Stateless batch clustering - no state mutation.
+
+        This method performs speaker clustering without modifying any
+        internal state (speaker_profiles, speaker_count, etc.). It's
+        designed for the two-pass processing architecture.
+
+        Args:
+            segments: List of segments with 'start', 'end', 'text' keys
+            audio_data: Full audio data (normalized float32)
+            sample_rate: Audio sample rate
+
+        Returns:
+            DiarizationResult with clustering results
+        """
+        from src.audio.batch_diarizer import (
+            DiarizationResult, SpeakerCluster, is_batch_diarizer_available
+        )
+
+        if not is_batch_diarizer_available():
+            logger.warning("Batch diarizer not available, returning empty result")
+            return DiarizationResult()
+
+        if not segments:
+            return DiarizationResult()
+
+        logger.info(f"Stateless batch clustering: {len(segments)} segments")
+
+        # Extract embeddings for all segments (using existing method)
+        embeddings_data = []
+        for idx, seg in enumerate(segments):
+            start_sample = int(seg['start'] * sample_rate)
+            end_sample = int(seg['end'] * sample_rate)
+            segment_audio = audio_data[start_sample:end_sample]
+            duration = seg['end'] - seg['start']
+
+            if len(segment_audio) == 0:
+                continue
+
+            if duration >= self.min_embedding_duration:
+                embedding = self._get_embedding(segment_audio, sample_rate)
+                if embedding is not None:
+                    embeddings_data.append((
+                        idx, embedding, seg['start'], seg['end'], duration
+                    ))
+
+        logger.info(f"Extracted {len(embeddings_data)} embeddings (stateless)")
+
+        if len(embeddings_data) < 2:
+            # Insufficient for clustering
+            if not embeddings_data:
+                cluster = SpeakerCluster(
+                    speaker_id='speaker_1',
+                    segment_indices=list(range(len(segments))),
+                    first_appearance=segments[0]['start'] if segments else 0.0,
+                    cluster_tightness=0.3
+                )
+                return DiarizationResult(
+                    speaker_clusters={'speaker_1': cluster},
+                    segment_assignments=['speaker_1'] * len(segments),
+                    segment_confidences=[0.3] * len(segments),
+                    total_speakers=1,
+                    methodology_note="Insufficient embeddings for stateless clustering."
+                )
+            # Single embedding
+            idx, emb, start, end, duration = embeddings_data[0]
+            cluster = SpeakerCluster(
+                speaker_id='speaker_1',
+                embeddings=[emb],
+                segment_indices=[idx],
+                first_appearance=start,
+                total_duration=duration,
+                cluster_tightness=1.0
+            )
+            cluster.compute_centroid()
+            return DiarizationResult(
+                speaker_clusters={'speaker_1': cluster},
+                segment_assignments=['speaker_1'] * len(segments),
+                segment_confidences=[0.5] * len(segments),
+                total_speakers=1,
+                methodology_note="Single embedding found in stateless mode."
+            )
+
+        # Perform clustering using existing method (but don't update state)
+        embeddings_matrix = np.array([e[1] for e in embeddings_data])
+        cluster_labels = self._cluster_embeddings(embeddings_matrix)
+
+        # Group by cluster and find first appearance
+        from collections import defaultdict
+        cluster_data = defaultdict(list)
+        for i, (idx, emb, start, end, duration) in enumerate(embeddings_data):
+            cluster = cluster_labels[i]
+            cluster_data[cluster].append((idx, emb, start, end, duration))
+
+        cluster_first_appearance = {}
+        for cluster, data in cluster_data.items():
+            first_time = min(d[2] for d in data)
+            cluster_first_appearance[cluster] = first_time
+
+        # Sort clusters by first appearance for deterministic IDs
+        sorted_clusters = sorted(
+            cluster_data.keys(),
+            key=lambda c: cluster_first_appearance[c]
+        )
+
+        # Build speaker clusters
+        speaker_clusters: Dict[str, SpeakerCluster] = {}
+        cluster_to_speaker: Dict[int, str] = {}
+
+        for speaker_num, cluster in enumerate(sorted_clusters, 1):
+            speaker_id = f"speaker_{speaker_num}"
+            cluster_to_speaker[cluster] = speaker_id
+            data = cluster_data[cluster]
+
+            cluster_obj = SpeakerCluster(
+                speaker_id=speaker_id,
+                embeddings=[d[1] for d in data],
+                segment_indices=[d[0] for d in data],
+                first_appearance=cluster_first_appearance[cluster],
+                total_duration=sum(d[4] for d in data)
+            )
+            cluster_obj.compute_centroid()
+            cluster_obj.compute_tightness()
+            speaker_clusters[speaker_id] = cluster_obj
+
+        # Build segment assignments
+        segment_assignments = ['unknown'] * len(segments)
+        segment_confidences = [0.0] * len(segments)
+
+        for cluster in speaker_clusters.values():
+            for idx in cluster.segment_indices:
+                segment_assignments[idx] = cluster.speaker_id
+                segment_confidences[idx] = cluster.cluster_tightness
+
+        methodology = (
+            f"Stateless batch clustering: {len(embeddings_data)} embeddings into "
+            f"{len(speaker_clusters)} speakers (threshold={self.similarity_threshold:.2f}). "
+            f"No state mutation - suitable for two-pass processing."
+        )
+
+        return DiarizationResult(
+            speaker_clusters=speaker_clusters,
+            segment_assignments=segment_assignments,
+            segment_confidences=segment_confidences,
+            total_speakers=len(speaker_clusters),
+            methodology_note=methodology
+        )

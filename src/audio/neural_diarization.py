@@ -36,11 +36,13 @@ try:
     from scipy.spatial.distance import cosine, cdist
     from scipy.cluster.hierarchy import linkage, fcluster
     import torch
+    import torchaudio
     PYANNOTE_AVAILABLE = True
 except (ImportError, TypeError, Exception) as e:
     # TypeError can occur with lightning/pyannote version conflicts
     PYANNOTE_AVAILABLE = False
     torch = None
+    torchaudio = None
     logging.getLogger(__name__).warning(f"Pyannote not available: {e}")
 
 try:
@@ -52,6 +54,34 @@ except ImportError:
 load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+
+def load_audio_for_pyannote(audio_path: str) -> Dict[str, Any]:
+    """
+    Load audio file using torchaudio and return in pyannote-compatible format.
+
+    This bypasses pyannote's built-in audio loading which requires torchcodec/FFmpeg,
+    allowing us to use torchaudio instead.
+
+    Args:
+        audio_path: Path to audio file
+
+    Returns:
+        Dictionary with 'waveform' (torch.Tensor) and 'sample_rate' (int)
+    """
+    if torchaudio is None:
+        raise ImportError("torchaudio is required for audio loading")
+
+    waveform, sample_rate = torchaudio.load(audio_path)
+
+    # Pyannote expects mono audio - convert if stereo
+    if waveform.shape[0] > 1:
+        waveform = torch.mean(waveform, dim=0, keepdim=True)
+
+    return {
+        "waveform": waveform,
+        "sample_rate": sample_rate
+    }
 
 
 @dataclass
@@ -631,12 +661,25 @@ class NeuralSpeakerDiarizer:
         self._load_pipeline()
 
         try:
+            # Load audio using torchaudio to bypass torchcodec/FFmpeg issues
+            try:
+                audio_input = load_audio_for_pyannote(audio_path)
+            except Exception as load_err:
+                logger.warning(f"torchaudio load failed, trying direct path: {load_err}")
+                audio_input = audio_path
+
             # Run diarization
-            diarization = self.pipeline(
-                audio_path,
+            result = self.pipeline(
+                audio_input,
                 min_speakers=self.min_speakers,
                 max_speakers=self.max_speakers
             )
+
+            # Handle both pyannote 3.x (Annotation) and 4.x (DiarizeOutput) API
+            if hasattr(result, 'speaker_diarization'):
+                diarization = result.speaker_diarization
+            else:
+                diarization = result
 
             # Convert to our format
             speaker_segments = {}
@@ -680,12 +723,29 @@ class NeuralSpeakerDiarizer:
         try:
             logger.info(f"Running full pipeline diarization on {audio_path}")
 
+            # Load audio using torchaudio to bypass torchcodec/FFmpeg issues
+            try:
+                audio_input = load_audio_for_pyannote(audio_path)
+                logger.info(f"Audio loaded via torchaudio: {audio_input['waveform'].shape}, sr={audio_input['sample_rate']}")
+            except Exception as load_err:
+                logger.warning(f"torchaudio load failed, trying direct path: {load_err}")
+                audio_input = audio_path
+
             # Run pyannote pipeline on entire file
-            diarization = self.pipeline(
-                audio_path,
+            result = self.pipeline(
+                audio_input,
                 min_speakers=self.min_speakers,
                 max_speakers=self.max_speakers
             )
+
+            # Handle both pyannote 3.x (Annotation) and 4.x (DiarizeOutput) API
+            # In 4.x, result is DiarizeOutput with speaker_diarization attribute
+            if hasattr(result, 'speaker_diarization'):
+                # pyannote 4.x - DiarizeOutput
+                diarization = result.speaker_diarization
+            else:
+                # pyannote 3.x - direct Annotation
+                diarization = result
 
             # Build list of speaker turns: (start, end, speaker_label)
             speaker_turns = []

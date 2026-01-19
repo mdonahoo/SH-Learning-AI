@@ -425,7 +425,7 @@ class OllamaClient:
         from src.llm.prompt_templates import build_mission_summary_prompt
 
         prompt = build_mission_summary_prompt(mission_data, style)
-        system_prompt = "You are an expert mission analyst for the Starship Horizons bridge simulator."
+        system_prompt = "You are an expert mission analyst for bridge simulator training sessions."
 
         return self.generate(prompt, system=system_prompt, temperature=0.8)
 
@@ -472,7 +472,7 @@ class OllamaClient:
 
         prompt = build_full_report_prompt(mission_data, style)
         system_prompt = """You are an expert mission analyst who creates comprehensive,
-        entertaining, and insightful mission reports for Starship Horizons bridge simulator sessions."""
+        entertaining, and insightful mission reports for bridge simulator training sessions."""
 
         # Calculate transcript size for time estimation
         import json

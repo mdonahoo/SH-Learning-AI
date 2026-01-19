@@ -49,6 +49,77 @@
             <span id="status-text"></span>
         </div>
 
+        <!-- Workflow Banner -->
+        <div class="workflow-banner">
+            <div class="workflow-steps">
+                <div class="workflow-step">
+                    <div class="step-icon record">
+                        <span class="record-dot"></span>
+                    </div>
+                    <div class="step-text">
+                        <span class="step-label">Press Record</span>
+                        <span class="step-hint">Before mission starts</span>
+                    </div>
+                </div>
+                
+                <div class="workflow-arrow">→</div>
+                
+                <div class="workflow-step">
+                    <div class="step-icon mission">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="3" width="20" height="14" rx="2"/>
+                            <path d="M8 21h8M12 17v4"/>
+                        </svg>
+                    </div>
+                    <div class="step-text">
+                        <span class="step-label">Run Mission</span>
+                        <span class="step-hint">Audio captures automatically</span>
+                    </div>
+                </div>
+                
+                <div class="workflow-arrow">→</div>
+                
+                <div class="workflow-step">
+                    <div class="step-icon stop">
+                        <span class="stop-square"></span>
+                    </div>
+                    <div class="step-text">
+                        <span class="step-label">Stop Recording</span>
+                        <span class="step-hint">When mission ends</span>
+                    </div>
+                </div>
+                
+                <div class="workflow-arrow">→</div>
+                
+                <div class="workflow-step">
+                    <div class="step-icon analyze">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                        </svg>
+                    </div>
+                    <div class="step-text">
+                        <span class="step-label">AI Analysis</span>
+                        <span class="step-hint">Processing locally</span>
+                    </div>
+                </div>
+                
+                <div class="workflow-arrow">→</div>
+                
+                <div class="workflow-step">
+                    <div class="step-icon report">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                            <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
+                        </svg>
+                    </div>
+                    <div class="step-text">
+                        <span class="step-label">Get Report</span>
+                        <span class="step-hint">Leadership insights</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Input Section -->
         <section class="card" id="input-section">
             <div class="card-header" onclick="app.toggleSection('input-section')">
@@ -163,6 +234,8 @@
                 <!-- Tab Navigation -->
                 <div class="tabs">
                     <button class="tab active" data-tab="summary">Summary</button>
+                    <button class="tab" data-tab="narrative">Debrief</button>
+                    <button class="tab" data-tab="story">Story</button>
                     <button class="tab" data-tab="transcript">Transcript</button>
                     <button class="tab" data-tab="speakers">Crew</button>
                     <button class="tab" data-tab="scorecards">Scorecards</button>
@@ -223,6 +296,60 @@
                         <div id="top-recommendations" class="recommendations-preview hidden">
                             <h3>Priority Recommendations</h3>
                             <div id="recommendations-preview"></div>
+                        </div>
+                    </div>
+
+                    <!-- AI Team Analysis Tab -->
+                    <div id="tab-narrative" class="tab-panel hidden">
+                        <div id="narrative-loading" class="narrative-loading">
+                            <div class="loading-spinner"></div>
+                            <div class="loading-text">
+                                <span class="loading-title">Generating Team Analysis...</span>
+                                <span class="loading-subtitle">This typically takes 1-2 minutes</span>
+                                <span class="loading-timer" id="narrative-timer">0s elapsed</span>
+                            </div>
+                        </div>
+                        <div id="narrative-section" class="narrative-tab-content hidden">
+                            <div class="narrative-header">
+                                <h2>🎯 Team Dynamics Analysis</h2>
+                                <div class="narrative-badge">
+                                    <span class="ai-model" id="narrative-model">AI Generated</span>
+                                </div>
+                            </div>
+                            <div id="narrative-content" class="narrative-content"></div>
+                        </div>
+                        <div id="narrative-unavailable" class="narrative-unavailable hidden">
+                            <div class="unavailable-icon">🔌</div>
+                            <h3>Team Analysis Unavailable</h3>
+                            <p>The Ollama LLM server is not available. Make sure Ollama is running with a model loaded.</p>
+                            <code>ollama serve</code>
+                        </div>
+                    </div>
+
+                    <!-- AI Story Narrative Tab -->
+                    <div id="tab-story" class="tab-panel hidden">
+                        <div id="story-loading" class="narrative-loading">
+                            <div class="loading-spinner"></div>
+                            <div class="loading-text">
+                                <span class="loading-title">Generating Mission Story...</span>
+                                <span class="loading-subtitle">This typically takes 1-2 minutes</span>
+                                <span class="loading-timer" id="story-timer">0s elapsed</span>
+                            </div>
+                        </div>
+                        <div id="story-section" class="narrative-tab-content hidden">
+                            <div class="narrative-header">
+                                <h2>📖 Mission Story</h2>
+                                <div class="narrative-badge">
+                                    <span class="ai-model" id="story-model">AI Generated</span>
+                                </div>
+                            </div>
+                            <div id="story-content" class="narrative-content story-content"></div>
+                        </div>
+                        <div id="story-unavailable" class="narrative-unavailable hidden">
+                            <div class="unavailable-icon">🔌</div>
+                            <h3>Mission Story Unavailable</h3>
+                            <p>The Ollama LLM server is not available. Make sure Ollama is running with a model loaded.</p>
+                            <code>ollama serve</code>
                         </div>
                     </div>
 

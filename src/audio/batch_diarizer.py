@@ -1,0 +1,609 @@
+"""
+Batch speaker diarization with two-pass processing architecture.
+
+This module implements a stateless batch clustering approach to ensure
+consistent speaker IDs across different audio lengths. The key insight
+is that speaker IDs should be deterministic and based on the complete
+audio, not incrementally assigned as segments are processed.
+
+Two-Pass Architecture:
+1. Pass 1 - Speaker Clustering: Process ENTIRE audio before assigning
+   ANY speaker IDs. Use stateless batch clustering so the same voice
+   always gets the same ID.
+2. Pass 2 - Role Inference: With stable speaker IDs, aggregate ALL
+   utterances per speaker and assign roles based on complete evidence.
+
+Key Benefits:
+- Same voice gets same speaker ID regardless of audio length
+- Deterministic results (same audio = same output)
+- Speaker IDs ordered by first appearance in audio
+- No state accumulation between audio files
+"""
+
+import numpy as np
+import logging
+import os
+from typing import Dict, List, Optional, Tuple, Any
+from dataclasses import dataclass, field
+from collections import defaultdict
+from pathlib import Path
+from dotenv import load_dotenv
+
+try:
+    from resemblyzer import VoiceEncoder
+    RESEMBLYZER_AVAILABLE = True
+except ImportError:
+    RESEMBLYZER_AVAILABLE = False
+    VoiceEncoder = None
+
+try:
+    from scipy.spatial.distance import cosine, cdist
+    from scipy.cluster.hierarchy import linkage, fcluster
+    SCIPY_AVAILABLE = True
+except ImportError:
+    SCIPY_AVAILABLE = False
+
+load_dotenv()
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class SpeakerCluster:
+    """
+    Information about a speaker cluster.
+
+    Attributes:
+        speaker_id: Deterministic speaker identifier (e.g., 'speaker_1')
+        embeddings: All voice embeddings assigned to this speaker
+        segment_indices: Indices of segments belonging to this speaker
+        first_appearance: Timestamp of first appearance in audio
+        total_duration: Total speaking time for this speaker
+        centroid: Mean embedding vector for this cluster
+        cluster_tightness: How similar embeddings are within cluster (0-1)
+    """
+    speaker_id: str
+    embeddings: List[np.ndarray] = field(default_factory=list)
+    segment_indices: List[int] = field(default_factory=list)
+    first_appearance: float = float('inf')
+    total_duration: float = 0.0
+    centroid: Optional[np.ndarray] = None
+    cluster_tightness: float = 0.0
+
+    def compute_centroid(self) -> Optional[np.ndarray]:
+        """Compute and cache the centroid of all embeddings."""
+        if not self.embeddings:
+            return None
+        self.centroid = np.mean(self.embeddings, axis=0)
+        return self.centroid
+
+    def compute_tightness(self) -> float:
+        """
+        Compute cluster tightness (voice confidence).
+
+        Returns average similarity of embeddings to centroid.
+        Higher = more consistent voice = higher confidence.
+        """
+        if len(self.embeddings) < 2:
+            self.cluster_tightness = 1.0  # Single embedding = perfect consistency
+            return self.cluster_tightness
+
+        if self.centroid is None:
+            self.compute_centroid()
+
+        if self.centroid is None:
+            return 0.0
+
+        # Calculate average similarity to centroid
+        similarities = []
+        for emb in self.embeddings:
+            sim = 1.0 - cosine(emb, self.centroid)
+            similarities.append(sim)
+
+        self.cluster_tightness = float(np.mean(similarities))
+        return self.cluster_tightness
+
+
+@dataclass
+class DiarizationResult:
+    """
+    Complete result of batch diarization.
+
+    This is the output of Pass 1 (speaker clustering) and serves as
+    input to Pass 2 (role inference).
+
+    Attributes:
+        speaker_clusters: Dict mapping speaker_id to SpeakerCluster
+        segment_assignments: List of speaker_id for each segment
+        segment_confidences: Per-segment confidence scores
+        total_speakers: Number of unique speakers detected
+        methodology_note: Description of how diarization was performed
+    """
+    speaker_clusters: Dict[str, SpeakerCluster] = field(default_factory=dict)
+    segment_assignments: List[str] = field(default_factory=list)
+    segment_confidences: List[float] = field(default_factory=list)
+    total_speakers: int = 0
+    methodology_note: str = ""
+
+    def get_speaker_voice_confidence(self, speaker_id: str) -> float:
+        """
+        Get voice confidence for a speaker.
+
+        This reflects how consistently the speaker's voice clusters,
+        independent of role inference.
+        """
+        cluster = self.speaker_clusters.get(speaker_id)
+        if cluster:
+            return cluster.cluster_tightness
+        return 0.0
+
+    def get_segments_for_speaker(self, speaker_id: str) -> List[int]:
+        """Get segment indices for a specific speaker."""
+        cluster = self.speaker_clusters.get(speaker_id)
+        if cluster:
+            return cluster.segment_indices
+        return []
+
+
+class BatchSpeakerDiarizer:
+    """
+    Stateless batch speaker diarizer using two-pass processing.
+
+    Unlike incremental diarization, this processes the ENTIRE audio
+    before assigning any speaker IDs. This ensures:
+    1. Same voice always gets same ID regardless of audio length
+    2. Results are deterministic (same audio = same output)
+    3. Speaker IDs ordered by first appearance in audio
+
+    Usage:
+        diarizer = BatchSpeakerDiarizer()
+        result = diarizer.diarize_complete(audio_path, segments)
+        # result.speaker_clusters contains per-speaker voice data
+        # result.segment_assignments contains speaker_id per segment
+    """
+
+    def __init__(
+        self,
+        similarity_threshold: Optional[float] = None,
+        min_speakers: Optional[int] = None,
+        max_speakers: Optional[int] = None,
+        min_embedding_duration: float = 1.0
+    ):
+        """
+        Initialize batch speaker diarizer.
+
+        Args:
+            similarity_threshold: Minimum similarity (0-1) to cluster speakers
+            min_speakers: Minimum expected speakers
+            max_speakers: Maximum expected speakers
+            min_embedding_duration: Minimum segment duration for embedding extraction
+        """
+        if not RESEMBLYZER_AVAILABLE:
+            raise ImportError(
+                "resemblyzer is not installed. "
+                "Install with: pip install resemblyzer"
+            )
+
+        if not SCIPY_AVAILABLE:
+            raise ImportError(
+                "scipy is not installed. "
+                "Install with: pip install scipy"
+            )
+
+        # Load encoder
+        logger.info("Loading resemblyzer voice encoder for batch diarization...")
+        self.encoder = VoiceEncoder()
+        logger.info("Voice encoder loaded")
+
+        # Configuration
+        self.similarity_threshold = similarity_threshold or float(
+            os.getenv('SPEAKER_EMBEDDING_THRESHOLD', '0.85')
+        )
+        self.min_speakers = min_speakers or int(os.getenv('MIN_EXPECTED_SPEAKERS', '1'))
+        self.max_speakers = max_speakers or int(os.getenv('MAX_EXPECTED_SPEAKERS', '8'))
+        self.expected_speakers = int(os.getenv('EXPECTED_BRIDGE_CREW', '6'))
+        self.min_embedding_duration = min_embedding_duration
+
+        # Sample rate expected by resemblyzer
+        self.sample_rate = 16000
+
+        logger.info(
+            f"BatchSpeakerDiarizer initialized: threshold={self.similarity_threshold}, "
+            f"speakers={self.min_speakers}-{self.max_speakers}"
+        )
+
+    def diarize_complete(
+        self,
+        audio_data: np.ndarray,
+        segments: List[Dict[str, Any]],
+        sample_rate: int = 16000
+    ) -> Tuple[List[Dict[str, Any]], DiarizationResult]:
+        """
+        Perform complete two-pass diarization.
+
+        This is the main entry point. It processes all segments at once
+        to ensure consistent speaker IDs.
+
+        Args:
+            audio_data: Full audio samples (float32, normalized -1 to 1)
+            segments: List of segments with 'start', 'end', 'text' keys
+            sample_rate: Audio sample rate
+
+        Returns:
+            Tuple of (updated_segments, DiarizationResult)
+            - segments: Original segments with 'speaker_id' and 'speaker_confidence' added
+            - result: DiarizationResult with cluster info for role inference
+        """
+        if not segments:
+            return segments, DiarizationResult()
+
+        logger.info(f"Batch diarization: {len(segments)} segments")
+
+        # Pass 1: Extract all embeddings
+        embeddings_data = self._extract_all_embeddings(audio_data, segments, sample_rate)
+        logger.info(f"Extracted {len(embeddings_data)} embeddings")
+
+        if len(embeddings_data) < 2:
+            # Not enough embeddings for clustering
+            return self._handle_insufficient_embeddings(segments, embeddings_data)
+
+        # Pass 1b: Global clustering
+        cluster_labels = self._cluster_globally(embeddings_data)
+
+        # Pass 1c: Assign deterministic speaker IDs (by first appearance)
+        speaker_clusters = self._assign_speaker_ids(embeddings_data, cluster_labels, segments)
+
+        # Build result
+        result = self._build_result(segments, embeddings_data, speaker_clusters)
+
+        # Update segments with speaker info
+        segments = self._update_segments(segments, embeddings_data, speaker_clusters)
+
+        # Interpolate gaps (short segments without embeddings)
+        segments = self._interpolate_gaps(segments, speaker_clusters)
+
+        logger.info(f"Batch diarization complete: {result.total_speakers} speakers")
+        return segments, result
+
+    def _extract_all_embeddings(
+        self,
+        audio_data: np.ndarray,
+        segments: List[Dict[str, Any]],
+        sample_rate: int
+    ) -> List[Tuple[int, np.ndarray, float, float, float]]:
+        """
+        Extract embeddings for all segments that meet duration threshold.
+
+        Returns:
+            List of tuples: (segment_index, embedding, start_time, end_time, duration)
+        """
+        embeddings_data = []
+
+        for idx, seg in enumerate(segments):
+            start_sample = int(seg['start'] * sample_rate)
+            end_sample = int(seg['end'] * sample_rate)
+            segment_audio = audio_data[start_sample:end_sample]
+            duration = seg['end'] - seg['start']
+
+            if len(segment_audio) == 0:
+                continue
+
+            if duration >= self.min_embedding_duration:
+                embedding = self._get_embedding(segment_audio, sample_rate)
+                if embedding is not None:
+                    embeddings_data.append((
+                        idx, embedding, seg['start'], seg['end'], duration
+                    ))
+
+        return embeddings_data
+
+    def _get_embedding(
+        self,
+        audio_data: np.ndarray,
+        sample_rate: int = 16000
+    ) -> Optional[np.ndarray]:
+        """Extract speaker embedding from audio segment."""
+        try:
+            # Resample if needed
+            if sample_rate != self.sample_rate:
+                ratio = self.sample_rate / sample_rate
+                new_length = int(len(audio_data) * ratio)
+                indices = np.linspace(0, len(audio_data) - 1, new_length)
+                audio_data = np.interp(indices, np.arange(len(audio_data)), audio_data)
+
+            # Preprocess for resemblyzer (expects float64)
+            audio_data = audio_data.astype(np.float64)
+
+            # Get embedding
+            embedding = self.encoder.embed_utterance(audio_data)
+            return embedding
+
+        except Exception as e:
+            logger.warning(f"Failed to extract embedding: {e}")
+            return None
+
+    def _cluster_globally(
+        self,
+        embeddings_data: List[Tuple]
+    ) -> np.ndarray:
+        """
+        Perform hierarchical clustering on all embeddings at once.
+
+        This ensures clustering decisions use complete information,
+        not incremental state.
+        """
+        n = len(embeddings_data)
+        if n < 2:
+            return np.array([1])
+
+        # Extract embeddings into matrix
+        embeddings_matrix = np.array([e[1] for e in embeddings_data])
+
+        # Calculate pairwise cosine distances
+        distances = cdist(embeddings_matrix, embeddings_matrix, metric='cosine')
+        condensed = distances[np.triu_indices(n, k=1)]
+
+        # Hierarchical clustering
+        linkage_matrix = linkage(condensed, method='average')
+
+        # Log distance statistics
+        logger.info(
+            f"Embedding distances: min={condensed.min():.3f}, "
+            f"max={condensed.max():.3f}, mean={condensed.mean():.3f}"
+        )
+
+        # Cluster using distance threshold
+        distance_threshold = 1.0 - self.similarity_threshold
+        labels = fcluster(linkage_matrix, t=distance_threshold, criterion='distance')
+
+        num_clusters = len(np.unique(labels))
+        logger.info(f"Initial clustering: {num_clusters} clusters")
+
+        # Enforce speaker limits
+        if num_clusters > self.max_speakers:
+            labels = fcluster(linkage_matrix, t=self.max_speakers, criterion='maxclust')
+            logger.info(f"Reduced to {self.max_speakers} clusters (max limit)")
+        elif num_clusters < self.min_speakers and n >= self.min_speakers:
+            labels = fcluster(linkage_matrix, t=self.min_speakers, criterion='maxclust')
+            logger.info(f"Forced to {self.min_speakers} clusters (min limit)")
+
+        return labels
+
+    def _assign_speaker_ids(
+        self,
+        embeddings_data: List[Tuple],
+        cluster_labels: np.ndarray,
+        segments: List[Dict[str, Any]]
+    ) -> Dict[int, SpeakerCluster]:
+        """
+        Assign deterministic speaker IDs based on first appearance.
+
+        Key insight: Speaker IDs are assigned by earliest appearance
+        in the audio, not by cluster number. This ensures:
+        - First voice detected = speaker_1
+        - Second voice detected = speaker_2
+        - Same physical voice always gets same ID
+        """
+        # Group embeddings by cluster
+        cluster_data: Dict[int, List[Tuple[int, np.ndarray, float, float, float]]] = defaultdict(list)
+        for i, (idx, emb, start, end, duration) in enumerate(embeddings_data):
+            cluster = cluster_labels[i]
+            cluster_data[cluster].append((idx, emb, start, end, duration))
+
+        # Find first appearance time for each cluster
+        cluster_first_appearance = {}
+        for cluster, data in cluster_data.items():
+            first_time = min(d[2] for d in data)  # start time
+            cluster_first_appearance[cluster] = first_time
+
+        # Sort clusters by first appearance
+        sorted_clusters = sorted(
+            cluster_data.keys(),
+            key=lambda c: cluster_first_appearance[c]
+        )
+
+        # Create speaker clusters with deterministic IDs
+        speaker_clusters: Dict[int, SpeakerCluster] = {}
+        for speaker_num, cluster in enumerate(sorted_clusters, 1):
+            speaker_id = f"speaker_{speaker_num}"
+            data = cluster_data[cluster]
+
+            cluster_obj = SpeakerCluster(
+                speaker_id=speaker_id,
+                embeddings=[d[1] for d in data],
+                segment_indices=[d[0] for d in data],
+                first_appearance=cluster_first_appearance[cluster],
+                total_duration=sum(d[4] for d in data)
+            )
+            cluster_obj.compute_centroid()
+            cluster_obj.compute_tightness()
+
+            speaker_clusters[cluster] = cluster_obj
+
+        logger.info(
+            f"Speaker ID assignment: {len(speaker_clusters)} speakers, "
+            f"ordered by first appearance"
+        )
+
+        return speaker_clusters
+
+    def _build_result(
+        self,
+        segments: List[Dict[str, Any]],
+        embeddings_data: List[Tuple],
+        speaker_clusters: Dict[int, SpeakerCluster]
+    ) -> DiarizationResult:
+        """Build the complete diarization result."""
+        # Create speaker_id -> cluster mapping
+        speaker_cluster_map = {
+            cluster.speaker_id: cluster
+            for cluster in speaker_clusters.values()
+        }
+
+        # Build segment assignments
+        segment_assignments = ['unknown'] * len(segments)
+        segment_confidences = [0.0] * len(segments)
+
+        for cluster in speaker_clusters.values():
+            for idx in cluster.segment_indices:
+                segment_assignments[idx] = cluster.speaker_id
+                segment_confidences[idx] = cluster.cluster_tightness
+
+        methodology = (
+            f"Two-pass batch diarization: {len(embeddings_data)} embeddings clustered "
+            f"into {len(speaker_clusters)} speakers using hierarchical clustering "
+            f"(threshold={self.similarity_threshold:.2f}). Speaker IDs assigned by "
+            f"first appearance in audio for consistency across clip lengths."
+        )
+
+        return DiarizationResult(
+            speaker_clusters=speaker_cluster_map,
+            segment_assignments=segment_assignments,
+            segment_confidences=segment_confidences,
+            total_speakers=len(speaker_clusters),
+            methodology_note=methodology
+        )
+
+    def _update_segments(
+        self,
+        segments: List[Dict[str, Any]],
+        embeddings_data: List[Tuple],
+        speaker_clusters: Dict[int, SpeakerCluster]
+    ) -> List[Dict[str, Any]]:
+        """Update segment dictionaries with speaker info."""
+        # Build index -> cluster mapping
+        segment_to_cluster = {}
+        for cluster_id, cluster in speaker_clusters.items():
+            for idx in cluster.segment_indices:
+                segment_to_cluster[idx] = cluster
+
+        # Update segments
+        for idx, seg in enumerate(segments):
+            if idx in segment_to_cluster:
+                cluster = segment_to_cluster[idx]
+                seg['speaker_id'] = cluster.speaker_id
+                seg['speaker_confidence'] = cluster.cluster_tightness
+            # Segments without embeddings handled by interpolation
+
+        return segments
+
+    def _interpolate_gaps(
+        self,
+        segments: List[Dict[str, Any]],
+        speaker_clusters: Dict[int, SpeakerCluster]
+    ) -> List[Dict[str, Any]]:
+        """
+        Handle short segments that couldn't get embeddings.
+
+        Uses temporal context to assign speaker IDs to gaps.
+        """
+        for idx, seg in enumerate(segments):
+            if seg.get('speaker_id'):
+                continue  # Already assigned
+
+            # Look for neighboring speakers
+            prev_speaker = None
+            next_speaker = None
+
+            # Search backward
+            for i in range(idx - 1, -1, -1):
+                if segments[i].get('speaker_id'):
+                    prev_speaker = segments[i]['speaker_id']
+                    break
+
+            # Search forward
+            for i in range(idx + 1, len(segments)):
+                if segments[i].get('speaker_id'):
+                    next_speaker = segments[i]['speaker_id']
+                    break
+
+            # Assign based on neighbors
+            if prev_speaker and next_speaker:
+                if prev_speaker == next_speaker:
+                    seg['speaker_id'] = prev_speaker
+                    seg['speaker_confidence'] = 0.7  # Interpolated
+                else:
+                    # Between two different speakers - use previous
+                    seg['speaker_id'] = prev_speaker
+                    seg['speaker_confidence'] = 0.5  # Uncertain
+            elif prev_speaker:
+                seg['speaker_id'] = prev_speaker
+                seg['speaker_confidence'] = 0.6
+            elif next_speaker:
+                seg['speaker_id'] = next_speaker
+                seg['speaker_confidence'] = 0.6
+            else:
+                # No neighbors found - shouldn't happen often
+                seg['speaker_id'] = 'speaker_1'
+                seg['speaker_confidence'] = 0.3
+
+        return segments
+
+    def _handle_insufficient_embeddings(
+        self,
+        segments: List[Dict[str, Any]],
+        embeddings_data: List[Tuple]
+    ) -> Tuple[List[Dict[str, Any]], DiarizationResult]:
+        """Handle case with fewer than 2 embeddings."""
+        if not embeddings_data:
+            # No embeddings at all - assign all to speaker_1
+            for seg in segments:
+                seg['speaker_id'] = 'speaker_1'
+                seg['speaker_confidence'] = 0.3
+
+            cluster = SpeakerCluster(
+                speaker_id='speaker_1',
+                segment_indices=list(range(len(segments))),
+                first_appearance=segments[0]['start'] if segments else 0.0,
+                cluster_tightness=0.3
+            )
+
+            return segments, DiarizationResult(
+                speaker_clusters={'speaker_1': cluster},
+                segment_assignments=['speaker_1'] * len(segments),
+                segment_confidences=[0.3] * len(segments),
+                total_speakers=1,
+                methodology_note="Insufficient embeddings for clustering; single speaker assumed."
+            )
+
+        # Single embedding - assign to speaker_1
+        idx, emb, start, end, duration = embeddings_data[0]
+
+        cluster = SpeakerCluster(
+            speaker_id='speaker_1',
+            embeddings=[emb],
+            segment_indices=[idx],
+            first_appearance=start,
+            total_duration=duration,
+            cluster_tightness=1.0
+        )
+        cluster.compute_centroid()
+
+        # Assign all segments to speaker_1
+        for seg in segments:
+            seg['speaker_id'] = 'speaker_1'
+            seg['speaker_confidence'] = 0.5
+
+        segments[idx]['speaker_confidence'] = 1.0
+
+        return segments, DiarizationResult(
+            speaker_clusters={'speaker_1': cluster},
+            segment_assignments=['speaker_1'] * len(segments),
+            segment_confidences=[0.5] * len(segments),
+            total_speakers=1,
+            methodology_note="Single embedding found; single speaker assumed."
+        )
+
+    def reset(self):
+        """
+        Reset is a no-op for stateless batch diarizer.
+
+        Unlike incremental diarizers, this class maintains no state
+        between calls to diarize_complete().
+        """
+        pass  # Intentionally empty - stateless design
+
+
+def is_batch_diarizer_available() -> bool:
+    """Check if batch diarization dependencies are available."""
+    return RESEMBLYZER_AVAILABLE and SCIPY_AVAILABLE

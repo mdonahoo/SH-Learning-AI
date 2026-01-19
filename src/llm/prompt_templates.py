@@ -57,7 +57,7 @@ def build_mission_summary_prompt(mission_data: Dict[str, Any], style: str = "ent
     style_instructions = get_style_instructions(style)
 
     prompt = f"""
-Analyze this Starship Horizons bridge simulator mission and create a summary.
+Analyze this bridge simulator bridge simulator mission and create a summary.
 
 **Mission Details:**
 - Mission ID: {mission_id}
@@ -110,7 +110,7 @@ def build_crew_analysis_prompt(transcripts: List[Dict[str, Any]], events: List[D
     speaker_count = len(speakers)
 
     prompt = f"""
-Analyze the crew performance from this Starship Horizons mission.
+Analyze the crew performance from this bridge simulator mission.
 
 **Crew Communications ({len(transcripts)} utterances, {speaker_count} speakers):**
 {transcript_text}
@@ -195,7 +195,7 @@ def build_full_report_prompt(mission_data: Dict[str, Any], style: str = "enterta
     bridge_crew_text = ', '.join(bridge_crew) if bridge_crew else "Not specified"
 
     prompt = f"""
-You are analyzing a Starship Horizons bridge simulator training session. Your goal is to provide
+You are analyzing a bridge simulator bridge simulator training session. Your goal is to provide
 ACTIONABLE TRAINING INSIGHTS that will help this crew improve their performance.
 
 ## YOUR ROLE
@@ -424,7 +424,7 @@ def build_scientific_analysis_prompt(
     ])
 
     prompt = f"""
-You are a training analyst evaluating a Starship Horizons bridge simulator session using
+You are a training analyst evaluating a bridge simulator bridge simulator session using
 established scientific frameworks for team performance and learning assessment.
 
 ## YOUR ROLE

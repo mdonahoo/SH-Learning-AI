@@ -9,6 +9,7 @@ This module provides audio input/output capabilities including:
 - Real-time audio transcription
 - Speaker diarization
 - Engagement analytics
+- Two-pass batch diarization for consistent speaker IDs
 """
 
 from .config import AudioConfig
@@ -36,3 +37,35 @@ try:
 except ImportError:
     # Transcription components not available
     __all__ = ['AudioConfig']
+
+# Import two-pass batch diarization components
+try:
+    from .batch_diarizer import (
+        BatchSpeakerDiarizer,
+        DiarizationResult,
+        SpeakerCluster,
+        is_batch_diarizer_available
+    )
+    __all__.extend([
+        'BatchSpeakerDiarizer',
+        'DiarizationResult',
+        'SpeakerCluster',
+        'is_batch_diarizer_available'
+    ])
+except ImportError:
+    # Batch diarization not available
+    pass
+
+# Import CPU diarization components
+try:
+    from .cpu_diarization import (
+        CPUSpeakerDiarizer,
+        CPUSpeakerProfile
+    )
+    __all__.extend([
+        'CPUSpeakerDiarizer',
+        'CPUSpeakerProfile'
+    ])
+except ImportError:
+    # CPU diarization not available
+    pass

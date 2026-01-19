@@ -33,6 +33,18 @@ from src.metrics.role_inference import (
     RolePatterns,
     SpeakerRoleAnalysis,
 )
+
+# Aggregate role inference with diarization confidence
+try:
+    from src.metrics.aggregate_role_inference import (
+        AggregateRoleInferenceEngine,
+        AggregateRoleAnalysis,
+        is_aggregate_inference_available,
+    )
+except ImportError:
+    AggregateRoleInferenceEngine = None
+    AggregateRoleAnalysis = None
+    is_aggregate_inference_available = None
 from src.metrics.confidence_analyzer import (
     ConfidenceAnalyzer,
     ConfidenceRange,
@@ -91,6 +103,10 @@ __all__ = [
     'BridgeRole',
     'RolePatterns',
     'SpeakerRoleAnalysis',
+    # Aggregate role inference (two-pass architecture)
+    'AggregateRoleInferenceEngine',
+    'AggregateRoleAnalysis',
+    'is_aggregate_inference_available',
     # Confidence analysis
     'ConfidenceAnalyzer',
     'ConfidenceRange',

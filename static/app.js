@@ -278,9 +278,70 @@ class ApiClient {
 class ResultsRenderer {
     constructor(container) {
         this.container = container;
+        // Speaker-to-role mapping for displaying roles instead of speaker IDs
+        this.speakerRoles = {};
+    }
+
+    /**
+     * Build speaker-to-role mapping from role assignments.
+     * This allows all render methods to display roles instead of "speaker_X".
+     */
+    buildSpeakerRoleMap(roleAssignments) {
+        this.speakerRoles = {};
+        if (!roleAssignments) return;
+
+        roleAssignments.forEach(ra => {
+            if (ra.speaker_id && ra.role) {
+                // Extract just the role name (e.g., "Captain" from "Captain/Command")
+                const roleName = ra.role.split('/')[0];
+                this.speakerRoles[ra.speaker_id] = {
+                    role: roleName,
+                    fullRole: ra.role,
+                    confidence: ra.confidence || 0
+                };
+            }
+        });
+    }
+
+    /**
+     * Get display name for a speaker - prefers role name over speaker_id.
+     * @param {string} speakerId - The speaker ID (e.g., "speaker_1")
+     * @param {boolean} includeId - Whether to include speaker ID as suffix for disambiguation
+     * @returns {string} Display name (e.g., "Captain" or "Captain (1)")
+     */
+    getSpeakerDisplayName(speakerId, includeId = false) {
+        if (!speakerId) return 'Unknown';
+
+        const roleInfo = this.speakerRoles[speakerId];
+        if (roleInfo && roleInfo.role && roleInfo.role !== 'Unknown') {
+            if (includeId) {
+                // Extract number from speaker_id for disambiguation
+                const num = speakerId.replace(/\D/g, '');
+                return `${roleInfo.role} (${num})`;
+            }
+            return roleInfo.role;
+        }
+
+        // Fallback: format speaker_id more nicely
+        const num = speakerId.replace(/\D/g, '');
+        return `Crew ${num}`;
+    }
+
+    /**
+     * Get role badge HTML for a speaker.
+     */
+    getSpeakerRoleBadge(speakerId) {
+        const roleInfo = this.speakerRoles[speakerId];
+        if (!roleInfo) return '';
+
+        const confClass = roleInfo.confidence >= 0.7 ? 'high' : roleInfo.confidence >= 0.4 ? 'medium' : 'low';
+        return `<span class="role-badge ${confClass}">${roleInfo.role}</span>`;
     }
 
     render(results) {
+        // Build speaker-to-role mapping first (before any rendering)
+        this.buildSpeakerRoleMap(results.role_assignments);
+
         // Update stats
         document.getElementById('duration').textContent =
             this.formatDuration(results.duration_seconds);
@@ -312,6 +373,12 @@ class ResultsRenderer {
 
         // Render Training recommendations
         this.renderTraining(results.training_recommendations);
+
+        // Render AI Narrative
+        this.renderNarrative(results.narrative_summary);
+
+        // Render AI Story
+        this.renderStory(results.story_narrative);
     }
 
     renderSummary(results) {
@@ -380,15 +447,19 @@ class ResultsRenderer {
         if (!segments || segments.length === 0) {
             container.innerHTML = '<p class="empty">No transcription available</p>';
         } else {
-            container.innerHTML = segments.map(seg => `
-                <div class="segment">
+            container.innerHTML = segments.map(seg => {
+                const displayName = this.getSpeakerDisplayName(seg.speaker_id, true);
+                const roleInfo = this.speakerRoles[seg.speaker_id];
+                const roleClass = roleInfo ? 'has-role' : '';
+                return `
+                <div class="segment ${roleClass}">
                     <div class="segment-header">
-                        <span class="segment-speaker">${seg.speaker_id || 'Speaker'}</span>
+                        <span class="segment-speaker">${displayName}</span>
                         <span class="segment-time">${this.formatTime(seg.start_time)} - ${this.formatTime(seg.end_time)}</span>
                     </div>
                     <div class="segment-text">${this.escapeHtml(seg.text)}</div>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         document.getElementById('full-text').textContent = fullText || '';
@@ -397,50 +468,168 @@ class ResultsRenderer {
     renderSpeakers(speakers, roleAssignments) {
         const container = document.getElementById('speakers-content');
 
+        // Define standard bridge roles with icons and descriptions
+        const BRIDGE_ROLES = [
+            { id: 'Captain/Command', name: 'Captain', icon: '👨‍✈️', desc: 'Commands the bridge crew' },
+            { id: 'Helm/Navigation', name: 'Helm', icon: '🧭', desc: 'Pilots the ship' },
+            { id: 'Tactical/Weapons', name: 'Tactical', icon: '🎯', desc: 'Weapons and defense' },
+            { id: 'Science/Sensors', name: 'Science', icon: '🔬', desc: 'Sensors and analysis' },
+            { id: 'Engineering/Systems', name: 'Engineering', icon: '⚙️', desc: 'Ship systems and power' },
+            { id: 'Operations/Monitoring', name: 'Operations', icon: '📊', desc: 'Monitoring and logistics' },
+            { id: 'Communications', name: 'Comms', icon: '📡', desc: 'Hailing and signals' },
+        ];
+
+        // Build speaker data lookup
+        const speakerDataMap = {};
+        if (speakers) {
+            for (const s of speakers) {
+                speakerDataMap[s.speaker_id] = s;
+            }
+        }
+
+        // Build role-to-speakers mapping from role_assignments
+        const roleToSpeakers = {};
+        const unassignedSpeakers = [];
+
+        if (roleAssignments && roleAssignments.length > 0) {
+            for (const ra of roleAssignments) {
+                const role = ra.role || 'Crew Member';
+                if (!roleToSpeakers[role]) {
+                    roleToSpeakers[role] = [];
+                }
+                roleToSpeakers[role].push({
+                    speaker_id: ra.speaker_id,
+                    confidence: ra.confidence,
+                    voice_confidence: ra.voice_confidence,
+                    telemetry_confidence: ra.telemetry_confidence,
+                    evidence_count: ra.evidence_count,
+                    methodology_note: ra.methodology_note,
+                    key_indicators: ra.key_indicators || [],
+                    speakerData: speakerDataMap[ra.speaker_id] || {}
+                });
+            }
+        } else if (speakers) {
+            // No role assignments - all speakers are unassigned
+            for (const s of speakers) {
+                unassignedSpeakers.push({
+                    speaker_id: s.speaker_id,
+                    speakerData: s
+                });
+            }
+        }
+
         if (!speakers || speakers.length === 0) {
             container.innerHTML = '<p class="empty">No speaker information available</p>';
             return;
         }
 
-        // Build role lookup from role_assignments
-        const roleMap = {};
-        if (roleAssignments) {
-            for (const ra of roleAssignments) {
-                roleMap[ra.speaker_id] = {
-                    role: ra.role,
-                    confidence: ra.confidence
-                };
-            }
-        }
+        // Helper function to get confidence class
+        const getConfClass = (conf) => {
+            if (conf >= 0.8) return 'high';
+            if (conf >= 0.5) return 'medium';
+            return 'low';
+        };
 
-        container.innerHTML = speakers.map(speaker => {
-            const roleInfo = roleMap[speaker.speaker_id];
-            const role = roleInfo?.role || speaker.role;
-            const roleConfidence = roleInfo?.confidence;
+        // Render role cards
+        let html = '<div class="roles-grid">';
 
-            return `
-                <div class="speaker-card">
-                    <h3>
-                        ${speaker.speaker_id}
-                        ${role ? `<span class="speaker-role">${role}${roleConfidence ? ` (${(roleConfidence * 100).toFixed(0)}%)` : ''}</span>` : ''}
-                    </h3>
-                    <div class="speaker-stats">
-                        <div class="speaker-stat">
-                            <strong>${this.formatDuration(speaker.total_speaking_time)}</strong>
-                            Speaking time
+        for (const roleDef of BRIDGE_ROLES) {
+            const assignedSpeakers = roleToSpeakers[roleDef.id] || [];
+            const hasAssignment = assignedSpeakers.length > 0;
+            const topSpeaker = assignedSpeakers[0];
+
+            html += `
+                <div class="role-card ${hasAssignment ? 'assigned' : 'unassigned'}">
+                    <div class="role-card-header">
+                        <span class="role-icon">${roleDef.icon}</span>
+                        <div class="role-info">
+                            <span class="role-name">${roleDef.name}</span>
+                            <span class="role-desc">${roleDef.desc}</span>
                         </div>
-                        <div class="speaker-stat">
-                            <strong>${speaker.utterance_count}</strong>
-                            Utterances
-                        </div>
-                        <div class="speaker-stat">
-                            <strong>${speaker.avg_utterance_duration.toFixed(1)}s</strong>
-                            Avg duration
-                        </div>
+                    </div>
+                    <div class="role-card-body">
+                        ${hasAssignment ? assignedSpeakers.map(sp => {
+                            const conf = sp.confidence || 0;
+                            const voiceConf = sp.voice_confidence;
+                            const telemetryConf = sp.telemetry_confidence;
+                            const evidenceCount = sp.evidence_count || 0;
+                            const data = sp.speakerData || {};
+
+                            return `
+                                <div class="role-speaker">
+                                    <div class="role-speaker-header">
+                                        <span class="speaker-name">${this.getSpeakerDisplayName(sp.speaker_id)}</span>
+                                        <span class="speaker-confidence ${getConfClass(conf)}">${(conf * 100).toFixed(0)}%</span>
+                                    </div>
+                                    <div class="confidence-sources">
+                                        ${voiceConf !== undefined ? `
+                                            <span class="conf-source voice" title="Based on speech patterns and keywords">
+                                                <span class="source-icon">🎤</span> ${(voiceConf * 100).toFixed(0)}%
+                                            </span>
+                                        ` : ''}
+                                        ${telemetryConf !== undefined && telemetryConf > 0 ? `
+                                            <span class="conf-source telemetry" title="${evidenceCount} console actions matched">
+                                                <span class="source-icon">🖥️</span> +${(telemetryConf * 100).toFixed(0)}%
+                                            </span>
+                                        ` : ''}
+                                    </div>
+                                    ${sp.key_indicators && sp.key_indicators.length > 0 ? `
+                                        <div class="key-indicators">
+                                            ${sp.key_indicators.slice(0, 3).map(kw => `<span class="keyword-tag">${kw}</span>`).join('')}
+                                        </div>
+                                    ` : ''}
+                                    <div class="speaker-mini-stats">
+                                        <span title="Speaking time">${this.formatDuration(data.total_speaking_time || 0)}</span>
+                                        <span title="Utterances">${data.utterance_count || 0} utterances</span>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('') : `
+                            <div class="role-empty">
+                                <span class="empty-icon">?</span>
+                                <span class="empty-text">Not detected</span>
+                            </div>
+                        `}
                     </div>
                 </div>
             `;
-        }).join('');
+        }
+
+        // Handle "Crew Member" / Unknown role assignments
+        const crewMembers = roleToSpeakers['Crew Member'] || [];
+        if (crewMembers.length > 0 || unassignedSpeakers.length > 0) {
+            const allUnassigned = [...crewMembers, ...unassignedSpeakers];
+            html += `
+                <div class="role-card unassigned crew-members">
+                    <div class="role-card-header">
+                        <span class="role-icon">👤</span>
+                        <div class="role-info">
+                            <span class="role-name">Other Crew</span>
+                            <span class="role-desc">Role not yet determined</span>
+                        </div>
+                    </div>
+                    <div class="role-card-body">
+                        ${allUnassigned.map(sp => {
+                            const data = sp.speakerData || {};
+                            return `
+                                <div class="role-speaker minor">
+                                    <div class="role-speaker-header">
+                                        <span class="speaker-name">${this.getSpeakerDisplayName(sp.speaker_id)}</span>
+                                    </div>
+                                    <div class="speaker-mini-stats">
+                                        <span>${this.formatDuration(data.total_speaking_time || 0)}</span>
+                                        <span>${data.utterance_count || 0} utterances</span>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        html += '</div>';
+        container.innerHTML = html;
     }
 
     renderQuality(quality, confidenceDistribution) {
@@ -582,7 +771,7 @@ class ResultsRenderer {
                                         <div class="examples-content">
                                             ${p.examples.map(ex => `
                                                 <div class="example-quote">
-                                                    <span class="quote-speaker">${ex.speaker || 'Speaker'}</span>
+                                                    <span class="quote-speaker">${this.getSpeakerDisplayName(ex.speaker) || 'Speaker'}</span>
                                                     <span class="quote-text">"${this.escapeHtml(ex.text || ex)}"</span>
                                                 </div>
                                             `).join('')}
@@ -618,7 +807,7 @@ class ResultsRenderer {
                                         <div class="examples-content">
                                             ${p.examples.map(ex => `
                                                 <div class="example-quote">
-                                                    <span class="quote-speaker">${ex.speaker || 'Speaker'}</span>
+                                                    <span class="quote-speaker">${this.getSpeakerDisplayName(ex.speaker) || 'Speaker'}</span>
                                                     <span class="quote-text">"${this.escapeHtml(ex.text || ex)}"</span>
                                                 </div>
                                             `).join('')}
@@ -645,8 +834,8 @@ class ResultsRenderer {
             <div class="scorecard">
                 <div class="scorecard-header">
                     <h3>
-                        ${card.speaker_id}
-                        ${card.role ? `<span class="speaker-role">${card.role}</span>` : ''}
+                        ${this.getSpeakerDisplayName(card.speaker_id)}
+                        ${card.role && !this.speakerRoles[card.speaker_id] ? `<span class="speaker-role">${card.role}</span>` : ''}
                     </h3>
                     <span class="overall-score">${card.overall_score.toFixed(1)}/5</span>
                 </div>
@@ -771,7 +960,7 @@ class ResultsRenderer {
                             const confLevel = comm.confidence >= 0.7 ? 'high' : comm.confidence >= 0.4 ? 'medium' : 'low';
                             return `
                             <div class="comm-item">
-                                <span class="comm-speaker">${comm.speaker}</span>
+                                <span class="comm-speaker">${this.getSpeakerDisplayName(comm.speaker)}</span>
                                 <span class="comm-text">"${this.escapeHtml(comm.text)}"</span>
                                 <span class="comm-confidence ${confLevel}">${(comm.confidence * 100).toFixed(0)}%</span>
                             </div>
@@ -786,7 +975,7 @@ class ResultsRenderer {
                     <div class="speaker-stats-list">
                         ${(Array.isArray(learning.speaker_statistics) ? learning.speaker_statistics : Object.values(learning.speaker_statistics)).map(stat => `
                             <div class="speaker-stat-row">
-                                <span class="speaker-id">${stat.speaker}</span>
+                                <span class="speaker-id">${this.getSpeakerDisplayName(stat.speaker)}</span>
                                 <div class="stat-bar-wrap">
                                     <div class="stat-bar" style="width: ${stat.percentage}%"></div>
                                 </div>
@@ -836,84 +1025,118 @@ class ResultsRenderer {
             return '#ef4444';
         };
 
+        const getScoreLabel = (score) => {
+            if (score >= 4) return 'Excellent';
+            if (score >= 3) return 'Good';
+            if (score >= 2) return 'Developing';
+            return 'Needs Focus';
+        };
+
+        // Icons and brief descriptions for each habit
+        const habitInfo = {
+            1: { icon: '🎯', brief: 'Taking responsibility and initiative' },
+            2: { icon: '🧭', brief: 'Having clear goals and vision' },
+            3: { icon: '📋', brief: 'Prioritizing important tasks first' },
+            4: { icon: '🤝', brief: 'Finding solutions that benefit everyone' },
+            5: { icon: '👂', brief: 'Understanding others before being understood' },
+            6: { icon: '⚡', brief: 'Creative collaboration for better results' },
+            7: { icon: '🔄', brief: 'Continuous improvement and learning' }
+        };
+
         container.innerHTML = `
-            <div class="habits-header">
-                <h2>Leadership Effectiveness Assessment</h2>
-                <div class="overall-score-ring">
-                    <svg viewBox="0 0 100 100" class="score-ring">
-                        <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="8"/>
-                        <circle cx="50" cy="50" r="45" fill="none" stroke="${getScoreColor(habits.overall_score)}" stroke-width="8"
-                            stroke-dasharray="${(habits.overall_score / 5) * 283} 283"
-                            stroke-linecap="round" transform="rotate(-90 50 50)"/>
-                    </svg>
-                    <div class="score-ring-text">
-                        <span class="score-big">${habits.overall_score.toFixed(1)}</span>
-                        <span class="score-max">/5</span>
-                    </div>
+            <div class="habits-intro">
+                <div class="habits-intro-text">
+                    <h2>7 Habits of Highly Effective People</h2>
+                    <p>Assessment based on Stephen Covey's leadership framework, measuring team communication patterns.</p>
                 </div>
-                <div class="overall-label">Overall Effectiveness</div>
+                <div class="habits-overall-score">
+                    <div class="overall-score-ring">
+                        <svg viewBox="0 0 100 100" class="score-ring">
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="8"/>
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="${getScoreColor(habits.overall_score)}" stroke-width="8"
+                                stroke-dasharray="${(habits.overall_score / 5) * 283} 283"
+                                stroke-linecap="round" transform="rotate(-90 50 50)"/>
+                        </svg>
+                        <div class="score-ring-text">
+                            <span class="score-big">${habits.overall_score.toFixed(1)}</span>
+                            <span class="score-max">/5</span>
+                        </div>
+                    </div>
+                    <div class="overall-label">${getScoreLabel(habits.overall_score)}</div>
+                </div>
             </div>
 
             <div class="habits-grid">
                 ${habits.habits.map(h => {
                     const scoreClass = getScoreClass(h.score);
+                    const info = habitInfo[h.habit_number] || { icon: '📌', brief: '' };
+                    const scorePercent = (h.score / 5) * 100;
                     return `
                     <div class="habit-card ${scoreClass}">
                         <div class="habit-card-header">
+                            <div class="habit-icon-wrap">
+                                <span class="habit-icon">${info.icon}</span>
+                            </div>
                             <div class="habit-info">
                                 <span class="habit-num">Habit ${h.habit_number}</span>
                                 <span class="habit-name">${h.youth_friendly_name || h.habit_name}</span>
                             </div>
-                            <div class="habit-score-display ${scoreClass}">
-                                <span class="score-val">${h.score}/5</span>
+                        </div>
+
+                        <div class="habit-brief">${info.brief}</div>
+
+                        <div class="habit-score-section">
+                            <div class="habit-score-bar">
+                                <div class="habit-score-fill ${scoreClass}" style="width: ${scorePercent}%"></div>
+                            </div>
+                            <div class="habit-score-info">
+                                <span class="habit-score-value ${scoreClass}">${h.score}/5</span>
+                                <span class="habit-score-label">${getScoreLabel(h.score)}</span>
                             </div>
                         </div>
-                        <div class="habit-observations">
-                            <span class="obs-count">${h.observation_count}</span> observations
+
+                        <div class="habit-stats">
+                            <span class="habit-stat">
+                                <span class="stat-value">${h.observation_count}</span>
+                                <span class="stat-label">observations</span>
+                            </span>
                         </div>
+
                         <div class="habit-interpretation">${h.interpretation}</div>
+
                         ${h.development_tip ? `
                             <div class="habit-tip-box">
                                 <span class="tip-icon">💡</span>
                                 <div class="tip-content">
-                                    <span class="tip-label">Tip</span>
+                                    <span class="tip-label">Growth Tip</span>
                                     <span class="tip-text">${h.development_tip}</span>
                                 </div>
                             </div>
                         ` : ''}
-                        ${h.examples?.length > 0 || h.pattern_breakdown ? `
+
+                        ${(h.examples?.length > 0 || h.gap_to_next_score) ? `
                             <details class="habit-details">
                                 <summary>
                                     <span class="details-icon">▶</span>
-                                    Show Evidence
+                                    View Evidence & Progress Path
                                 </summary>
                                 <div class="habit-evidence-content">
-                                    ${h.pattern_breakdown && Object.keys(h.pattern_breakdown).length > 0 ? `
-                                        <div class="pattern-list">
-                                            <span class="evidence-label">Pattern Breakdown</span>
-                                            ${Object.entries(h.pattern_breakdown).map(([k, v]) => `
-                                                <div class="pattern-item">
-                                                    <span class="pattern-name">${k}</span>
-                                                    <span class="pattern-count">${v} matches</span>
-                                                </div>
-                                            `).join('')}
-                                        </div>
-                                    ` : ''}
                                     ${h.gap_to_next_score ? `
                                         <div class="gap-info">
-                                            <span class="evidence-label">To Improve</span>
+                                            <span class="evidence-label">📈 How to Improve</span>
                                             <p>${h.gap_to_next_score}</p>
                                         </div>
                                     ` : ''}
                                     ${h.examples?.length > 0 ? `
                                         <div class="examples-list">
-                                            <span class="evidence-label">Examples</span>
-                                            ${h.examples.map(ex => `
+                                            <span class="evidence-label">💬 Examples from Session</span>
+                                            ${h.examples.slice(0, 3).map(ex => `
                                                 <div class="example-item">
-                                                    <span class="ex-speaker">${ex.speaker || 'Speaker'}</span>
+                                                    <span class="ex-speaker">${this.getSpeakerDisplayName(ex.speaker) || 'Speaker'}</span>
                                                     <span class="ex-text">"${this.escapeHtml(ex.text || ex)}"</span>
                                                 </div>
                                             `).join('')}
+                                            ${h.examples.length > 3 ? `<div class="more-examples">+${h.examples.length - 3} more examples</div>` : ''}
                                         </div>
                                     ` : ''}
                                 </div>
@@ -923,49 +1146,51 @@ class ResultsRenderer {
                 `}).join('')}
             </div>
 
-            ${habits.strengths && habits.strengths.length > 0 ? `
-                <div class="summary-section strengths-section">
-                    <h3>
-                        <span class="section-icon">✓</span>
-                        Team Strengths
-                    </h3>
-                    <div class="summary-list">
-                        ${habits.strengths.map(s => `
-                            <div class="summary-item strength">
-                                <div class="summary-item-header">
-                                    <span class="summary-name">${s.name}</span>
-                                    <span class="summary-score high">${s.score}/5</span>
+            <div class="habits-summary-grid">
+                ${habits.strengths && habits.strengths.length > 0 ? `
+                    <div class="summary-section strengths-section">
+                        <h3>
+                            <span class="section-icon">✓</span>
+                            Team Strengths
+                        </h3>
+                        <div class="summary-list">
+                            ${habits.strengths.map(s => `
+                                <div class="summary-item strength">
+                                    <div class="summary-item-header">
+                                        <span class="summary-name">${s.name}</span>
+                                        <span class="summary-score high">${s.score}/5</span>
+                                    </div>
+                                    ${s.interpretation ? `<p class="summary-desc">${s.interpretation}</p>` : ''}
                                 </div>
-                                ${s.interpretation ? `<p class="summary-desc">${s.interpretation}</p>` : ''}
-                            </div>
-                        `).join('')}
+                            `).join('')}
+                        </div>
                     </div>
-                </div>
-            ` : ''}
+                ` : ''}
 
-            ${habits.growth_areas && habits.growth_areas.length > 0 ? `
-                <div class="summary-section growth-section">
-                    <h3>
-                        <span class="section-icon">↗</span>
-                        Growth Opportunities
-                    </h3>
-                    <div class="summary-list">
-                        ${habits.growth_areas.map(g => `
-                            <div class="summary-item growth">
-                                <div class="summary-item-header">
-                                    <span class="summary-name">${g.name}</span>
-                                    <span class="summary-score low">${g.score}/5</span>
+                ${habits.growth_areas && habits.growth_areas.length > 0 ? `
+                    <div class="summary-section growth-section">
+                        <h3>
+                            <span class="section-icon">↗</span>
+                            Growth Opportunities
+                        </h3>
+                        <div class="summary-list">
+                            ${habits.growth_areas.map(g => `
+                                <div class="summary-item growth">
+                                    <div class="summary-item-header">
+                                        <span class="summary-name">${g.name}</span>
+                                        <span class="summary-score low">${g.score}/5</span>
+                                    </div>
+                                    ${g.development_tip ? `
+                                        <p class="summary-tip">
+                                            <span class="tip-bullet">💡</span> ${g.development_tip}
+                                        </p>
+                                    ` : ''}
                                 </div>
-                                ${g.development_tip ? `
-                                    <p class="summary-tip">
-                                        <em>Tip:</em> ${g.development_tip}
-                                    </p>
-                                ` : ''}
-                            </div>
-                        `).join('')}
+                            `).join('')}
+                        </div>
                     </div>
-                </div>
-            ` : ''}
+                ` : ''}
+            </div>
         `;
     }
 
@@ -1100,6 +1325,88 @@ class ResultsRenderer {
         `;
     }
 
+    renderNarrative(narrativeSummary) {
+        const loadingEl = document.getElementById('narrative-loading');
+        const contentEl = document.getElementById('narrative-section');
+        const unavailableEl = document.getElementById('narrative-unavailable');
+        const narrativeContent = document.getElementById('narrative-content');
+        const narrativeModel = document.getElementById('narrative-model');
+
+        // Hide loading state
+        if (loadingEl) loadingEl.classList.add('hidden');
+
+        if (narrativeSummary?.narrative) {
+            // Show content
+            if (unavailableEl) unavailableEl.classList.add('hidden');
+            if (contentEl) contentEl.classList.remove('hidden');
+
+            // Convert markdown-style to HTML
+            const narrative = narrativeSummary.narrative;
+            let html = narrative.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            html = html.split(/\n\n+/).map(p => `<p>${p.trim()}</p>`).join('');
+            html = html.replace(/\n/g, '<br>');
+
+            if (narrativeContent) narrativeContent.innerHTML = html;
+
+            // Show model and generation time
+            const genTime = narrativeSummary.generation_time;
+            const timeStr = genTime ? ` in ${genTime}s` : '';
+            if (narrativeModel) {
+                narrativeModel.textContent = `Generated by ${narrativeSummary.model || 'AI'}${timeStr}`;
+            }
+        } else {
+            // Show unavailable state
+            if (contentEl) contentEl.classList.add('hidden');
+            if (unavailableEl) unavailableEl.classList.remove('hidden');
+        }
+    }
+
+    renderStory(storyNarrative) {
+        const loadingEl = document.getElementById('story-loading');
+        const contentEl = document.getElementById('story-section');
+        const unavailableEl = document.getElementById('story-unavailable');
+        const storyContent = document.getElementById('story-content');
+        const storyModel = document.getElementById('story-model');
+
+        // Hide loading state
+        if (loadingEl) loadingEl.classList.add('hidden');
+
+        if (storyNarrative?.story) {
+            // Show content
+            if (unavailableEl) unavailableEl.classList.add('hidden');
+            if (contentEl) contentEl.classList.remove('hidden');
+
+            // Convert markdown-style to HTML with story-specific formatting
+            const story = storyNarrative.story;
+            let html = story.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            // Handle italics for quotes
+            html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+            // Convert paragraphs
+            html = html.split(/\n\n+/).map(p => {
+                const trimmed = p.trim();
+                // Check if it's a quote (starts with ")
+                if (trimmed.startsWith('"') || trimmed.includes('said') || trimmed.includes('ordered')) {
+                    return `<p class="story-dialogue">${trimmed}</p>`;
+                }
+                return `<p>${trimmed}</p>`;
+            }).join('');
+            html = html.replace(/\n/g, '<br>');
+
+            if (storyContent) storyContent.innerHTML = html;
+
+            // Show model and generation time
+            const genTime = storyNarrative.generation_time;
+            const timeStr = genTime ? ` in ${genTime}s` : '';
+            if (storyModel) {
+                storyModel.textContent = `Generated by ${storyNarrative.model || 'AI'}${timeStr}`;
+            }
+        } else {
+            // Show unavailable state
+            if (contentEl) contentEl.classList.add('hidden');
+            if (unavailableEl) unavailableEl.classList.remove('hidden');
+        }
+    }
+
     formatDuration(seconds) {
         if (!seconds) return '0:00';
         const mins = Math.floor(seconds / 60);
@@ -1140,6 +1447,13 @@ class ResultsRenderer {
         md += `| Processing Time | ${results.processing_time_seconds.toFixed(1)}s |\n`;
         md += `\n`;
 
+        // AI Narrative Summary
+        if (results.narrative_summary?.narrative) {
+            md += `## AI Mission Debrief\n\n`;
+            md += `*Generated by ${results.narrative_summary.model || 'AI'}*\n\n`;
+            md += `${results.narrative_summary.narrative}\n\n`;
+        }
+
         // Speakers with Role Assignments
         if (results.speakers && results.speakers.length > 0) {
             md += `## Speakers\n\n`;
@@ -1156,7 +1470,8 @@ class ResultsRenderer {
 
             for (const s of results.speakers) {
                 const role = roleMap[s.speaker_id] || s.role || '-';
-                md += `| ${s.speaker_id} | ${role} | ${this.formatDuration(s.total_speaking_time)} | ${s.utterance_count} | ${s.avg_utterance_duration.toFixed(1)}s |\n`;
+                const displayName = this.getSpeakerDisplayName(s.speaker_id);
+                md += `| ${displayName} | ${role} | ${this.formatDuration(s.total_speaking_time)} | ${s.utterance_count} | ${s.avg_utterance_duration.toFixed(1)}s |\n`;
             }
             md += `\n`;
         }
@@ -1168,7 +1483,7 @@ class ResultsRenderer {
         md += `## Transcript\n\n`;
         if (results.transcription && results.transcription.length > 0) {
             for (const seg of results.transcription) {
-                const speaker = seg.speaker_id || 'Speaker';
+                const speaker = this.getSpeakerDisplayName(seg.speaker_id) || 'Speaker';
                 const time = this.formatTime(seg.start_time);
                 md += `**[${time}] ${speaker}:** ${seg.text}\n\n`;
             }
@@ -1590,6 +1905,13 @@ class App {
         if (progressFill) progressFill.style.width = `${progress}%`;
         if (progressPercent) progressPercent.textContent = `${progress}%`;
 
+        // Show narrative loading when narrative step starts
+        if (stepId === 'narrative') {
+            this.showNarrativeLoading();
+        } else if (stepId === 'complete') {
+            this.stopNarrativeLoading();
+        }
+
         // Update step states
         const steps = document.querySelectorAll('#progress-steps .step');
         let foundCurrent = false;
@@ -1618,6 +1940,35 @@ class App {
                 if (icon) icon.innerHTML = '&#9675;'; // Empty circle
             }
         });
+    }
+
+    // Show narrative loading with timer
+    showNarrativeLoading() {
+        const loadingEl = document.getElementById('narrative-loading');
+        const contentEl = document.getElementById('narrative-section');
+        const unavailableEl = document.getElementById('narrative-unavailable');
+
+        if (loadingEl) loadingEl.classList.remove('hidden');
+        if (contentEl) contentEl.classList.add('hidden');
+        if (unavailableEl) unavailableEl.classList.add('hidden');
+
+        // Start timer
+        this.narrativeStartTime = Date.now();
+        this.narrativeTimerInterval = setInterval(() => {
+            const elapsed = Math.floor((Date.now() - this.narrativeStartTime) / 1000);
+            const timerEl = document.getElementById('narrative-timer');
+            if (timerEl) {
+                timerEl.textContent = `${elapsed}s elapsed`;
+            }
+        }, 1000);
+    }
+
+    // Stop narrative loading timer
+    stopNarrativeLoading() {
+        if (this.narrativeTimerInterval) {
+            clearInterval(this.narrativeTimerInterval);
+            this.narrativeTimerInterval = null;
+        }
     }
 
     getExtensionFromMimeType(mimeType) {

@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 # Configuration
 WEB_HOST = os.getenv('WEB_SERVER_HOST', '0.0.0.0')
 WEB_PORT = int(os.getenv('WEB_SERVER_PORT', '8000'))
-MAX_UPLOAD_MB = int(os.getenv('WEB_MAX_UPLOAD_MB', '1024'))
+MAX_UPLOAD_MB = int(os.getenv('WEB_MAX_UPLOAD_MB', '2048'))
 MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
 CORS_ORIGINS = os.getenv('WEB_CORS_ORIGINS', '*').split(',')
 
