@@ -551,6 +551,9 @@ class ResultsRenderer {
             return 'low';
         };
 
+        // Calculate total speaking time for participation percentage
+        const totalSpeakingTime = speakers.reduce((sum, s) => sum + (s.total_speaking_time || 0), 0);
+
         // Render role cards
         let html = '<div class="roles-grid">';
 
@@ -575,6 +578,9 @@ class ResultsRenderer {
                             const telemetryConf = sp.telemetry_confidence;
                             const evidenceCount = sp.evidence_count || 0;
                             const data = sp.speakerData || {};
+                            const speakingTime = data.total_speaking_time || 0;
+                            const utterances = data.utterance_count || 0;
+                            const participation = totalSpeakingTime > 0 ? (speakingTime / totalSpeakingTime * 100) : 0;
 
                             return `
                                 <div class="role-speaker">
@@ -582,27 +588,48 @@ class ResultsRenderer {
                                         <span class="speaker-name">${this.getSpeakerDisplayName(sp.speaker_id)}</span>
                                         <span class="speaker-confidence ${getConfClass(conf)}">${(conf * 100).toFixed(0)}%</span>
                                     </div>
-                                    <div class="confidence-sources">
-                                        ${voiceConf !== undefined ? `
-                                            <span class="conf-source voice" title="Based on speech patterns and keywords">
-                                                <span class="source-icon">🎤</span> ${(voiceConf * 100).toFixed(0)}%
-                                            </span>
-                                        ` : ''}
-                                        ${telemetryConf !== undefined && telemetryConf > 0 ? `
-                                            <span class="conf-source telemetry" title="${evidenceCount} console actions matched">
-                                                <span class="source-icon">🖥️</span> +${(telemetryConf * 100).toFixed(0)}%
-                                            </span>
-                                        ` : ''}
+
+                                    <div class="crew-metrics">
+                                        <div class="crew-metric">
+                                            <div class="crew-metric-value">${this.formatDuration(speakingTime)}</div>
+                                            <div class="crew-metric-label">Speaking Time</div>
+                                        </div>
+                                        <div class="crew-metric">
+                                            <div class="crew-metric-value">${utterances}</div>
+                                            <div class="crew-metric-label">Utterances</div>
+                                        </div>
                                     </div>
-                                    ${sp.key_indicators && sp.key_indicators.length > 0 ? `
-                                        <div class="key-indicators">
-                                            ${sp.key_indicators.slice(0, 3).map(kw => `<span class="keyword-tag">${kw}</span>`).join('')}
+
+                                    <div class="participation-bar">
+                                        <div class="participation-bar-label">
+                                            <span>Participation</span>
+                                            <span>${participation.toFixed(1)}%</span>
+                                        </div>
+                                        <div class="participation-bar-track">
+                                            <div class="participation-bar-fill" style="width: ${Math.min(participation, 100)}%"></div>
+                                        </div>
+                                    </div>
+
+                                    ${(voiceConf !== undefined || (telemetryConf !== undefined && telemetryConf > 0)) ? `
+                                        <div class="confidence-sources">
+                                            ${voiceConf !== undefined ? `
+                                                <span class="conf-source voice" title="Based on speech patterns and keywords">
+                                                    <span class="source-icon">🎤</span> Voice ${(voiceConf * 100).toFixed(0)}%
+                                                </span>
+                                            ` : ''}
+                                            ${telemetryConf !== undefined && telemetryConf > 0 ? `
+                                                <span class="conf-source telemetry" title="${evidenceCount} console actions matched">
+                                                    <span class="source-icon">🖥️</span> Telemetry +${(telemetryConf * 100).toFixed(0)}%
+                                                </span>
+                                            ` : ''}
                                         </div>
                                     ` : ''}
-                                    <div class="speaker-mini-stats">
-                                        <span title="Speaking time">${this.formatDuration(data.total_speaking_time || 0)}</span>
-                                        <span title="Utterances">${data.utterance_count || 0} utterances</span>
-                                    </div>
+
+                                    ${sp.key_indicators && sp.key_indicators.length > 0 ? `
+                                        <div class="key-indicators">
+                                            ${sp.key_indicators.slice(0, 5).map(kw => `<span class="keyword-tag">"${kw}"</span>`).join('')}
+                                        </div>
+                                    ` : ''}
                                 </div>
                             `;
                         }).join('') : `

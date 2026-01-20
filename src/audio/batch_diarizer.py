@@ -200,7 +200,9 @@ class BatchSpeakerDiarizer:
             os.getenv('SPEAKER_EMBEDDING_THRESHOLD', '0.85')
         )
         self.min_speakers = min_speakers or int(os.getenv('MIN_EXPECTED_SPEAKERS', '1'))
-        self.max_speakers = max_speakers or int(os.getenv('MAX_EXPECTED_SPEAKERS', '8'))
+        # For chunked diarization, allow MORE speakers per chunk
+        # Cross-chunk merging will consolidate similar voices
+        self.max_speakers = max_speakers or int(os.getenv('MAX_EXPECTED_SPEAKERS', '12'))
         self.expected_speakers = int(os.getenv('EXPECTED_BRIDGE_CREW', '6'))
         self.min_embedding_duration = min_embedding_duration
 
@@ -210,10 +212,10 @@ class BatchSpeakerDiarizer:
         # Chunk-based diarization for long audio (prevents speaker drift)
         # Audio longer than this will be processed in chunks
         self.chunk_threshold_seconds = float(
-            os.getenv('DIARIZATION_CHUNK_THRESHOLD', '600')  # 10 minutes
+            os.getenv('DIARIZATION_CHUNK_THRESHOLD', '900')  # 15 minutes
         )
         self.chunk_duration_seconds = float(
-            os.getenv('DIARIZATION_CHUNK_DURATION', '300')  # 5 minutes per chunk
+            os.getenv('DIARIZATION_CHUNK_DURATION', '600')  # 10 minutes per chunk
         )
         self.chunk_overlap_seconds = float(
             os.getenv('DIARIZATION_CHUNK_OVERLAP', '30')  # 30 second overlap
@@ -256,6 +258,41 @@ class BatchSpeakerDiarizer:
         # Calculate audio duration
         audio_duration = len(audio_data) / sample_rate
         logger.info(f"Batch diarization: {len(segments)} segments, {audio_duration:.1f}s audio")
+
+        # Optional audio preprocessing for better embedding quality
+        preprocess_enabled = os.getenv('DIARIZATION_PREPROCESS', 'true').lower() == 'true'
+        if preprocess_enabled:
+            try:
+                from src.audio.preprocessing import preprocess_audio, get_audio_stats
+
+                # Log pre-processing stats
+                stats_before = get_audio_stats(audio_data, sample_rate)
+                logger.info(
+                    f"Audio stats before preprocessing: "
+                    f"peak={stats_before['peak']:.3f}, rms={stats_before['rms']:.3f}, "
+                    f"SNR≈{stats_before['snr_estimate']:.1f}dB"
+                )
+
+                # Apply preprocessing
+                audio_data = preprocess_audio(
+                    audio_data, sample_rate,
+                    normalize=True,
+                    highpass=True,
+                    noise_reduce=True,
+                    noise_strength=0.3
+                )
+
+                # Log post-processing stats
+                stats_after = get_audio_stats(audio_data, sample_rate)
+                logger.info(
+                    f"Audio stats after preprocessing: "
+                    f"peak={stats_after['peak']:.3f}, rms={stats_after['rms']:.3f}, "
+                    f"SNR≈{stats_after['snr_estimate']:.1f}dB"
+                )
+            except ImportError as e:
+                logger.debug(f"Preprocessing not available: {e}")
+            except Exception as e:
+                logger.warning(f"Preprocessing failed, using original audio: {e}")
 
         # Use chunked diarization for long audio to prevent speaker drift
         if audio_duration > self.chunk_threshold_seconds:
@@ -435,6 +472,12 @@ class BatchSpeakerDiarizer:
         # Interpolate gaps
         segments = self._interpolate_gaps_simple(segments)
 
+        # Consolidate tiny speakers to reduce over-segmentation
+        segments = self._consolidate_tiny_speakers(
+            segments, chunk_results, global_speaker_map,
+            min_segments=5  # Speakers with <5 segments get merged
+        )
+
         # Build result
         speaker_ids = set(s.get('speaker_id') for s in segments if s.get('speaker_id'))
         result = DiarizationResult(
@@ -458,6 +501,12 @@ class BatchSpeakerDiarizer:
         """
         Merge speaker clusters across chunks using centroid similarity.
 
+        Handles edge cases:
+        - Speaker appears in chunk 1 and 3 but not 2: Clustering finds them
+        - Two chunk speakers match same previous speaker: They remain separate
+          if their centroids are different (distinct voices)
+        - Short speakers with unreliable embeddings: Filtered by min_embedding_duration
+
         Args:
             chunk_results: List of chunk results with centroids
 
@@ -467,30 +516,62 @@ class BatchSpeakerDiarizer:
         if not chunk_results:
             return {}
 
-        # Collect all centroids with their chunk/speaker info
-        all_centroids = []  # (chunk_idx, local_speaker_id, centroid)
+        # Collect all centroids with their chunk/speaker info and speaking time
+        all_centroids = []  # (chunk_idx, local_speaker_id, centroid, speaking_time)
         for cr in chunk_results:
             for speaker_id, centroid in cr['centroids'].items():
-                all_centroids.append((cr['chunk_idx'], speaker_id, centroid))
+                # Calculate speaking time for this speaker in this chunk
+                speaking_time = 0.0
+                for seg_idx, spk in cr.get('segment_speakers', {}).items():
+                    if spk == speaker_id:
+                        speaking_time += 1.0  # Approximate
+                all_centroids.append((cr['chunk_idx'], speaker_id, centroid, speaking_time))
 
         if len(all_centroids) < 2:
             # Not enough to merge
             return {(c[0], c[1]): c[1] for c in all_centroids}
 
-        # Cluster centroids across chunks
-        centroid_matrix = np.array([c[2] for c in all_centroids])
-        distances = cdist(centroid_matrix, centroid_matrix, metric='cosine')
-        condensed = distances[np.triu_indices(len(all_centroids), k=1)]
+        # Filter out speakers with very little speaking time (unreliable embeddings)
+        min_speaking_time = 3.0  # At least 3 segments
+        reliable_centroids = [c for c in all_centroids if c[3] >= min_speaking_time]
+        unreliable_centroids = [c for c in all_centroids if c[3] < min_speaking_time]
 
-        # Use slightly higher threshold for cross-chunk merging
-        merge_threshold = 1.0 - (self.similarity_threshold * 0.9)  # Slightly stricter
-        linkage_matrix = linkage(condensed, method='average')
+        if len(reliable_centroids) < 2:
+            # Fall back to using all centroids
+            reliable_centroids = all_centroids
+            unreliable_centroids = []
+
+        logger.info(
+            f"Cross-chunk merging: {len(reliable_centroids)} reliable speakers, "
+            f"{len(unreliable_centroids)} short speakers"
+        )
+
+        # Cluster centroids across chunks
+        centroid_matrix = np.array([c[2] for c in reliable_centroids])
+        distances = cdist(centroid_matrix, centroid_matrix, metric='cosine')
+        condensed = distances[np.triu_indices(len(reliable_centroids), k=1)]
+
+        # Log distance statistics for debugging
+        if len(condensed) > 0:
+            logger.info(
+                f"Cross-chunk distances: min={condensed.min():.3f}, "
+                f"max={condensed.max():.3f}, mean={condensed.mean():.3f}"
+            )
+
+        # Use CONSERVATIVE threshold for cross-chunk merging
+        # Balance between over-merging (too few speakers) and over-segmentation (too many)
+        # 0.12 is conservative but allows same-voice matching across chunks
+        merge_threshold = 0.12
+        linkage_matrix = linkage(condensed, method='complete')  # Complete linkage is stricter
         labels = fcluster(linkage_matrix, t=merge_threshold, criterion='distance')
+
+        num_clusters = len(set(labels))
+        logger.info(f"Cross-chunk clustering: {num_clusters} clusters at threshold {merge_threshold}")
 
         # Build global speaker map
         # Group by cluster label, then assign global IDs by first appearance
         cluster_to_speakers = defaultdict(list)
-        for idx, (chunk_idx, speaker_id, centroid) in enumerate(all_centroids):
+        for idx, (chunk_idx, speaker_id, centroid, speaking_time) in enumerate(reliable_centroids):
             cluster_label = labels[idx]
             cluster_to_speakers[cluster_label].append((chunk_idx, speaker_id))
 
@@ -504,8 +585,26 @@ class BatchSpeakerDiarizer:
                 global_map[(chunk_idx, local_speaker)] = global_speaker_id
             global_id += 1
 
+        # Handle unreliable speakers: match to nearest reliable speaker
+        for chunk_idx, speaker_id, centroid, speaking_time in unreliable_centroids:
+            # Find most similar reliable centroid
+            best_match = None
+            best_similarity = 0.0
+            for r_chunk_idx, r_speaker_id, r_centroid, _ in reliable_centroids:
+                similarity = 1.0 - cosine(centroid, r_centroid)
+                if similarity > best_similarity:
+                    best_similarity = similarity
+                    best_match = (r_chunk_idx, r_speaker_id)
+
+            if best_match and best_similarity > 0.7:
+                global_map[(chunk_idx, speaker_id)] = global_map.get(best_match, f"speaker_{global_id}")
+            else:
+                # New speaker
+                global_map[(chunk_idx, speaker_id)] = f"speaker_{global_id}"
+                global_id += 1
+
         logger.info(
-            f"Merged {len(all_centroids)} chunk speakers into {global_id - 1} global speakers"
+            f"Merged {len(all_centroids)} chunk speakers into {len(set(global_map.values()))} global speakers"
         )
         return global_map
 
@@ -540,6 +639,120 @@ class BatchSpeakerDiarizer:
                 # Assign to nearest (prefer previous)
                 seg['speaker_id'] = prev_speaker or next_speaker or 'speaker_1'
                 seg['speaker_confidence'] = 0.4  # Low confidence for interpolated
+
+        return segments
+
+    def _consolidate_tiny_speakers(
+        self,
+        segments: List[Dict[str, Any]],
+        chunk_results: List[Dict],
+        global_speaker_map: Dict[Tuple[int, str], str],
+        min_segments: int = 5
+    ) -> List[Dict[str, Any]]:
+        """
+        Merge tiny speakers (<min_segments utterances) into their closest major speaker.
+
+        This reduces over-segmentation by consolidating speakers who have too few
+        utterances to be reliably distinct.
+
+        Args:
+            segments: List of segments with speaker_id assigned
+            chunk_results: Original chunk results with centroids
+            global_speaker_map: Mapping from chunk speakers to global speakers
+            min_segments: Minimum segments to be considered a "major" speaker
+
+        Returns:
+            Updated segments with tiny speakers merged
+        """
+        from collections import Counter
+
+        # Count segments per speaker
+        speaker_counts = Counter(s.get('speaker_id') for s in segments if s.get('speaker_id'))
+
+        # Identify major vs tiny speakers
+        major_speakers = {spk for spk, count in speaker_counts.items() if count >= min_segments}
+        tiny_speakers = {spk for spk, count in speaker_counts.items() if count < min_segments}
+
+        if not tiny_speakers or not major_speakers:
+            return segments
+
+        logger.info(
+            f"Consolidating {len(tiny_speakers)} tiny speakers (<{min_segments} segments) "
+            f"into {len(major_speakers)} major speakers"
+        )
+
+        # Build centroid map for global speakers
+        global_centroids = {}
+        for cr in chunk_results:
+            for local_speaker, centroid in cr.get('centroids', {}).items():
+                chunk_key = (cr['chunk_idx'], local_speaker)
+                global_speaker = global_speaker_map.get(chunk_key)
+                if global_speaker and global_speaker not in global_centroids:
+                    global_centroids[global_speaker] = centroid
+
+        # Find best match for each tiny speaker
+        merge_map = {}
+        for tiny_spk in tiny_speakers:
+            if tiny_spk not in global_centroids:
+                # No centroid available - merge into most common major speaker
+                merge_map[tiny_spk] = max(major_speakers, key=lambda s: speaker_counts.get(s, 0))
+                continue
+
+            tiny_centroid = global_centroids[tiny_spk]
+            best_match = None
+            best_similarity = 0.0
+
+            for major_spk in major_speakers:
+                if major_spk in global_centroids:
+                    major_centroid = global_centroids[major_spk]
+                    similarity = 1.0 - cosine(tiny_centroid, major_centroid)
+                    if similarity > best_similarity:
+                        best_similarity = similarity
+                        best_match = major_spk
+
+            if best_match and best_similarity > 0.6:  # Reasonable similarity threshold
+                merge_map[tiny_spk] = best_match
+                logger.debug(f"Merging {tiny_spk} -> {best_match} (similarity={best_similarity:.2f})")
+            else:
+                # Keep as separate speaker if no good match
+                pass
+
+        # Apply merges
+        merged_count = 0
+        for seg in segments:
+            old_speaker = seg.get('speaker_id')
+            if old_speaker in merge_map:
+                seg['speaker_id'] = merge_map[old_speaker]
+                seg['speaker_confidence'] *= 0.8  # Reduce confidence for merged
+                merged_count += 1
+
+        if merged_count > 0:
+            # Renumber speakers to be consecutive
+            segments = self._renumber_speakers(segments)
+            new_count = len(set(s.get('speaker_id') for s in segments if s.get('speaker_id')))
+            logger.info(f"Consolidated to {new_count} speakers ({merged_count} segments reassigned)")
+
+        return segments
+
+    def _renumber_speakers(self, segments: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Renumber speakers to be consecutive (speaker_1, speaker_2, etc.)."""
+        # Get unique speakers in order of first appearance
+        speaker_order = []
+        seen = set()
+        for seg in segments:
+            spk = seg.get('speaker_id')
+            if spk and spk not in seen:
+                speaker_order.append(spk)
+                seen.add(spk)
+
+        # Create renumbering map
+        renumber_map = {old: f"speaker_{i+1}" for i, old in enumerate(speaker_order)}
+
+        # Apply renumbering
+        for seg in segments:
+            old_speaker = seg.get('speaker_id')
+            if old_speaker in renumber_map:
+                seg['speaker_id'] = renumber_map[old_speaker]
 
         return segments
 

@@ -43,10 +43,12 @@ STARSHIP_HORIZONS_PROMPT = (
     "held a treaty, treaty for years, treaty is in effect. "
     "Neutral zone, blue neutral border zone, border patrol, tensions rising. "
 
-    # Ship names and designations - Hedge is critical (often misheard)
+    # Ship names and designations - critical (often misheard)
     "Player ship: Hedge, USS Hedge, the Hedge, of Hedge, crew of Hedge. "
     "Common phrases: captain and crew of Hedge, commanding officer of Hedge, "
     "greetings captain and crew of Hedge, to the commanding officer of Hedge. "
+    "Allied ships: Hyperion, USS Hyperion, the Hyperion, Hyperion is, "
+    "Endeavor, USS Endeavor, Damocles, USS Damocles, Endeavor and Damocles. "
     "Enemy ships: Lutren, Lutrench, Belgore, MSF, Wickert, Phobos, core trailer, chord trailer. "
     "Ship designations: 215, 302, 307, 310, 22, 32, R2. "
 
@@ -106,8 +108,10 @@ STARSHIP_HORIZONS_PROMPT = (
     # Weapons and tubes - critical for accuracy
     "Tubes: left tube, right tube, load tubes, put in tubes, unload, "
     "install the right tube, launch the missile, launch left tube, launch right tube. "
-    "Missiles: homing missiles, homings, nukes, nuke, load nukes, launch the nuke, "
-    "fire the nuke, nuke ready, nukes loaded, EMPs, EMP, mines, torpedoes. "
+    "Missiles: homing missiles, homing missile, homings, nukes, nuke, load nukes, "
+    "launch the nuke, fire the nuke, nuke ready, nukes loaded, nuclear, "
+    "EMPs, EMP, EMP missile, mines, mine, torpedoes, torpedo. "
+    "HVLI: HVLI, HVLIs, heavy velocity light interceptor. "
     "Beam frequency: terahertz (NOT hertz or earths), "
     "800 terahertz, set to 800 terahertz, set your laser to 800 terahertz, set lasers to 800 terahertz, "
     "500 terahertz, 460 terahertz, 100 terahertz, 200 terahertz, 300 terahertz, "

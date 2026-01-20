@@ -317,6 +317,9 @@ class RoleInferenceEngine:
         # Post-process to resolve role conflicts
         results = self._resolve_role_conflicts(results)
 
+        # Apply addressing pattern penalties
+        results = self._apply_addressing_penalties(results, speaker_utterances)
+
         return results
 
     # Minimum requirements for role assignment
@@ -772,6 +775,105 @@ class RoleInferenceEngine:
                 methodology_notes=old_analysis.methodology_notes +
                     f" (Reassigned from {old_analysis.inferred_role.value} - another speaker had stronger combined evidence.)"
             )
+
+        return results
+
+    # Patterns that indicate a speaker is ADDRESSING someone (not being that role)
+    ADDRESSING_PATTERNS = {
+        BridgeRole.CAPTAIN: [
+            r'^captain[,\s]',
+            r'^cap[,\s]',
+            r'^sir[,\s]',
+            r'\bcaptain[,\s]+(?:we|i|the|shields|weapons|engines)',
+        ],
+        BridgeRole.HELM: [
+            r'^helm[,\s]',
+            r'^navigation[,\s]',
+        ],
+        BridgeRole.TACTICAL: [
+            r'^tactical[,\s]',
+            r'^weapons[,\s]',
+        ],
+        BridgeRole.ENGINEERING: [
+            r'^engineer(?:ing)?[,\s]',
+        ],
+        BridgeRole.SCIENCE: [
+            r'^science[,\s]',
+        ],
+        BridgeRole.COMMUNICATIONS: [
+            r'^comms?[,\s]',
+            r'^communications[,\s]',
+        ],
+    }
+
+    def _apply_addressing_penalties(
+        self,
+        results: Dict[str, SpeakerRoleAnalysis],
+        speaker_utterances: Dict[str, List]
+    ) -> Dict[str, SpeakerRoleAnalysis]:
+        """
+        Detect when speakers address specific roles and penalize misassignment.
+
+        If a speaker frequently says "Captain, ..." they are NOT the Captain.
+        This fixes misattributions like "Captain, I cannot fire" being labeled Captain.
+
+        Args:
+            results: Current role analysis results
+            speaker_utterances: Mapping of speaker to their utterances
+
+        Returns:
+            Updated results with addressing penalties applied
+        """
+        import re
+
+        for speaker, analysis in results.items():
+            if analysis.inferred_role == BridgeRole.UNKNOWN:
+                continue
+
+            utterances = speaker_utterances.get(speaker, [])
+            if not utterances:
+                continue
+
+            # Count how many times this speaker addresses their assigned role
+            addressing_count = 0
+            total_count = len(utterances)
+
+            role_patterns = self.ADDRESSING_PATTERNS.get(analysis.inferred_role, [])
+            if not role_patterns:
+                continue
+
+            for utt in utterances:
+                text = (utt.get('text') or '').lower().strip()
+                for pattern in role_patterns:
+                    if re.search(pattern, text, re.IGNORECASE):
+                        addressing_count += 1
+                        break  # Count once per utterance
+
+            # If speaker frequently addresses their assigned role, reassign them
+            # Threshold: if >10% of utterances address the role, it's suspicious
+            if total_count >= 3 and addressing_count / total_count > 0.10:
+                old_role = analysis.inferred_role
+                new_confidence = analysis.confidence * 0.5  # Halve confidence
+
+                # Reassign to Crew Member
+                results[speaker] = SpeakerRoleAnalysis(
+                    speaker=analysis.speaker,
+                    inferred_role=BridgeRole.UNKNOWN,
+                    confidence=round(new_confidence, 2),
+                    utterance_count=analysis.utterance_count,
+                    utterance_percentage=analysis.utterance_percentage,
+                    keyword_matches=analysis.keyword_matches,
+                    total_keyword_matches=analysis.total_keyword_matches,
+                    key_indicators=analysis.key_indicators,
+                    example_utterances=analysis.example_utterances,
+                    methodology_notes=analysis.methodology_notes +
+                        f" (Reassigned from {old_role.value}: speaker frequently addresses {old_role.value} role, suggesting they are NOT that role.)"
+                )
+
+                logger.info(
+                    f"Addressing penalty: {speaker} reassigned from {old_role.value} -> Crew Member "
+                    f"({addressing_count}/{total_count} utterances address {old_role.value})"
+                )
 
         return results
 
