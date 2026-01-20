@@ -333,7 +333,19 @@
 
                     <!-- AI Team Analysis Tab -->
                     <div id="tab-narrative" class="tab-panel hidden">
-                        <div id="narrative-loading" class="narrative-loading">
+                        <div class="narrative-header">
+                            <h2>🎯 Team Dynamics Analysis</h2>
+                            <div class="narrative-actions">
+                                <button id="regenerate-narrative-btn" class="btn btn-regenerate" onclick="app.regenerateNarrative()">
+                                    <span class="btn-icon">🔄</span>
+                                    <span>Regenerate</span>
+                                </button>
+                                <div id="narrative-badge" class="narrative-badge hidden">
+                                    <span class="ai-model" id="narrative-model">AI Generated</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="narrative-loading" class="narrative-loading hidden">
                             <div class="loading-spinner"></div>
                             <div class="loading-text">
                                 <span class="loading-title">Generating Team Analysis...</span>
@@ -342,12 +354,6 @@
                             </div>
                         </div>
                         <div id="narrative-section" class="narrative-tab-content hidden">
-                            <div class="narrative-header">
-                                <h2>🎯 Team Dynamics Analysis</h2>
-                                <div class="narrative-badge">
-                                    <span class="ai-model" id="narrative-model">AI Generated</span>
-                                </div>
-                            </div>
                             <div id="narrative-content" class="narrative-content"></div>
                         </div>
                         <div id="narrative-unavailable" class="narrative-unavailable hidden">
@@ -360,7 +366,19 @@
 
                     <!-- AI Story Narrative Tab -->
                     <div id="tab-story" class="tab-panel hidden">
-                        <div id="story-loading" class="narrative-loading">
+                        <div class="narrative-header">
+                            <h2>📖 Mission Story</h2>
+                            <div class="narrative-actions">
+                                <button id="regenerate-story-btn" class="btn btn-regenerate" onclick="app.regenerateStory()">
+                                    <span class="btn-icon">🔄</span>
+                                    <span>Regenerate</span>
+                                </button>
+                                <div id="story-badge" class="narrative-badge hidden">
+                                    <span class="ai-model" id="story-model">AI Generated</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="story-loading" class="narrative-loading hidden">
                             <div class="loading-spinner"></div>
                             <div class="loading-text">
                                 <span class="loading-title">Generating Mission Story...</span>
@@ -369,12 +387,6 @@
                             </div>
                         </div>
                         <div id="story-section" class="narrative-tab-content hidden">
-                            <div class="narrative-header">
-                                <h2>📖 Mission Story</h2>
-                                <div class="narrative-badge">
-                                    <span class="ai-model" id="story-model">AI Generated</span>
-                                </div>
-                            </div>
                             <div id="story-content" class="narrative-content story-content"></div>
                         </div>
                         <div id="story-unavailable" class="narrative-unavailable hidden">

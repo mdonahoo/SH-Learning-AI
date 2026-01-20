@@ -33,6 +33,14 @@ from src.web.models import (
 from src.web.audio_processor import AudioProcessor, ANALYSIS_STEPS
 from src.web.archive_manager import ArchiveManager
 
+# Import narrative generators for regeneration
+try:
+    from src.web.narrative_summary import NarrativeSummaryGenerator
+    NARRATIVE_AVAILABLE = True
+except ImportError:
+    NARRATIVE_AVAILABLE = False
+    logger.warning("Narrative summary module not available for regeneration")
+
 load_dotenv()
 
 logger = logging.getLogger(__name__)
@@ -43,6 +51,7 @@ WEB_PORT = int(os.getenv('WEB_SERVER_PORT', '8000'))
 MAX_UPLOAD_MB = int(os.getenv('WEB_MAX_UPLOAD_MB', '2048'))
 MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
 CORS_ORIGINS = os.getenv('WEB_CORS_ORIGINS', '*').split(',')
+DISABLE_AUDIO_FILES = os.getenv('DISABLE_AUDIO_FILES', 'false').lower() == 'true'
 
 # Global processor and archive manager instances
 _processor: Optional[AudioProcessor] = None
@@ -148,6 +157,19 @@ async def health_check():
         whisper_loaded=processor.is_model_loaded,
         whisper_model=processor.whisper_model_size if processor.is_model_loaded else None
     )
+
+
+@app.get("/api/config")
+async def get_config():
+    """
+    Get client configuration settings.
+
+    Returns configuration flags that affect UI behavior.
+    """
+    return {
+        "audio_disabled": DISABLE_AUDIO_FILES,
+        "max_upload_mb": MAX_UPLOAD_MB
+    }
 
 
 @app.get("/api/services-status", response_model=ServicesStatusResponse)
@@ -396,6 +418,13 @@ async def analyze_audio(
     - Confidence distribution
     - Learning framework evaluation
     """
+    # Check if audio uploads are disabled
+    if DISABLE_AUDIO_FILES:
+        raise HTTPException(
+            status_code=403,
+            detail="Audio file uploads are disabled on this server"
+        )
+
     # Validate file size
     content = await file.read()
     if len(content) > MAX_UPLOAD_BYTES:
@@ -480,6 +509,12 @@ async def analyze_audio_stream(
     - include_narrative: Include LLM team analysis (default: True)
     - include_story: Include LLM mission story generation (default: True)
     """
+    # Check if audio uploads are disabled
+    if DISABLE_AUDIO_FILES:
+        async def disabled_stream():
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Audio file uploads are disabled on this server'})}\n\n"
+        return StreamingResponse(disabled_stream(), media_type="text/event-stream")
+
     # Validate file size
     content = await file.read()
     if len(content) > MAX_UPLOAD_BYTES:
@@ -578,6 +613,13 @@ async def get_analysis_steps():
 @app.get("/api/recordings/{filename}")
 async def download_recording(filename: str):
     """Download a saved recording."""
+    # Check if audio downloads are disabled
+    if DISABLE_AUDIO_FILES:
+        raise HTTPException(
+            status_code=403,
+            detail="Audio file downloads are disabled on this server"
+        )
+
     processor = get_processor()
 
     # Security: only allow files from recordings directory
@@ -659,6 +701,347 @@ async def delete_analysis(filename: str):
         return {"status": "ok", "message": f"Deleted {filename}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/analyses/{filename}/regenerate-narrative")
+async def regenerate_narrative(filename: str):
+    """Regenerate the AI team analysis narrative for an existing analysis."""
+    if not NARRATIVE_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="Narrative generation not available. Ensure Ollama is running."
+        )
+
+    processor = get_processor()
+
+    # Security: only allow valid filenames
+    if '..' in filename or '/' in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    # Load existing analysis
+    analysis = processor.get_analysis(filename)
+    if analysis is None:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+
+    try:
+        import time
+        start_time = time.time()
+
+        # Generate new narrative using async method
+        logger.info(f"Regenerating narrative for {filename}")
+        generator = NarrativeSummaryGenerator()
+        # Pass the results object (handle nested structure)
+        results_data = analysis.get('results', analysis)
+        narrative_result = await generator.generate_summary(results_data)
+
+        if narrative_result:
+            generation_time = round(time.time() - start_time, 1)
+            narrative_result['generation_time'] = generation_time
+
+            # Update the analysis with new narrative (handle nested 'results' structure)
+            if 'results' in analysis:
+                analysis['results']['narrative_summary'] = narrative_result
+            else:
+                analysis['narrative_summary'] = narrative_result
+
+            # Save updated analysis
+            file_path = processor.analyses_dir / filename
+            with open(file_path, 'w') as f:
+                json.dump(analysis, f, indent=2, default=str)
+
+            logger.info(f"Narrative regenerated in {generation_time}s for {filename}")
+            return {
+                "status": "ok",
+                "narrative_summary": narrative_result
+            }
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to generate narrative. Check Ollama connection."
+            )
+
+    except Exception as e:
+        logger.error(f"Error regenerating narrative: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/analyses/{filename}/regenerate-story")
+async def regenerate_story(filename: str):
+    """Regenerate the AI mission story for an existing analysis."""
+    if not NARRATIVE_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="Story generation not available. Ensure Ollama is running."
+        )
+
+    processor = get_processor()
+
+    # Security: only allow valid filenames
+    if '..' in filename or '/' in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    # Load existing analysis
+    analysis = processor.get_analysis(filename)
+    if analysis is None:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+
+    try:
+        import time
+        start_time = time.time()
+
+        # Generate new story using async method
+        logger.info(f"Regenerating story for {filename}")
+        generator = NarrativeSummaryGenerator()
+        # Pass the results object (handle nested structure)
+        results_data = analysis.get('results', analysis)
+        story_result = await generator.generate_story(results_data)
+
+        if story_result:
+            generation_time = round(time.time() - start_time, 1)
+            story_result['generation_time'] = generation_time
+
+            # Update the analysis with new story (handle nested 'results' structure)
+            if 'results' in analysis:
+                analysis['results']['story_narrative'] = story_result
+            else:
+                analysis['story_narrative'] = story_result
+
+            # Save updated analysis
+            file_path = processor.analyses_dir / filename
+            with open(file_path, 'w') as f:
+                json.dump(analysis, f, indent=2, default=str)
+
+            logger.info(f"Story regenerated in {generation_time}s for {filename}")
+            return {
+                "status": "ok",
+                "story_narrative": story_result
+            }
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to generate story. Check Ollama connection."
+            )
+
+    except Exception as e:
+        logger.error(f"Error regenerating story: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/analyses/{filename}/regenerate-narrative-stream")
+async def regenerate_narrative_stream(filename: str):
+    """Regenerate narrative with streaming progress updates."""
+    if not NARRATIVE_AVAILABLE:
+        async def error_stream():
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Narrative generation not available'})}\n\n"
+        return StreamingResponse(error_stream(), media_type="text/event-stream")
+
+    processor = get_processor()
+
+    if '..' in filename or '/' in filename:
+        async def error_stream():
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Invalid filename'})}\n\n"
+        return StreamingResponse(error_stream(), media_type="text/event-stream")
+
+    analysis = processor.get_analysis(filename)
+    if analysis is None:
+        async def error_stream():
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Analysis not found'})}\n\n"
+        return StreamingResponse(error_stream(), media_type="text/event-stream")
+
+    async def generate_stream():
+        import time
+        import httpx
+
+        start_time = time.time()
+        generator = NarrativeSummaryGenerator()
+
+        # Get the results object (handle nested structure)
+        results_data = analysis.get('results', analysis)
+
+        # Send start event
+        yield f"data: {json.dumps({'type': 'start', 'message': 'Starting narrative generation...'})}\n\n"
+
+        try:
+            # Check Ollama availability
+            if not await generator.check_ollama_available():
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Ollama not available'})}\n\n"
+                return
+
+            # Build prompt using results data
+            prompt = generator._build_prompt(results_data)
+            yield f"data: {json.dumps({'type': 'progress', 'chars': 0, 'message': 'Sending to LLM...'})}\n\n"
+
+            # Stream from Ollama
+            client = await generator._get_client()
+            narrative_parts = []
+            chars_generated = 0
+
+            async with client.stream(
+                'POST',
+                f"{generator.ollama_host}/api/generate",
+                json={
+                    "model": generator.ollama_model,
+                    "prompt": prompt,
+                    "stream": True,
+                    "options": {"temperature": 0.3, "num_predict": 1024}
+                },
+                timeout=300.0
+            ) as response:
+                if response.status_code != 200:
+                    yield f"data: {json.dumps({'type': 'error', 'message': f'Ollama error: {response.status_code}'})}\n\n"
+                    return
+
+                async for line in response.aiter_lines():
+                    if line:
+                        try:
+                            chunk = json.loads(line)
+                            text = chunk.get('response', '')
+                            if text:
+                                narrative_parts.append(text)
+                                chars_generated += len(text)
+                                # Send progress every few characters
+                                yield f"data: {json.dumps({'type': 'progress', 'chars': chars_generated, 'message': f'Generating... {chars_generated} chars'})}\n\n"
+
+                            if chunk.get('done', False):
+                                break
+                        except json.JSONDecodeError:
+                            continue
+
+            narrative = ''.join(narrative_parts).strip()
+            generation_time = round(time.time() - start_time, 1)
+
+            if narrative:
+                narrative_result = {
+                    'narrative': narrative,
+                    'model': generator.ollama_model,
+                    'generation_time': generation_time
+                }
+
+                # Update and save analysis (handle nested 'results' structure)
+                if 'results' in analysis:
+                    analysis['results']['narrative_summary'] = narrative_result
+                else:
+                    analysis['narrative_summary'] = narrative_result
+
+                file_path = processor.analyses_dir / filename
+                with open(file_path, 'w') as f:
+                    json.dump(analysis, f, indent=2, default=str)
+
+                yield f"data: {json.dumps({'type': 'complete', 'narrative_summary': narrative_result, 'chars': chars_generated})}\n\n"
+            else:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Empty response from LLM'})}\n\n"
+
+        except Exception as e:
+            logger.error(f"Streaming narrative error: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return StreamingResponse(generate_stream(), media_type="text/event-stream")
+
+
+@app.post("/api/analyses/{filename}/regenerate-story-stream")
+async def regenerate_story_stream(filename: str):
+    """Regenerate story with streaming progress updates."""
+    if not NARRATIVE_AVAILABLE:
+        async def error_stream():
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Story generation not available'})}\n\n"
+        return StreamingResponse(error_stream(), media_type="text/event-stream")
+
+    processor = get_processor()
+
+    if '..' in filename or '/' in filename:
+        async def error_stream():
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Invalid filename'})}\n\n"
+        return StreamingResponse(error_stream(), media_type="text/event-stream")
+
+    analysis = processor.get_analysis(filename)
+    if analysis is None:
+        async def error_stream():
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Analysis not found'})}\n\n"
+        return StreamingResponse(error_stream(), media_type="text/event-stream")
+
+    async def generate_stream():
+        import time
+
+        start_time = time.time()
+        generator = NarrativeSummaryGenerator()
+
+        # Get the results object (handle nested structure)
+        results_data = analysis.get('results', analysis)
+
+        yield f"data: {json.dumps({'type': 'start', 'message': 'Starting story generation...'})}\n\n"
+
+        try:
+            if not await generator.check_ollama_available():
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Ollama not available'})}\n\n"
+                return
+
+            # Build story prompt using results data
+            prompt = generator._build_story_prompt(results_data)
+            yield f"data: {json.dumps({'type': 'progress', 'chars': 0, 'message': 'Sending to LLM...'})}\n\n"
+
+            client = await generator._get_client()
+            story_parts = []
+            chars_generated = 0
+
+            async with client.stream(
+                'POST',
+                f"{generator.ollama_host}/api/generate",
+                json={
+                    "model": generator.ollama_model,
+                    "prompt": prompt,
+                    "stream": True,
+                    "options": {"temperature": 0.7, "num_predict": 2048}
+                },
+                timeout=300.0
+            ) as response:
+                if response.status_code != 200:
+                    yield f"data: {json.dumps({'type': 'error', 'message': f'Ollama error: {response.status_code}'})}\n\n"
+                    return
+
+                async for line in response.aiter_lines():
+                    if line:
+                        try:
+                            chunk = json.loads(line)
+                            text = chunk.get('response', '')
+                            if text:
+                                story_parts.append(text)
+                                chars_generated += len(text)
+                                yield f"data: {json.dumps({'type': 'progress', 'chars': chars_generated, 'message': f'Writing... {chars_generated} chars'})}\n\n"
+
+                            if chunk.get('done', False):
+                                break
+                        except json.JSONDecodeError:
+                            continue
+
+            story = ''.join(story_parts).strip()
+            generation_time = round(time.time() - start_time, 1)
+
+            if story:
+                story_result = {
+                    'story': story,
+                    'model': generator.ollama_model,
+                    'generation_time': generation_time
+                }
+
+                # Update and save analysis (handle nested 'results' structure)
+                if 'results' in analysis:
+                    analysis['results']['story_narrative'] = story_result
+                else:
+                    analysis['story_narrative'] = story_result
+
+                file_path = processor.analyses_dir / filename
+                with open(file_path, 'w') as f:
+                    json.dump(analysis, f, indent=2, default=str)
+
+                yield f"data: {json.dumps({'type': 'complete', 'story_narrative': story_result, 'chars': chars_generated})}\n\n"
+            else:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Empty response from LLM'})}\n\n"
+
+        except Exception as e:
+            logger.error(f"Streaming story error: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return StreamingResponse(generate_stream(), media_type="text/event-stream")
 
 
 # ============================================================================
@@ -767,6 +1150,13 @@ async def transcribe_audio(
 
     Faster than full analysis when only transcription is needed.
     """
+    # Check if audio uploads are disabled
+    if DISABLE_AUDIO_FILES:
+        raise HTTPException(
+            status_code=403,
+            detail="Audio file uploads are disabled on this server"
+        )
+
     # Validate file size
     content = await file.read()
     if len(content) > MAX_UPLOAD_BYTES:

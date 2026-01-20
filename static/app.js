@@ -1381,26 +1381,164 @@ class ResultsRenderer {
         `;
     }
 
+    parseMarkdown(text) {
+        // Convert markdown to HTML with proper formatting
+        const lines = text.split('\n');
+        let html = '';
+        let inTable = false;
+        let inList = false;
+        let listType = null;
+
+        for (let i = 0; i < lines.length; i++) {
+            let line = lines[i];
+
+            // Skip empty lines but close lists
+            if (!line.trim()) {
+                if (inList) {
+                    html += listType === 'ul' ? '</ul>' : '</ol>';
+                    inList = false;
+                    listType = null;
+                }
+                if (inTable) {
+                    html += '</tbody></table>';
+                    inTable = false;
+                }
+                continue;
+            }
+
+            // Headers
+            if (line.startsWith('### ')) {
+                if (inList) { html += listType === 'ul' ? '</ul>' : '</ol>'; inList = false; }
+                html += `<h3 class="narrative-h3">${this.formatInlineMarkdown(line.slice(4))}</h3>`;
+                continue;
+            }
+            if (line.startsWith('## ')) {
+                if (inList) { html += listType === 'ul' ? '</ul>' : '</ol>'; inList = false; }
+                html += `<h2 class="narrative-h2">${this.formatInlineMarkdown(line.slice(3))}</h2>`;
+                continue;
+            }
+            if (line.startsWith('# ')) {
+                if (inList) { html += listType === 'ul' ? '</ul>' : '</ol>'; inList = false; }
+                html += `<h1 class="narrative-h1">${this.formatInlineMarkdown(line.slice(2))}</h1>`;
+                continue;
+            }
+
+            // Table detection (lines starting with |)
+            if (line.trim().startsWith('|')) {
+                // Check if this is a separator line (|---|---|)
+                if (line.match(/^\|[\s\-:|]+\|$/)) {
+                    continue; // Skip separator lines
+                }
+
+                const cells = line.split('|').filter(c => c.trim()).map(c => this.formatInlineMarkdown(c.trim()));
+
+                if (!inTable) {
+                    // Start new table with header
+                    html += '<table class="narrative-table"><thead><tr>';
+                    cells.forEach(cell => html += `<th>${cell}</th>`);
+                    html += '</tr></thead><tbody>';
+                    inTable = true;
+                } else {
+                    // Table row
+                    html += '<tr>';
+                    cells.forEach(cell => html += `<td>${cell}</td>`);
+                    html += '</tr>';
+                }
+                continue;
+            } else if (inTable) {
+                html += '</tbody></table>';
+                inTable = false;
+            }
+
+            // Checkbox lists (- [ ] or - [x])
+            if (line.match(/^-\s*\[\s*[xX]?\s*\]/)) {
+                if (!inList || listType !== 'ul') {
+                    if (inList) html += listType === 'ul' ? '</ul>' : '</ol>';
+                    html += '<ul class="narrative-checklist">';
+                    inList = true;
+                    listType = 'ul';
+                }
+                const checked = line.match(/\[\s*[xX]\s*\]/) ? 'checked' : '';
+                const content = line.replace(/^-\s*\[\s*[xX]?\s*\]\s*/, '');
+                html += `<li class="checklist-item ${checked}"><span class="checkbox">${checked ? '☑' : '☐'}</span> ${this.formatInlineMarkdown(content)}</li>`;
+                continue;
+            }
+
+            // Unordered lists (- item)
+            if (line.match(/^[-*]\s+/)) {
+                if (!inList || listType !== 'ul') {
+                    if (inList) html += listType === 'ul' ? '</ul>' : '</ol>';
+                    html += '<ul class="narrative-list">';
+                    inList = true;
+                    listType = 'ul';
+                }
+                const content = line.replace(/^[-*]\s+/, '');
+                html += `<li>${this.formatInlineMarkdown(content)}</li>`;
+                continue;
+            }
+
+            // Ordered lists (1. item)
+            if (line.match(/^\d+\.\s+/)) {
+                if (!inList || listType !== 'ol') {
+                    if (inList) html += listType === 'ul' ? '</ul>' : '</ol>';
+                    html += '<ol class="narrative-list">';
+                    inList = true;
+                    listType = 'ol';
+                }
+                const content = line.replace(/^\d+\.\s+/, '');
+                html += `<li>${this.formatInlineMarkdown(content)}</li>`;
+                continue;
+            }
+
+            // Close list if we hit a non-list item
+            if (inList) {
+                html += listType === 'ul' ? '</ul>' : '</ol>';
+                inList = false;
+                listType = null;
+            }
+
+            // Regular paragraph
+            html += `<p>${this.formatInlineMarkdown(line)}</p>`;
+        }
+
+        // Close any open elements
+        if (inList) html += listType === 'ul' ? '</ul>' : '</ol>';
+        if (inTable) html += '</tbody></table>';
+
+        return html;
+    }
+
+    formatInlineMarkdown(text) {
+        // Bold
+        text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        // Italic
+        text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+        // Inline code
+        text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+        // Quotes
+        text = text.replace(/"([^"]+)"/g, '<q>$1</q>');
+        return text;
+    }
+
     renderNarrative(narrativeSummary, llmSkippedReason = null) {
         const loadingEl = document.getElementById('narrative-loading');
         const contentEl = document.getElementById('narrative-section');
         const unavailableEl = document.getElementById('narrative-unavailable');
         const narrativeContent = document.getElementById('narrative-content');
         const narrativeModel = document.getElementById('narrative-model');
+        const narrativeBadge = document.getElementById('narrative-badge');
 
         // Hide loading state
         if (loadingEl) loadingEl.classList.add('hidden');
 
         if (narrativeSummary?.narrative) {
-            // Show content
+            // Show content and badge
             if (unavailableEl) unavailableEl.classList.add('hidden');
             if (contentEl) contentEl.classList.remove('hidden');
+            if (narrativeBadge) narrativeBadge.classList.remove('hidden');
 
-            // Convert markdown-style to HTML
-            const narrative = narrativeSummary.narrative;
-            let html = narrative.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-            html = html.split(/\n\n+/).map(p => `<p>${p.trim()}</p>`).join('');
-            html = html.replace(/\n/g, '<br>');
+            // Convert markdown to HTML with proper formatting
+            const html = this.parseMarkdown(narrativeSummary.narrative);
 
             if (narrativeContent) narrativeContent.innerHTML = html;
 
@@ -1413,6 +1551,7 @@ class ResultsRenderer {
         } else {
             // Show unavailable state with reason if provided
             if (contentEl) contentEl.classList.add('hidden');
+            if (narrativeBadge) narrativeBadge.classList.add('hidden');
             if (unavailableEl) {
                 unavailableEl.classList.remove('hidden');
                 // Add skip reason if available
@@ -1422,7 +1561,7 @@ class ResultsRenderer {
                             <span class="notice-icon">⏱️</span>
                             <strong>AI Debrief Skipped</strong>
                             <p>${llmSkippedReason}</p>
-                            <p class="notice-tip">All analysis metrics and scorecards are still available in other tabs.</p>
+                            <p class="notice-tip">Click "Regenerate" above to generate it now, or check other tabs for analysis metrics.</p>
                         </div>
                     `;
                 }
@@ -1436,14 +1575,16 @@ class ResultsRenderer {
         const unavailableEl = document.getElementById('story-unavailable');
         const storyContent = document.getElementById('story-content');
         const storyModel = document.getElementById('story-model');
+        const storyBadge = document.getElementById('story-badge');
 
         // Hide loading state
         if (loadingEl) loadingEl.classList.add('hidden');
 
         if (storyNarrative?.story) {
-            // Show content
+            // Show content and badge
             if (unavailableEl) unavailableEl.classList.add('hidden');
             if (contentEl) contentEl.classList.remove('hidden');
+            if (storyBadge) storyBadge.classList.remove('hidden');
 
             // Convert markdown-style to HTML with story-specific formatting
             const story = storyNarrative.story;
@@ -1472,6 +1613,7 @@ class ResultsRenderer {
         } else {
             // Show unavailable state with reason if provided
             if (contentEl) contentEl.classList.add('hidden');
+            if (storyBadge) storyBadge.classList.add('hidden');
             if (unavailableEl) {
                 unavailableEl.classList.remove('hidden');
                 // Add skip reason if available
@@ -1481,7 +1623,7 @@ class ResultsRenderer {
                             <span class="notice-icon">⏱️</span>
                             <strong>Mission Story Skipped</strong>
                             <p>${llmSkippedReason}</p>
-                            <p class="notice-tip">All analysis metrics and scorecards are still available in other tabs.</p>
+                            <p class="notice-tip">Click "Regenerate" above to generate it now, or check other tabs for analysis metrics.</p>
                         </div>
                     `;
                 }
@@ -1949,15 +2091,74 @@ class App {
         this.currentMetadata = null;
         this.archiveData = [];
         this.collapsedSections = new Set();
+        this.audioDisabled = false; // Server config for disabling audio uploads/downloads
 
         this.initElements();
         this.bindEvents();
+        this.loadConfig(); // Load server config first
         this.loadArchive();
         this.checkServicesStatus(); // Check service status on load
 
         // Start with results section collapsed if no results
         this.collapsedSections.add('results-section');
         this.updateSectionState('results-section');
+    }
+
+    async loadConfig() {
+        try {
+            const response = await fetch('/api/config');
+            if (response.ok) {
+                const config = await response.json();
+                this.audioDisabled = config.audio_disabled || false;
+                this.applyAudioDisabledState();
+
+                // Re-render archive list to apply audio disabled state to download buttons
+                if (this.archiveData.length > 0) {
+                    this.renderArchiveList(this.archiveData);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load config:', error);
+        }
+    }
+
+    applyAudioDisabledState() {
+        if (!this.audioDisabled) return;
+
+        // Hide the input row with record/upload buttons
+        const inputRow = document.querySelector('#input-section .input-row');
+        if (inputRow) {
+            inputRow.classList.add('hidden');
+        }
+
+        // Hide the audio preview section
+        const audioPreview = document.getElementById('audio-preview');
+        if (audioPreview) {
+            audioPreview.classList.add('hidden');
+        }
+
+        // Show audio disabled notice in the card content
+        const cardContent = document.querySelector('#input-section .card-content');
+        if (cardContent) {
+            const notice = document.createElement('div');
+            notice.className = 'audio-disabled-notice';
+            notice.innerHTML = `
+                <span class="notice-icon">🔒</span>
+                <div class="notice-text">
+                    <strong>Audio Upload Disabled</strong>
+                    <p>Audio recording and upload are disabled on this server. You can still view existing analyses from the archive below.</p>
+                </div>
+            `;
+            cardContent.insertBefore(notice, cardContent.firstChild);
+        }
+
+        // Hide the download audio button in results
+        if (this.downloadAudioBtn) {
+            this.downloadAudioBtn.classList.add('hidden');
+        }
+        if (this.saveAudioBtn) {
+            this.saveAudioBtn.classList.add('hidden');
+        }
     }
 
     initElements() {
@@ -2658,7 +2859,7 @@ class App {
                         </div>
                     </div>
                     <div class="archive-item-actions">
-                        ${analysis.recording_filename ? `
+                        ${analysis.recording_filename && !this.audioDisabled ? `
                             <button class="btn-icon" onclick="event.stopPropagation(); app.downloadArchivedAudio('${analysis.recording_filename}')" title="Download Audio">
                                 &#127911;
                             </button>
@@ -2679,8 +2880,13 @@ class App {
     }
 
     async loadArchivedAnalysis(filename) {
+        // Find and mark the clicked item as loading
+        const archiveItem = document.querySelector(`.archive-item[data-filename="${filename}"]`);
+        if (archiveItem) {
+            archiveItem.classList.add('loading');
+        }
+
         try {
-            this.showStatus('Loading analysis...', 'info');
             const data = await this.api.getAnalysis(filename);
 
             if (data && data.results) {
@@ -2713,6 +2919,11 @@ class App {
         } catch (error) {
             console.error('Failed to load analysis:', error);
             this.showStatus('Failed to load analysis: ' + error.message, 'error');
+        } finally {
+            // Remove loading state
+            if (archiveItem) {
+                archiveItem.classList.remove('loading');
+            }
         }
     }
 
@@ -2738,6 +2949,226 @@ class App {
         } catch (error) {
             console.error('Failed to delete analysis:', error);
             this.showStatus('Failed to delete: ' + error.message, 'error');
+        }
+    }
+
+    async regenerateNarrative() {
+        if (!this.currentFilename) {
+            this.showStatus('No analysis loaded to regenerate', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('regenerate-narrative-btn');
+        const contentEl = document.getElementById('narrative-section');
+        const unavailableEl = document.getElementById('narrative-unavailable');
+        const narrativeContent = document.getElementById('narrative-content');
+
+        // Show loading state
+        btn.classList.add('regenerating');
+        btn.disabled = true;
+        const originalText = btn.querySelector('span:last-child').textContent;
+        btn.querySelector('span:last-child').textContent = 'Regenerating...';
+
+        // Hide unavailable, show content section with progress UI
+        if (unavailableEl) unavailableEl.classList.add('hidden');
+        if (contentEl) contentEl.classList.remove('hidden');
+
+        const startTime = Date.now();
+
+        const updateProgress = (chars, message) => {
+            const elapsed = Math.round((Date.now() - startTime) / 1000);
+            if (narrativeContent) {
+                narrativeContent.innerHTML = `
+                    <div class="regenerating-progress">
+                        <div class="progress-spinner"></div>
+                        <div class="progress-stats">
+                            <div class="progress-message">${message}</div>
+                            <div class="progress-details">
+                                <span class="stat"><strong>${chars.toLocaleString()}</strong> characters</span>
+                                <span class="stat"><strong>${elapsed}s</strong> elapsed</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        };
+
+        updateProgress(0, 'Connecting to LLM...');
+
+        try {
+            const response = await fetch(`/api/analyses/${this.currentFilename}/regenerate-narrative-stream`, {
+                method: 'POST'
+            });
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+
+                            if (data.type === 'progress') {
+                                updateProgress(data.chars || 0, data.message || 'Generating...');
+                            } else if (data.type === 'complete') {
+                                this.renderer.renderNarrative(data.narrative_summary);
+                                this.showStatus(`Team analysis regenerated (${data.chars?.toLocaleString() || 0} chars)`, 'success');
+                                if (this.currentResults) {
+                                    this.currentResults.narrative_summary = data.narrative_summary;
+                                }
+                            } else if (data.type === 'error') {
+                                throw new Error(data.message);
+                            }
+                        } catch (e) {
+                            if (e.message !== 'Unexpected end of JSON input') {
+                                throw e;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error regenerating narrative:', error);
+            this.showStatus(`Failed to regenerate: ${error.message}`, 'error');
+            if (this.currentResults?.narrative_summary) {
+                this.renderer.renderNarrative(this.currentResults.narrative_summary);
+            } else {
+                if (contentEl) contentEl.classList.add('hidden');
+                if (unavailableEl) {
+                    unavailableEl.classList.remove('hidden');
+                    unavailableEl.innerHTML = `
+                        <div class="llm-skipped-notice">
+                            <span class="notice-icon">❌</span>
+                            <strong>Generation Failed</strong>
+                            <p>${error.message}</p>
+                            <p class="notice-tip">Click "Regenerate" to try again.</p>
+                        </div>
+                    `;
+                }
+            }
+        } finally {
+            btn.classList.remove('regenerating');
+            btn.disabled = false;
+            btn.querySelector('span:last-child').textContent = originalText;
+        }
+    }
+
+    async regenerateStory() {
+        if (!this.currentFilename) {
+            this.showStatus('No analysis loaded to regenerate', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('regenerate-story-btn');
+        const contentEl = document.getElementById('story-section');
+        const unavailableEl = document.getElementById('story-unavailable');
+        const storyContent = document.getElementById('story-content');
+
+        // Show loading state
+        btn.classList.add('regenerating');
+        btn.disabled = true;
+        const originalText = btn.querySelector('span:last-child').textContent;
+        btn.querySelector('span:last-child').textContent = 'Regenerating...';
+
+        // Hide unavailable, show content section with progress UI
+        if (unavailableEl) unavailableEl.classList.add('hidden');
+        if (contentEl) contentEl.classList.remove('hidden');
+
+        const startTime = Date.now();
+
+        const updateProgress = (chars, message) => {
+            const elapsed = Math.round((Date.now() - startTime) / 1000);
+            if (storyContent) {
+                storyContent.innerHTML = `
+                    <div class="regenerating-progress">
+                        <div class="progress-spinner"></div>
+                        <div class="progress-stats">
+                            <div class="progress-message">${message}</div>
+                            <div class="progress-details">
+                                <span class="stat"><strong>${chars.toLocaleString()}</strong> characters</span>
+                                <span class="stat"><strong>${elapsed}s</strong> elapsed</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        };
+
+        updateProgress(0, 'Connecting to LLM...');
+
+        try {
+            const response = await fetch(`/api/analyses/${this.currentFilename}/regenerate-story-stream`, {
+                method: 'POST'
+            });
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+
+                            if (data.type === 'progress') {
+                                updateProgress(data.chars || 0, data.message || 'Writing...');
+                            } else if (data.type === 'complete') {
+                                this.renderer.renderStory(data.story_narrative);
+                                this.showStatus(`Mission story regenerated (${data.chars?.toLocaleString() || 0} chars)`, 'success');
+                                if (this.currentResults) {
+                                    this.currentResults.story_narrative = data.story_narrative;
+                                }
+                            } else if (data.type === 'error') {
+                                throw new Error(data.message);
+                            }
+                        } catch (e) {
+                            if (e.message !== 'Unexpected end of JSON input') {
+                                throw e;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error regenerating story:', error);
+            this.showStatus(`Failed to regenerate: ${error.message}`, 'error');
+            if (this.currentResults?.story_narrative) {
+                this.renderer.renderStory(this.currentResults.story_narrative);
+            } else {
+                if (contentEl) contentEl.classList.add('hidden');
+                if (unavailableEl) {
+                    unavailableEl.classList.remove('hidden');
+                    unavailableEl.innerHTML = `
+                        <div class="llm-skipped-notice">
+                            <span class="notice-icon">❌</span>
+                            <strong>Generation Failed</strong>
+                            <p>${error.message}</p>
+                            <p class="notice-tip">Click "Regenerate" to try again.</p>
+                        </div>
+                    `;
+                }
+            }
+        } finally {
+            btn.classList.remove('regenerating');
+            btn.disabled = false;
+            btn.querySelector('span:last-child').textContent = originalText;
         }
     }
 

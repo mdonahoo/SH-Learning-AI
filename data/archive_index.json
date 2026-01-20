@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "updated_at": "2026-01-20T20:16:43.053544",
+  "analyses": {
+    "analysis_20260120_153527": {
+      "filename": "analysis_20260120_153527.json",
+      "recording_filename": "recording_20260120_152237.wav",
+      "auto_title": null,
+      "user_title": "Hyperion_01",
+      "created_at": "2026-01-20T15:35:30.756482",
+      "duration_seconds": 3909.924,
+      "speaker_count": 19,
+      "segment_count": 1411,
+      "tags": [],
+      "notes": "",
+      "starred": false,
+      "display_title": "Hyperion_01"
+    },
+    "analysis_20260120_155549": {
+      "filename": "analysis_20260120_155549.json",
+      "recording_filename": "recording_20260120_154458.wav",
+      "auto_title": null,
+      "user_title": "Damocles_01",
+      "created_at": "2026-01-20T15:55:52.852019",
+      "duration_seconds": 3705.131,
+      "speaker_count": 17,
+      "segment_count": 947,
+      "tags": [],
+      "notes": "",
+      "starred": false,
+      "display_title": "Damocles_01"
+    },
+    "analysis_20260120_170114": {
+      "filename": "analysis_20260120_170114.json",
+      "recording_filename": "recording_20260120_164844.wav",
+      "auto_title": null,
+      "user_title": "Democles_02",
+      "created_at": "2026-01-20T17:01:16.561737",
+      "duration_seconds": 3807.33,
+      "speaker_count": 14,
+      "segment_count": 1031,
+      "tags": [],
+      "notes": "",
+      "starred": false,
+      "display_title": "Democles_02"
+    },
+    "analysis_20260120_170457": {
+      "filename": "analysis_20260120_170457.json",
+      "recording_filename": "recording_20260120_165320.wav",
+      "auto_title": null,
+      "user_title": "Hyperion_02",
+      "created_at": "2026-01-20T17:04:59.389190",
+      "duration_seconds": 3869.712,
+      "speaker_count": 24,
+      "segment_count": 1325,
+      "tags": [],
+      "notes": "",
+      "starred": false,
+      "display_title": "Hyperion_02"
+    }
+  }
+}
