@@ -3,12 +3,17 @@ LLM-powered narrative summary generator for audio analysis.
 
 Generates engaging, insightful narrative summaries of bridge crew
 communication sessions using Ollama models.
+
+Includes hallucination prevention:
+- Constrained context building (only verified data)
+- Lower temperature for factual content
+- Post-generation validation
 """
 
 import asyncio
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
 from dotenv import load_dotenv
@@ -22,6 +27,33 @@ OLLAMA_HOST = os.getenv('OLLAMA_HOST', 'http://localhost:11434')
 OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'qwen2.5:14b-instruct')
 OLLAMA_TIMEOUT = float(os.getenv('OLLAMA_TIMEOUT', '600'))  # 10 minutes for large models
 LLM_REPORT_STYLE = os.getenv('LLM_REPORT_STYLE', 'entertaining')
+
+# Import hallucination prevention if available
+try:
+    from src.llm.hallucination_prevention import (
+        OutputValidator,
+        clean_hallucinations,
+        ANTI_HALLUCINATION_PARAMS,
+        STORY_PARAMS,
+    )
+    HALLUCINATION_PREVENTION_AVAILABLE = True
+except ImportError:
+    HALLUCINATION_PREVENTION_AVAILABLE = False
+    # Default parameters if module not available
+    ANTI_HALLUCINATION_PARAMS = {
+        "temperature": 0.3,
+        "top_p": 0.9,
+        "top_k": 40,
+        "repeat_penalty": 1.1,
+        "num_predict": 500,
+    }
+    STORY_PARAMS = {
+        "temperature": 0.5,
+        "top_p": 0.9,
+        "top_k": 50,
+        "repeat_penalty": 1.1,
+        "num_predict": 1200,
+    }
 
 
 class NarrativeSummaryGenerator:
@@ -362,88 +394,69 @@ Your goal: make feedback feel like friendly advice, not evaluation.
         context = self._build_analysis_context(analysis)
         style_instructions = self._get_style_instructions()
 
-        prompt = f"""You are Dr. Elena Vasquez, a renowned organizational psychologist and leadership expert who has spent 20 years studying high-performing teams in aerospace, military, and emergency response settings. You've been invited to observe this bridge crew training session and provide your expert assessment.
-
-## YOUR EXPERTISE
-- Team dynamics and group psychology
-- Leadership communication patterns
-- Crew resource management (CRM)
-- The 7 Habits of Highly Effective People framework
-- Positive psychology and strengths-based feedback
+        prompt = f"""You are an experienced bridge crew instructor providing a structured mission debrief.
 
 ## YOUR TASK
-Write a SHORT, FOCUSED narrative (250-350 words) analyzing this crew's teamwork and leadership dynamics. You are an encouraging but honest expert who celebrates what teams do well while noting growth opportunities.
+Generate a CONCISE, STRUCTURED debrief using bullet points and tables. NO PROSE PARAGRAPHS.
 
 {style_instructions}
 
 ## SESSION DATA
-
 {context}
 
 ---
 
-## NARRATIVE STRUCTURE
+## OUTPUT FORMAT (use exactly this structure)
 
-Write your expert observation as a cohesive narrative (NOT bullet points) covering:
+### Mission Grade: [A/B/C/D/F]
+One sentence summary based on metrics.
 
-**1. Team Dynamics Snapshot** (1 paragraph)
-What kind of team are you observing? Describe the overall team energy and interaction style. How do they coordinate? Is there a clear command structure? How do members support each other?
+### Top 3 Strengths (with evidence)
+1. **[Strength]**: "[Exact quote]" - [Role]
+2. **[Strength]**: "[Exact quote]" - [Role]
+3. **[Strength]**: "[Exact quote]" - [Role]
 
-**2. Leadership & Communication Highlights** (1-2 paragraphs)
-Celebrate specific examples of GOOD teamwork you observed. Quote actual communications that demonstrate:
-- Clear command and acknowledgment
-- Proactive information sharing
-- Supporting teammates
-- Professional bridge protocol
-- Any moments of synergy or effective coordination
+### Top 2 Growth Areas
+1. **[Issue]**: What happened and ONE specific fix
+2. **[Issue]**: What happened and ONE specific fix
 
-Be specific! Use actual quotes from the transcript as evidence. Frame these as "I observed..." or "A great example was when..."
+### Individual Performance
+| Role | Did Well | Work On |
+|------|----------|---------|
+| Captain | [Specific] | [Specific] |
+| Helm | [Specific] | [Specific] |
+| Tactical | [Specific] | [Specific] |
+| (others) | ... | ... |
 
-**3. Growth Edge** (1 short paragraph)
-Based on the Seven Habits scores and communication patterns, identify ONE specific area where this crew could level up. Frame it positively as their "growth edge" - the next skill that would take them from good to great. Be encouraging, not critical.
+### Quick Wins for Next Mission
+- [ ] [Action 1 - tied to growth area]
+- [ ] [Action 2 - tied to growth area]
+- [ ] [Action 3 - communication improvement]
 
-## CRITICAL RULES - YOU MUST FOLLOW THESE
+## RULES
+1. ONLY use quotes from the transcript - never invent
+2. Use role names (Captain, Helm) not speaker IDs
+3. Keep total output under 200 words
+4. Every claim needs a quote as evidence
+5. Be specific and actionable, not vague
 
-1. **EVIDENCE REQUIRED**: Every claim must be backed by a direct quote from the transcript.
-   - BAD: "The Captain showed strong leadership"
-   - GOOD: "The Captain showed strong leadership when they said: 'All stations report status'"
-
-2. **USE THE DATA**: Reference specific scores and metrics provided above.
-   - BAD: "Communication was generally good"
-   - GOOD: "With 75% effective communications and strong closed-loop patterns, this crew..."
-
-3. **QUOTE VERBATIM**: Use exact quotes from the KEY COMMUNICATIONS and EVIDENCE sections.
-   - Put quotes in quotation marks
-   - Attribute to the role (Captain, Helm, etc.)
-
-4. **NO INVENTION**: If you can't find evidence for something, don't claim it happened.
-
-5. **ROLE NAMES ONLY**: Use Captain, Helm, Tactical, Science, Engineering, Comms - NOT speaker IDs
-
-6. **KEEP IT SHORT**: 250-350 words maximum. Every sentence must add value.
-
-7. **BALANCE**: ~70% celebrating strengths with evidence, ~30% growth opportunities
-
-## OUTPUT FORMAT
-
-Write a flowing narrative (NOT bullet points) that weaves together:
-- What you observed (with quoted evidence)
-- What the team did well (with specific examples)
-- One growth opportunity (grounded in the data)
-
-Write your evidence-based team dynamics narrative now:"""
+Generate the structured debrief now:"""
 
         return prompt
 
     async def generate_summary(
         self,
-        analysis: Dict[str, Any]
+        analysis: Dict[str, Any],
+        validate_output: bool = True
     ) -> Optional[Dict[str, Any]]:
         """
         Generate narrative summary from analysis results.
 
+        Uses anti-hallucination parameters and optional post-generation validation.
+
         Args:
             analysis: Complete analysis results dictionary
+            validate_output: Whether to validate generated content against source
 
         Returns:
             Dictionary with summary and metadata, or None if generation failed
@@ -458,8 +471,9 @@ Write your evidence-based team dynamics narrative now:"""
 
             client = await self._get_client()
 
-            logger.info(f"Generating narrative summary with {self.ollama_model}...")
+            logger.info(f"Generating narrative summary with {self.ollama_model} (anti-hallucination params)...")
 
+            # Use anti-hallucination parameters for factual content
             response = await client.post(
                 f"{self.ollama_host}/api/generate",
                 json={
@@ -467,8 +481,11 @@ Write your evidence-based team dynamics narrative now:"""
                     "prompt": prompt,
                     "stream": False,
                     "options": {
-                        "temperature": 0.7,
+                        "temperature": ANTI_HALLUCINATION_PARAMS["temperature"],
                         "num_predict": 1024,  # ~600 words
+                        "top_p": ANTI_HALLUCINATION_PARAMS["top_p"],
+                        "top_k": ANTI_HALLUCINATION_PARAMS["top_k"],
+                        "repeat_penalty": ANTI_HALLUCINATION_PARAMS["repeat_penalty"],
                     }
                 },
                 timeout=self.timeout
@@ -487,11 +504,25 @@ Write your evidence-based team dynamics narrative now:"""
 
             logger.info(f"Generated narrative summary: {len(narrative)} characters")
 
+            # Validate output if requested and module available
+            validation_issues = []
+            if validate_output and HALLUCINATION_PREVENTION_AVAILABLE:
+                transcripts = analysis.get('transcription', [])
+                narrative, validation_issues = clean_hallucinations(
+                    narrative,
+                    transcripts,
+                    analysis,
+                    add_warning=True
+                )
+                if validation_issues:
+                    logger.warning(f"Validation found {len(validation_issues)} issues")
+
             return {
                 'narrative': narrative,
                 'model': self.ollama_model,
                 'style': self.style,
-                'generated': True
+                'generated': True,
+                'validation_issues': len(validation_issues) if validation_issues else 0
             }
 
         except httpx.TimeoutException:
@@ -529,7 +560,7 @@ Write your evidence-based team dynamics narrative now:"""
             if progress_callback:
                 progress_callback(0, False)
 
-            # Use streaming to show progress
+            # Use streaming to show progress (with anti-hallucination params)
             async with client.stream(
                 'POST',
                 f"{self.ollama_host}/api/generate",
@@ -538,8 +569,11 @@ Write your evidence-based team dynamics narrative now:"""
                     "prompt": prompt,
                     "stream": True,
                     "options": {
-                        "temperature": 0.7,
+                        "temperature": ANTI_HALLUCINATION_PARAMS["temperature"],
                         "num_predict": 1024,
+                        "top_p": ANTI_HALLUCINATION_PARAMS["top_p"],
+                        "top_k": ANTI_HALLUCINATION_PARAMS["top_k"],
+                        "repeat_penalty": ANTI_HALLUCINATION_PARAMS["repeat_penalty"],
                     }
                 },
                 timeout=self.timeout
@@ -726,13 +760,17 @@ Write your story now (remember: only use facts from the transcript, gender-neutr
 
     async def generate_story(
         self,
-        analysis: Dict[str, Any]
+        analysis: Dict[str, Any],
+        validate_output: bool = True
     ) -> Optional[Dict[str, Any]]:
         """
         Generate story narrative from analysis results.
 
+        Uses balanced creative parameters with post-generation validation.
+
         Args:
             analysis: Complete analysis results dictionary
+            validate_output: Whether to validate generated content against source
 
         Returns:
             Dictionary with story and metadata, or None if generation failed
@@ -745,8 +783,9 @@ Write your story now (remember: only use facts from the transcript, gender-neutr
             prompt = self._build_story_prompt(analysis)
             client = await self._get_client()
 
-            logger.info(f"Generating story narrative with {self.ollama_model}...")
+            logger.info(f"Generating story narrative with {self.ollama_model} (story params)...")
 
+            # Use story-specific parameters (slightly more creative but still constrained)
             response = await client.post(
                 f"{self.ollama_host}/api/generate",
                 json={
@@ -754,8 +793,11 @@ Write your story now (remember: only use facts from the transcript, gender-neutr
                     "prompt": prompt,
                     "stream": False,
                     "options": {
-                        "temperature": 0.8,  # Slightly more creative for storytelling
-                        "num_predict": 1200,  # ~400 words
+                        "temperature": STORY_PARAMS["temperature"],
+                        "num_predict": STORY_PARAMS["num_predict"],
+                        "top_p": STORY_PARAMS["top_p"],
+                        "top_k": STORY_PARAMS["top_k"],
+                        "repeat_penalty": STORY_PARAMS["repeat_penalty"],
                     }
                 },
                 timeout=self.timeout
@@ -774,11 +816,25 @@ Write your story now (remember: only use facts from the transcript, gender-neutr
 
             logger.info(f"Generated story narrative: {len(story)} characters")
 
+            # Validate output if requested and module available
+            validation_issues = []
+            if validate_output and HALLUCINATION_PREVENTION_AVAILABLE:
+                transcripts = analysis.get('transcription', [])
+                story, validation_issues = clean_hallucinations(
+                    story,
+                    transcripts,
+                    analysis,
+                    add_warning=True
+                )
+                if validation_issues:
+                    logger.warning(f"Story validation found {len(validation_issues)} issues")
+
             return {
                 'story': story,
                 'model': self.ollama_model,
                 'style': 'narrative',
-                'generated': True
+                'generated': True,
+                'validation_issues': len(validation_issues) if validation_issues else 0
             }
 
         except Exception as e:

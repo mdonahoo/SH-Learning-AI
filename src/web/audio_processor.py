@@ -1182,7 +1182,11 @@ class AudioProcessor:
             # Step 6: Speaker scorecards (uses FILTERED transcripts)
             if include_detailed and SCORECARD_AVAILABLE and filtered_transcripts:
                 update_progress("scorecards", "Generating speaker scorecards", progress)
-                results['speaker_scorecards'] = self._generate_scorecards(filtered_transcripts)
+                # Pass role assignments so scorecards show detected roles
+                results['speaker_scorecards'] = self._generate_scorecards(
+                    filtered_transcripts,
+                    results.get('role_assignments', [])
+                )
             progress = 85
 
             # Step 7: Confidence distribution (uses ALL transcripts - shows full distribution)
@@ -1240,6 +1244,23 @@ class AudioProcessor:
                 logger.info(f"Pre-LLM analysis saved: {pre_llm_path}")
 
             # Step 11: LLM Team Analysis Narrative
+            # Skip LLM for very long recordings (>60 min) to avoid timeouts
+            recording_duration_min = results.get('duration_seconds', 0) / 60
+            max_llm_duration_min = 60  # Skip LLM for recordings longer than 60 minutes
+
+            if recording_duration_min > max_llm_duration_min:
+                results['llm_skipped_reason'] = (
+                    f"Recording duration ({recording_duration_min:.0f} min) exceeds "
+                    f"{max_llm_duration_min} min limit for LLM generation. "
+                    "Analysis metrics are available; narrative generation skipped to avoid timeouts."
+                )
+                logger.warning(
+                    f"Skipping LLM generation for {recording_duration_min:.0f} min recording "
+                    f"(>{max_llm_duration_min} min limit)"
+                )
+                include_narrative = False
+                include_story = False
+
             if include_detailed and include_narrative and NARRATIVE_GENERATOR_AVAILABLE and transcripts:
                 update_progress("narrative", "Generating team analysis (this may take 1-2 minutes)...", progress)
                 try:
@@ -1257,8 +1278,9 @@ class AudioProcessor:
                         logger.info("Team analysis skipped (Ollama unavailable)")
                 except Exception as e:
                     logger.warning(f"Team analysis generation failed: {e}")
+                    results['narrative_error'] = str(e)
             elif not include_narrative:
-                logger.info("Team analysis skipped (disabled by user)")
+                logger.info("Team analysis skipped (disabled by user or long recording)")
             progress = 97
 
             # Step 12: LLM Story Narrative
@@ -1279,6 +1301,7 @@ class AudioProcessor:
                         logger.info("Story narrative skipped (Ollama unavailable)")
                 except Exception as e:
                     logger.warning(f"Story generation failed: {e}")
+                    results['story_error'] = str(e)
             elif not include_story:
                 logger.info("Story narrative skipped (disabled by user)")
             progress = 100
@@ -1286,14 +1309,16 @@ class AudioProcessor:
             update_progress("complete", "Analysis complete", progress)
 
         finally:
+            # Always calculate processing time in finally block
+            results['processing_time_seconds'] = time.time() - start_time
+            logger.info(f"Total processing time: {results['processing_time_seconds']:.1f}s")
+
             # Clean up converted file
             if converted and wav_path != audio_path:
                 try:
                     os.remove(wav_path)
                 except Exception:
                     pass
-
-        results['processing_time_seconds'] = time.time() - start_time
 
         # Save analysis results
         saved_analysis_path = self.save_analysis(results, results.get('saved_recording_path'))
@@ -1496,11 +1521,27 @@ class AudioProcessor:
 
     def _generate_scorecards(
         self,
-        transcripts: List[Dict[str, Any]]
+        transcripts: List[Dict[str, Any]],
+        role_assignments: List[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
-        """Generate speaker scorecards with evidence."""
+        """
+        Generate speaker scorecards with evidence.
+
+        Args:
+            transcripts: List of transcript dictionaries
+            role_assignments: List of role assignment dicts with 'speaker_id' and 'role'
+        """
         try:
-            generator = SpeakerScorecardGenerator(transcripts)
+            # Convert role_assignments list to dict format expected by SpeakerScorecardGenerator
+            role_map = {}
+            if role_assignments:
+                for ra in role_assignments:
+                    speaker_id = ra.get('speaker_id')
+                    role = ra.get('role', 'Crew Member')
+                    if speaker_id:
+                        role_map[speaker_id] = role
+
+            generator = SpeakerScorecardGenerator(transcripts, role_assignments=role_map)
 
             # Use get_structured_results for evidence fields
             structured = generator.get_structured_results()
@@ -1525,9 +1566,12 @@ class AudioProcessor:
                         'calculation_details': score_data.get('calculation_details', '')
                     })
 
+                # Use the role from role_map if available, fall back to scorecard's role
+                detected_role = role_map.get(speaker_id, scorecard_data.get('role', 'Crew Member'))
+
                 result.append({
                     'speaker_id': speaker_id,
-                    'role': scorecard_data.get('role', 'Crew Member'),
+                    'role': detected_role,
                     'utterance_count': scorecard_data.get('utterance_count', 0),
                     'overall_score': scorecard_data.get('overall_score', 1),
                     'metrics': metrics,
@@ -1913,7 +1957,14 @@ class AudioProcessor:
                     'category': 'effective',
                     'description': examples[0].get('assessment', '') if examples else '',
                     'count': count,
-                    'examples': [ex.get('text', '') for ex in examples],
+                    'examples': [
+                        {
+                            'text': ex.get('text', ''),
+                            'speaker': ex.get('speaker', 'unknown'),
+                            'timestamp': ex.get('timestamp', ''),
+                        }
+                        for ex in examples
+                    ],
                     'evidence_details': evidence_details
                 })
 
@@ -1939,7 +1990,14 @@ class AudioProcessor:
                     'category': 'needs_improvement',
                     'description': examples[0].get('issue', '') if examples else '',
                     'count': count,
-                    'examples': [ex.get('text', '') for ex in examples],
+                    'examples': [
+                        {
+                            'text': ex.get('text', ''),
+                            'speaker': ex.get('speaker', 'unknown'),
+                            'timestamp': ex.get('timestamp', ''),
+                        }
+                        for ex in examples
+                    ],
                     'evidence_details': evidence_details
                 })
 

@@ -1306,6 +1306,42 @@ header {
     color: var(--primary);
 }
 
+/* LLM Skipped Notice (for long recordings) */
+.llm-skipped-notice {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.llm-skipped-notice .notice-icon {
+    font-size: 2.5rem;
+    margin-bottom: 12px;
+}
+
+.llm-skipped-notice strong {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--warning);
+    margin-bottom: 12px;
+}
+
+.llm-skipped-notice p {
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+    max-width: 400px;
+    line-height: 1.5;
+}
+
+.llm-skipped-notice .notice-tip {
+    font-size: 0.85rem;
+    color: var(--success);
+    margin-top: 8px;
+}
+
 /* Recommendations Preview */
 /* ===== PRIORITY RECOMMENDATIONS (SUMMARY TAB) ===== */
 .recommendations-preview, .top-recommendations {

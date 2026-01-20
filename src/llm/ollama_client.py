@@ -10,13 +10,27 @@ import os
 import sys
 import time
 import threading
-from typing import Dict, Any, List, Optional, Callable
+from typing import Dict, Any, List, Optional, Callable, Tuple
 import requests
 from dotenv import load_dotenv
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+# Import hallucination prevention utilities
+try:
+    from src.llm.hallucination_prevention import (
+        ConstrainedContextBuilder,
+        OutputValidator,
+        clean_hallucinations,
+        ANTI_HALLUCINATION_PARAMS,
+        STORY_PARAMS,
+    )
+    HALLUCINATION_PREVENTION_AVAILABLE = True
+except ImportError:
+    HALLUCINATION_PREVENTION_AVAILABLE = False
+    logger.warning("Hallucination prevention module not available")
 
 
 class ProgressDisplay:
@@ -197,7 +211,10 @@ class OllamaClient:
         prompt: str,
         system: Optional[str] = None,
         temperature: float = 0.7,
-        max_tokens: Optional[int] = None
+        max_tokens: Optional[int] = None,
+        top_p: Optional[float] = None,
+        top_k: Optional[int] = None,
+        repeat_penalty: Optional[float] = None
     ) -> Optional[str]:
         """
         Generate text using Ollama.
@@ -205,27 +222,37 @@ class OllamaClient:
         Args:
             prompt: User prompt
             system: System prompt (optional)
-            temperature: Sampling temperature (0.0-1.0)
+            temperature: Sampling temperature (0.0-1.0), lower = more deterministic
             max_tokens: Maximum tokens to generate
+            top_p: Nucleus sampling threshold (0.0-1.0)
+            top_k: Top-k sampling limit
+            repeat_penalty: Penalty for repeating tokens (1.0 = no penalty)
 
         Returns:
             Generated text or None if generation failed
         """
         try:
+            options = {"temperature": temperature}
+
+            # Add optional sampling parameters for hallucination reduction
+            if top_p is not None:
+                options["top_p"] = top_p
+            if top_k is not None:
+                options["top_k"] = top_k
+            if repeat_penalty is not None:
+                options["repeat_penalty"] = repeat_penalty
+            if max_tokens:
+                options["num_predict"] = max_tokens
+
             payload = {
                 "model": self.model,
                 "prompt": prompt,
                 "stream": False,
-                "options": {
-                    "temperature": temperature
-                }
+                "options": options
             }
 
             if system:
                 payload["system"] = system
-
-            if max_tokens:
-                payload["options"]["num_predict"] = max_tokens
 
             logger.info(f"Sending request to Ollama (model={self.model}, temp={temperature})")
 
@@ -548,9 +575,172 @@ class OllamaClient:
 
         logger.info("Generating mission story from actual dialogue and events...")
 
-        return self.generate(
+        # Use story-specific parameters if available
+        if HALLUCINATION_PREVENTION_AVAILABLE:
+            return self.generate(
+                prompt,
+                system=system_prompt,
+                temperature=STORY_PARAMS["temperature"],
+                max_tokens=STORY_PARAMS["num_predict"],
+                top_p=STORY_PARAMS["top_p"],
+                top_k=STORY_PARAMS["top_k"],
+                repeat_penalty=STORY_PARAMS["repeat_penalty"]
+            )
+        else:
+            return self.generate(
+                prompt,
+                system=system_prompt,
+                temperature=0.7,
+                max_tokens=4096
+            )
+
+    def generate_constrained_debrief(
+        self,
+        transcripts: List[Dict[str, Any]],
+        analysis_results: Dict[str, Any],
+        validate_output: bool = True
+    ) -> Tuple[Optional[str], List[Any]]:
+        """
+        Generate mission debrief with hallucination prevention.
+
+        Uses constrained context (only verified data) and validates output.
+
+        Args:
+            transcripts: Raw transcript data
+            analysis_results: Pre-computed analysis from other modules
+            validate_output: Whether to validate generated content
+
+        Returns:
+            Tuple of (generated debrief, list of validation issues)
+        """
+        if not HALLUCINATION_PREVENTION_AVAILABLE:
+            logger.warning("Hallucination prevention not available, using standard generation")
+            # Fall back to standard generation
+            from src.llm.hybrid_prompts import build_concise_debrief_prompt
+            prompt = build_concise_debrief_prompt({'seven_habits': analysis_results.get('seven_habits', {}),
+                                                   'communication_quality': analysis_results.get('communication_quality', {}),
+                                                   'top_communications': []})
+            result = self.generate(prompt, temperature=0.3, max_tokens=500)
+            return result, []
+
+        # Build constrained context
+        context_builder = ConstrainedContextBuilder(transcripts, analysis_results)
+        context = context_builder.build_debrief_context()
+
+        # Build prompt with constrained data
+        from src.llm.hybrid_prompts import MISSION_DEBRIEF_PROMPT
+
+        # Format key moments for the prompt
+        key_moments_text = "\n".join([
+            f"[{m['timestamp']}] {m['speaker']}: \"{m['text']}\""
+            for m in context['key_moments']
+        ])
+
+        prompt = MISSION_DEBRIEF_PROMPT.format(
+            habits_score=context['habits_score'],
+            top_habit=context['top_habit']['name'],
+            top_score=context['top_habit']['score'],
+            lowest_habit=context['lowest_habit']['name'],
+            lowest_score=context['lowest_habit']['score'],
+            comm_score=context['communication_score'],
+            key_moments=key_moments_text
+        )
+
+        system_prompt = """You are a flight instructor reviewing a training mission.
+        Use ONLY the data provided. Do not invent quotes, statistics, or events.
+        Keep your response under 300 words. Write for middle school students (ages 11-14)."""
+
+        logger.info("Generating constrained debrief with anti-hallucination parameters...")
+
+        # Generate with anti-hallucination parameters
+        generated = self.generate(
             prompt,
             system=system_prompt,
-            temperature=0.7,  # Higher temperature for creative narrative
-            max_tokens=4096
+            temperature=ANTI_HALLUCINATION_PARAMS["temperature"],
+            max_tokens=ANTI_HALLUCINATION_PARAMS["num_predict"],
+            top_p=ANTI_HALLUCINATION_PARAMS["top_p"],
+            top_k=ANTI_HALLUCINATION_PARAMS["top_k"],
+            repeat_penalty=ANTI_HALLUCINATION_PARAMS["repeat_penalty"]
         )
+
+        if not generated:
+            return None, []
+
+        # Validate output if requested
+        issues = []
+        if validate_output:
+            generated, issues = clean_hallucinations(
+                generated,
+                transcripts,
+                analysis_results,
+                add_warning=True
+            )
+
+            if issues:
+                logger.warning(f"Validation found {len(issues)} issues in generated debrief")
+
+        return generated, issues
+
+    def generate_validated_story(
+        self,
+        structured_data: Dict[str, Any],
+        validate_output: bool = True
+    ) -> Tuple[Optional[str], List[Any]]:
+        """
+        Generate mission story with post-generation validation.
+
+        Args:
+            structured_data: Pre-computed analysis from LearningEvaluator
+            validate_output: Whether to validate generated content
+
+        Returns:
+            Tuple of (generated story, list of validation issues)
+        """
+        from src.llm.story_prompts import build_mission_story_prompt
+
+        prompt = build_mission_story_prompt(structured_data)
+
+        system_prompt = """You are a creative writer specializing in military sci-fi
+        and bridge simulation narratives. You craft engaging stories that bring
+        mission data to life while staying 100% faithful to actual events and dialogue.
+        Use ONLY the dialogue provided - do not invent new quotes."""
+
+        logger.info("Generating validated mission story...")
+
+        # Use story parameters
+        if HALLUCINATION_PREVENTION_AVAILABLE:
+            generated = self.generate(
+                prompt,
+                system=system_prompt,
+                temperature=STORY_PARAMS["temperature"],
+                max_tokens=STORY_PARAMS["num_predict"],
+                top_p=STORY_PARAMS["top_p"],
+                top_k=STORY_PARAMS["top_k"],
+                repeat_penalty=STORY_PARAMS["repeat_penalty"]
+            )
+        else:
+            generated = self.generate(
+                prompt,
+                system=system_prompt,
+                temperature=0.5,
+                max_tokens=2500
+            )
+
+        if not generated:
+            return None, []
+
+        # Validate output if requested
+        issues = []
+        if validate_output and HALLUCINATION_PREVENTION_AVAILABLE:
+            raw_transcripts = structured_data.get('raw_transcripts', [])
+            generated, issues = clean_hallucinations(
+                generated,
+                raw_transcripts,
+                structured_data,
+                add_warning=True
+            )
+
+            if issues:
+                logger.warning(f"Validation found {len(issues)} issues in generated story")
+
+        return generated, issues

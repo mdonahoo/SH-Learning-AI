@@ -478,9 +478,17 @@ class BatchSpeakerDiarizer:
             min_segments=5  # Speakers with <5 segments get merged
         )
 
-        # Build result
+        # Build speaker clusters with voice confidence from merged centroids
+        speaker_clusters = self._build_speaker_clusters_from_chunks(
+            segments, chunk_results, global_speaker_map
+        )
+
+        # Build result with voice confidence data
         speaker_ids = set(s.get('speaker_id') for s in segments if s.get('speaker_id'))
         result = DiarizationResult(
+            speaker_clusters={c.speaker_id: c for c in speaker_clusters.values()},
+            segment_assignments=[s.get('speaker_id', 'unknown') for s in segments],
+            segment_confidences=[s.get('speaker_confidence', 0.0) for s in segments],
             total_speakers=len(speaker_ids),
             methodology_note=(
                 f"Chunk-based diarization ({len(chunk_boundaries)} chunks) "
@@ -733,6 +741,96 @@ class BatchSpeakerDiarizer:
             logger.info(f"Consolidated to {new_count} speakers ({merged_count} segments reassigned)")
 
         return segments
+
+    def _build_speaker_clusters_from_chunks(
+        self,
+        segments: List[Dict[str, Any]],
+        chunk_results: List[Dict],
+        global_speaker_map: Dict[Tuple[int, str], str]
+    ) -> Dict[str, SpeakerCluster]:
+        """
+        Build speaker clusters with voice confidence from merged chunk data.
+
+        This aggregates embeddings across chunks for each global speaker
+        and computes cluster tightness (voice confidence).
+
+        Args:
+            segments: Segments with global speaker IDs
+            chunk_results: Chunk results with centroids and embeddings
+            global_speaker_map: Mapping from chunk speakers to global speakers
+
+        Returns:
+            Dictionary mapping speaker_id to SpeakerCluster with voice confidence
+        """
+        from collections import defaultdict
+
+        # Collect all centroids for each global speaker
+        speaker_centroids: Dict[str, List[np.ndarray]] = defaultdict(list)
+
+        for cr in chunk_results:
+            for local_speaker, centroid in cr.get('centroids', {}).items():
+                chunk_key = (cr['chunk_idx'], local_speaker)
+                global_speaker = global_speaker_map.get(chunk_key)
+                if global_speaker and centroid is not None:
+                    speaker_centroids[global_speaker].append(centroid)
+
+        # Build speaker clusters
+        speaker_clusters = {}
+
+        for speaker_id in set(s.get('speaker_id') for s in segments if s.get('speaker_id')):
+            centroids = speaker_centroids.get(speaker_id, [])
+
+            # Get segment info for this speaker
+            speaker_segments = [s for s in segments if s.get('speaker_id') == speaker_id]
+            segment_indices = [i for i, s in enumerate(segments) if s.get('speaker_id') == speaker_id]
+
+            # Compute voice confidence from centroid consistency
+            if len(centroids) >= 2:
+                # Multiple chunk centroids - compute consistency
+                centroid_matrix = np.array(centroids)
+                mean_centroid = np.mean(centroid_matrix, axis=0)
+
+                # Compute average similarity to mean centroid
+                similarities = []
+                for c in centroids:
+                    sim = 1.0 - cosine(c, mean_centroid)
+                    similarities.append(sim)
+                cluster_tightness = float(np.mean(similarities))
+            elif len(centroids) == 1:
+                # Single centroid - high confidence
+                cluster_tightness = 0.85
+                mean_centroid = centroids[0]
+            else:
+                # No centroid data - moderate confidence
+                cluster_tightness = 0.7
+                mean_centroid = None
+
+            # Calculate first appearance and total duration
+            first_appearance = min(s.get('start', 0) for s in speaker_segments) if speaker_segments else 0.0
+            total_duration = sum(s.get('end', 0) - s.get('start', 0) for s in speaker_segments)
+
+            cluster = SpeakerCluster(
+                speaker_id=speaker_id,
+                embeddings=centroids,  # Store centroids as embeddings
+                segment_indices=segment_indices,
+                first_appearance=first_appearance,
+                total_duration=total_duration,
+                centroid=mean_centroid,
+                cluster_tightness=cluster_tightness
+            )
+
+            speaker_clusters[speaker_id] = cluster
+
+            # Update segment confidence with cluster tightness
+            for seg in speaker_segments:
+                seg['speaker_confidence'] = cluster_tightness
+
+        logger.info(
+            f"Built {len(speaker_clusters)} speaker clusters with voice confidence "
+            f"(avg tightness: {np.mean([c.cluster_tightness for c in speaker_clusters.values()]):.2f})"
+        )
+
+        return speaker_clusters
 
     def _renumber_speakers(self, segments: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Renumber speakers to be consecutive (speaker_1, speaker_2, etc.)."""
