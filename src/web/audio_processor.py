@@ -550,9 +550,9 @@ class AudioProcessor:
             saved_name = f"analysis_{timestamp}{suffix}.json"
             saved_path = self.analyses_dir / saved_name
 
-            # Generate title using LLM or fallback
-            auto_title = None
-            if self._title_generator:
+            # Use existing title from results if available, otherwise generate
+            auto_title = results.get('auto_title')
+            if not auto_title and self._title_generator:
                 try:
                     from src.web.title_generator import generate_title_sync
                     full_text = results.get('full_text', '')
@@ -560,6 +560,8 @@ class AudioProcessor:
                     duration = results.get('duration_seconds', 0)
                     auto_title = generate_title_sync(full_text, speakers, duration)
                     logger.info(f"Generated title: {auto_title}")
+                    # Store in results so subsequent saves use the same title
+                    results['auto_title'] = auto_title
                 except Exception as e:
                     logger.warning(f"Title generation failed: {e}")
                     # Fallback: use first sentence of transcript
@@ -567,6 +569,7 @@ class AudioProcessor:
                     if full_text:
                         first_sentence = full_text.split('.')[0][:80]
                         auto_title = first_sentence if first_sentence else None
+                        results['auto_title'] = auto_title
 
             # Add metadata
             analysis_data = {
@@ -1240,6 +1243,18 @@ class AudioProcessor:
                     filtered_transcripts, analysis_context
                 )
             progress = 95
+
+            # Generate title ONCE before any saves (ensures consistency across pre-LLM and final)
+            if not results.get('auto_title') and self._title_generator:
+                try:
+                    from src.web.title_generator import generate_title_sync
+                    full_text = results.get('full_text', '')
+                    speakers = results.get('speakers', [])
+                    duration = results.get('duration_seconds', 0)
+                    results['auto_title'] = generate_title_sync(full_text, speakers, duration)
+                    logger.info(f"Generated title: {results['auto_title']}")
+                except Exception as e:
+                    logger.warning(f"Title generation failed: {e}")
 
             # Save analysis BEFORE LLM processing (for debugging/comparison)
             pre_llm_path = self.save_analysis(

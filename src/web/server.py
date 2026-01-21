@@ -1123,12 +1123,17 @@ async def update_analysis_metadata(
     - tags: List of tags
     - notes: Free-form notes
     - starred: Favorite/star status
+
+    Updates both:
+    - archive_index.json (for quick listing)
+    - The individual analysis JSON file (for persistence)
     """
     # Security: only allow valid filenames
     if '..' in filename or '/' in filename:
         raise HTTPException(status_code=400, detail="Invalid filename")
 
     archive_mgr = get_archive_manager()
+    processor = get_processor()
 
     # Check if analysis exists
     metadata = archive_mgr.get_analysis(filename)
@@ -1139,7 +1144,7 @@ async def update_analysis_metadata(
         if not metadata:
             raise HTTPException(status_code=404, detail="Analysis not found")
 
-    # Update metadata
+    # Update archive index
     updated = archive_mgr.update_analysis(
         filename=filename,
         user_title=update.user_title,
@@ -1150,6 +1155,36 @@ async def update_analysis_metadata(
 
     if not updated:
         raise HTTPException(status_code=500, detail="Failed to update metadata")
+
+    # Also update the analysis JSON file itself
+    try:
+        file_path = processor.analyses_dir / filename
+        if file_path.exists():
+            with open(file_path, 'r') as f:
+                analysis_data = json.load(f)
+
+            # Update metadata in the analysis file
+            if 'metadata' not in analysis_data:
+                analysis_data['metadata'] = {}
+
+            if update.user_title is not None:
+                analysis_data['metadata']['user_title'] = update.user_title
+            if update.tags is not None:
+                analysis_data['metadata']['tags'] = update.tags
+            if update.notes is not None:
+                analysis_data['metadata']['notes'] = update.notes
+            if update.starred is not None:
+                analysis_data['metadata']['starred'] = update.starred
+
+            # Save updated analysis file
+            with open(file_path, 'w') as f:
+                json.dump(analysis_data, f, indent=2, default=str)
+
+            logger.info(f"Updated analysis file metadata: {filename}")
+
+    except Exception as e:
+        logger.warning(f"Failed to update analysis file {filename}: {e}")
+        # Don't fail the request - index is already updated
 
     return {"status": "ok", "metadata": updated.to_dict()}
 

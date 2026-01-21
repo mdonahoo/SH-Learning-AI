@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-01-21T01:34:32.241453",
+  "updated_at": "2026-01-21T02:29:38.092760",
   "analyses": {
     "analysis_20260120_170457": {
       "filename": "analysis_20260120_170457.json",
@@ -85,6 +85,34 @@
       "notes": "",
       "starred": false,
       "display_title": "Endeavor_02"
+    },
+    "analysis_20260121_022113": {
+      "filename": "analysis_20260121_022113.json",
+      "recording_filename": "recording_20260121_021704.wav",
+      "auto_title": "Shuttle retrieval and combat patrol simulation",
+      "user_title": null,
+      "created_at": "2026-01-21T02:21:16.046141",
+      "duration_seconds": 900.54,
+      "speaker_count": 7,
+      "segment_count": 259,
+      "tags": [],
+      "notes": "",
+      "starred": false,
+      "display_title": "Shuttle retrieval and combat patrol simulation"
+    },
+    "analysis_20260121_022750": {
+      "filename": "analysis_20260121_022750.json",
+      "recording_filename": "recording_20260121_022300.wav",
+      "auto_title": "Undocking and planetary scan mission in Caravera system",
+      "user_title": null,
+      "created_at": "2026-01-21T02:27:52.851930",
+      "duration_seconds": 901.215,
+      "speaker_count": 7,
+      "segment_count": 276,
+      "tags": [],
+      "notes": "",
+      "starred": false,
+      "display_title": "Undocking and planetary scan mission in Caravera system"
     }
   }
 }
