@@ -1,0 +1,1446 @@
+{
+  "metadata": {
+    "created_at": "2026-01-21T01:22:11.316755",
+    "recording_file": "recording_20260121_011635.wav",
+    "duration_seconds": 4008.96,
+    "speaker_count": 1,
+    "segment_count": 57,
+    "auto_title": "Pirate encounter simulation and combat strategy session"
+  },
+  "results": {
+    "transcription": [
+      {
+        "start_time": 333.41,
+        "end_time": 388.32000000000005,
+        "text": "Point number four, docking. We have to go get people from Landon?",
+        "confidence": 0.24327956476519186,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 388.48,
+        "end_time": 417.22,
+        "text": "Where do we need you guys to go too?",
+        "confidence": 0.24327956476519186,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 437.88,
+        "end_time": 453.65000000000003,
+        "text": "How's your mission? Are you locked in on the missions?",
+        "confidence": 0.24327956476519186,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 454.43000000000006,
+        "end_time": 455.23,
+        "text": "Of course!",
+        "confidence": 0.24327956476519186,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 456.47,
+        "end_time": 473.71000000000004,
+        "text": "Found any of those pesky pirates lurking about yet? Who is going find them first?",
+        "confidence": 0.24327956476519186,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 473.99,
+        "end_time": 482.81000000000006,
+        "text": "Sounds like you've got a strategy I'll check back with and things are falling apart",
+        "confidence": 0.24327956476519186,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 482.81000000000006,
+        "end_time": 490.94000000000005,
+        "text": "You don't have to do that. It's okay things will never well go successful",
+        "confidence": 0.255357141154153,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 490.94000000000005,
+        "end_time": 525.34,
+        "text": "Leave me give them gonna get more towards over there now really nothing",
+        "confidence": 0.255357141154153,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 609.298,
+        "end_time": 638.608,
+        "text": "did not have any oh i think i see them it's where we need to read what happened jump drive",
+        "confidence": 0.2397836446762085,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 638.608,
+        "end_time": 871.608,
+        "text": "using the weapon just want a shield seeing them on my map",
+        "confidence": 0.2397836446762085,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 871.608,
+        "end_time": 876.6679999999999,
+        "text": "I think we need to reverse a little bit.",
+        "confidence": 0.10760614107239919,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 876.708,
+        "end_time": 877.3679999999999,
+        "text": "We want the pilot!",
+        "confidence": 0.10760614107239919,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 877.6679999999999,
+        "end_time": 881.6679999999999,
+        "text": "There are no pirates in World of Warcraft.",
+        "confidence": 0.10760614107239919,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 881.6679999999999,
+        "end_time": 886.028,
+        "text": "Two or three, two or...",
+        "confidence": 0.10760614107239919,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 886.608,
+        "end_time": 895.448,
+        "text": "Turn it up a little and that's good.",
+        "confidence": 0.10760614107239919,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 1141.9465,
+        "end_time": 1142.1865,
+        "text": "Amen.",
+        "confidence": 0.107421875,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 1199.31,
+        "end_time": 1322.16,
+        "text": "Minimal energy. Put nuke in it, heal up! Can you see what they're at home with that?",
+        "confidence": 0.12937499761581422,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 1323.84,
+        "end_time": 1342.82,
+        "text": "33 and we'll get the shield. Is is going to hit or miss there's so much",
+        "confidence": 0.12937499761581422,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 1347.17,
+        "end_time": 1376.92,
+        "text": "Looks like its a tough ship, might take some more shots. Science whats happening",
+        "confidence": 0.12937499761581422,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 1376.92,
+        "end_time": 1382.87,
+        "text": "It looks strong shields have",
+        "confidence": 0.12937499761581422,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 1382.87,
+        "end_time": 1384.13,
+        "text": "Have you targeted the right frequency?",
+        "confidence": 0.28547297082505785,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 1387.19,
+        "end_time": 1388.19,
+        "text": "It's a shield.",
+        "confidence": 0.28547297082505785,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 1388.87,
+        "end_time": 1390.23,
+        "text": "The shields have to burn.",
+        "confidence": 0.28547297082505785,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 1410.73,
+        "end_time": 1411.07,
+        "text": "Frequency!",
+        "confidence": 0.28547297082505785,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 1416.14,
+        "end_time": 1418.84,
+        "text": "Weapons officer is laying down some heavy fire.",
+        "confidence": 0.28547297082505785,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 1419.0,
+        "end_time": 1424.12,
+        "text": "Looks like he's on a collision course.",
+        "confidence": 0.28547297082505785,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 1427.25,
+        "end_time": 1427.85,
+        "text": "Find it!",
+        "confidence": 0.28547297082505785,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 1428.15,
+        "end_time": 1432.71,
+        "text": "Your new weapons are not one-hundred...",
+        "confidence": 0.28547297082505785,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 1432.71,
+        "end_time": 1450.13,
+        "text": "Way to survive.",
+        "confidence": 0.28547297082505785,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 1450.53,
+        "end_time": 1456.62,
+        "text": "Do we heal by going through a station?",
+        "confidence": 0.28547297082505785,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 1456.88,
+        "end_time": 1458.06,
+        "text": "I don't know.",
+        "confidence": 0.28547297082505785,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 1458.32,
+        "end_time": 1481.57,
+        "text": "Where should I go, Captain?",
+        "confidence": 0.28547297082505785,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 1495.93,
+        "end_time": 1497.03,
+        "text": "We're not using weapons.",
+        "confidence": 0.28547297082505785,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 1770.788,
+        "end_time": 1788.8580000000002,
+        "text": "I need an exact number.",
+        "confidence": 0.09581367249758738,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 1789.218,
+        "end_time": 1789.978,
+        "text": "Do the math.",
+        "confidence": 0.09581367249758738,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 1790.058,
+        "end_time": 1790.678,
+        "text": "Number three?",
+        "confidence": 0.09581367249758738,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 1790.758,
+        "end_time": 1791.7780000000002,
+        "text": "The numbers, right there?",
+        "confidence": 0.09581367249758738,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 1793.258,
+        "end_time": 1794.1380000000001,
+        "text": "Five pirates!",
+        "confidence": 0.09581367249758738,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 1794.3580000000002,
+        "end_time": 1794.998,
+        "text": "I don't forget.",
+        "confidence": 0.09581367249758738,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 1800.258,
+        "end_time": 1801.498,
+        "text": "We're going to get five.",
+        "confidence": 0.09581367249758738,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 2070.987,
+        "end_time": 2083.857,
+        "text": "But I mean, all the other people kind of shutting everything.",
+        "confidence": 0.2282714955508709,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 2122.6585,
+        "end_time": 2131.2385000000004,
+        "text": "All right we're good Will! Let's wait until our energy is at an acceptable level.",
+        "confidence": 0.08932783806099082,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 2131.7785000000003,
+        "end_time": 2374.8085,
+        "text": "it's look at how fast where are the other shields let me reach one thousand get out of",
+        "confidence": 0.22860863520985558,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 2374.8085,
+        "end_time": 2385.6085000000003,
+        "text": "the world we're gonna try and go straight first hit there and gotta wait for number five",
+        "confidence": 0.22860863520985558,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 2923.6414999999997,
+        "end_time": 2938.3615,
+        "text": "There is a high fear out there, so we can't be diminished.",
+        "confidence": 0.207248255610466,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 3010.636,
+        "end_time": 3022.366,
+        "text": "They're gonna keep turning right as well.",
+        "confidence": 0.203785218823124,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 3022.466,
+        "end_time": 3022.926,
+        "text": "Jump!",
+        "confidence": 0.203785218823124,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 3034.986,
+        "end_time": 3035.506,
+        "text": "20U",
+        "confidence": 0.203785218823124,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 3035.506,
+        "end_time": 3111.466,
+        "text": "I see 10",
+        "confidence": 0.203785218823124,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 3112.1659999999997,
+        "end_time": 3117.116,
+        "text": "Debra you are doing very well",
+        "confidence": 0.203785218823124,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 3124.756,
+        "end_time": 3129.576,
+        "text": "Are we able to jump?",
+        "confidence": 0.203785218823124,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 3143.366,
+        "end_time": 3149.956,
+        "text": "Looks like you guys are starting to learn on time",
+        "confidence": 0.203785218823124,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 3149.956,
+        "end_time": 3153.456,
+        "text": "ABLE JUMP",
+        "confidence": 0.203785218823124,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 3154.336,
+        "end_time": 3210.636,
+        "text": "versus pandora who wins jump turn left a few degrees jumping now don't jump it'll come to",
+        "confidence": 0.38148082741959527,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 3210.636,
+        "end_time": 3289.9159999999997,
+        "text": "us as well point number five john canese i need to figure out what Hyperion felt like",
+        "confidence": 0.38148082741959527,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 3333.968,
+        "end_time": 3371.398,
+        "text": "Base jump drive, base jump drive. What do you mean our station? Back to the main room.",
+        "confidence": 0.1510416641831398,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      },
+      {
+        "start_time": 3947.1095,
+        "end_time": 3947.1495,
+        "text": "We'll be right back.",
+        "confidence": 0.25716145833333337,
+        "speaker_id": "speaker_1",
+        "speaker_role": null
+      }
+    ],
+    "full_text": "Point number four, docking. We have to go get people from Landon? Where do we need you guys to go too? How's your mission? Are you locked in on the missions? Of course! Found any of those pesky pirates lurking about yet? Who is going find them first? Sounds like you've got a strategy I'll check back with and things are falling apart You don't have to do that. It's okay things will never well go successful Leave me give them gonna get more towards over there now really nothing did not have any oh i think i see them it's where we need to read what happened jump drive using the weapon just want a shield seeing them on my map I think we need to reverse a little bit. We want the pilot! There are no pirates in World of Warcraft. Two or three, two or... Turn it up a little and that's good. Amen. Minimal energy. Put nuke in it, heal up! Can you see what they're at home with that? 33 and we'll get the shield. Is is going to hit or miss there's so much Looks like its a tough ship, might take some more shots. Science whats happening It looks strong shields have Have you targeted the right frequency? It's a shield. The shields have to burn. Frequency! Weapons officer is laying down some heavy fire. Looks like he's on a collision course. Find it! Your new weapons are not one-hundred... Way to survive. Do we heal by going through a station? I don't know. Where should I go, Captain? We're not using weapons. I need an exact number. Do the math. Number three? The numbers, right there? Five pirates! I don't forget. We're going to get five. But I mean, all the other people kind of shutting everything. All right we're good Will! Let's wait until our energy is at an acceptable level. it's look at how fast where are the other shields let me reach one thousand get out of the world we're gonna try and go straight first hit there and gotta wait for number five There is a high fear out there, so we can't be diminished. They're gonna keep turning right as well. Jump! 20U I see 10 Debra you are doing very well Are we able to jump? Looks like you guys are starting to learn on time ABLE JUMP versus pandora who wins jump turn left a few degrees jumping now don't jump it'll come to us as well point number five john canese i need to figure out what Hyperion felt like Base jump drive, base jump drive. What do you mean our station? Back to the main room. We'll be right back.",
+    "duration_seconds": 4008.96,
+    "speakers": [
+      {
+        "speaker_id": "speaker_1",
+        "total_speaking_time": 1292.6000000000013,
+        "utterance_count": 57,
+        "avg_utterance_duration": 22.677192982456162,
+        "role": null,
+        "engagement_score": null
+      }
+    ],
+    "communication_quality": {
+      "effective_count": 0,
+      "improvement_count": 7,
+      "effective_percentage": 0.0,
+      "patterns": [
+        {
+          "pattern_name": "filler_words",
+          "category": "needs_improvement",
+          "description": "Filler words reduce clarity and confidence",
+          "count": 4,
+          "examples": [
+            {
+              "text": "Looks like he's on a collision course.",
+              "speaker": "speaker_1",
+              "timestamp": 1419.0
+            },
+            {
+              "text": "Sounds like you've got a strategy I'll check back with and things are falling apart",
+              "speaker": "speaker_1",
+              "timestamp": 473.99
+            },
+            {
+              "text": "Looks like you guys are starting to learn on time",
+              "speaker": "speaker_1",
+              "timestamp": 3143.366
+            },
+            {
+              "text": "Looks like its a tough ship, might take some more shots. Science whats happening",
+              "speaker": "speaker_1",
+              "timestamp": 1347.17
+            }
+          ],
+          "evidence_details": [
+            {
+              "text": "Looks like he's on a collision course.",
+              "speaker": "speaker_1",
+              "timestamp": 1419.0,
+              "matched_substring": "like "
+            },
+            {
+              "text": "Sounds like you've got a strategy I'll check back with and things are falling apart",
+              "speaker": "speaker_1",
+              "timestamp": 473.99,
+              "matched_substring": "like "
+            },
+            {
+              "text": "Looks like you guys are starting to learn on time",
+              "speaker": "speaker_1",
+              "timestamp": 3143.366,
+              "matched_substring": "like "
+            },
+            {
+              "text": "Looks like its a tough ship, might take some more shots. Science whats happening",
+              "speaker": "speaker_1",
+              "timestamp": 1347.17,
+              "matched_substring": "like "
+            }
+          ]
+        },
+        {
+          "pattern_name": "incomplete_sentence",
+          "category": "needs_improvement",
+          "description": "Incomplete thought disrupts information flow",
+          "count": 2,
+          "examples": [
+            {
+              "text": "Your new weapons are not one-hundred...",
+              "speaker": "speaker_1",
+              "timestamp": 1428.15
+            },
+            {
+              "text": "Two or three, two or...",
+              "speaker": "speaker_1",
+              "timestamp": 881.6679999999999
+            }
+          ],
+          "evidence_details": [
+            {
+              "text": "Your new weapons are not one-hundred...",
+              "speaker": "speaker_1",
+              "timestamp": 1428.15,
+              "matched_substring": "..."
+            },
+            {
+              "text": "Two or three, two or...",
+              "speaker": "speaker_1",
+              "timestamp": 881.6679999999999,
+              "matched_substring": "..."
+            }
+          ]
+        },
+        {
+          "pattern_name": "uncertainty_marker",
+          "category": "needs_improvement",
+          "description": "Uncertainty without specific context",
+          "count": 1,
+          "examples": [
+            {
+              "text": "I don't know.",
+              "speaker": "speaker_1",
+              "timestamp": 1456.88
+            }
+          ],
+          "evidence_details": [
+            {
+              "text": "I don't know.",
+              "speaker": "speaker_1",
+              "timestamp": 1456.88,
+              "matched_substring": "I don't know"
+            }
+          ]
+        }
+      ],
+      "total_utterances_assessed": 49,
+      "calculation_summary": "Assessed 49 utterances. Matched 7 to patterns (0 effective, 7 needs improvement). Effective % = 0/7 = 0.0%",
+      "evidence_details": [
+        {
+          "text": "Sounds like you've got a strategy I'll check back with and things are falling apart",
+          "speaker": "speaker_1",
+          "timestamp": 473.99,
+          "matched_substring": "like ",
+          "pattern_name": "filler_words",
+          "category": "needs_improvement"
+        },
+        {
+          "text": "Two or three, two or...",
+          "speaker": "speaker_1",
+          "timestamp": 881.6679999999999,
+          "matched_substring": "...",
+          "pattern_name": "incomplete_sentence",
+          "category": "needs_improvement"
+        },
+        {
+          "text": "Looks like its a tough ship, might take some more shots. Science whats happening",
+          "speaker": "speaker_1",
+          "timestamp": 1347.17,
+          "matched_substring": "like ",
+          "pattern_name": "filler_words",
+          "category": "needs_improvement"
+        },
+        {
+          "text": "Looks like he's on a collision course.",
+          "speaker": "speaker_1",
+          "timestamp": 1419.0,
+          "matched_substring": "like ",
+          "pattern_name": "filler_words",
+          "category": "needs_improvement"
+        },
+        {
+          "text": "Your new weapons are not one-hundred...",
+          "speaker": "speaker_1",
+          "timestamp": 1428.15,
+          "matched_substring": "...",
+          "pattern_name": "incomplete_sentence",
+          "category": "needs_improvement"
+        },
+        {
+          "text": "I don't know.",
+          "speaker": "speaker_1",
+          "timestamp": 1456.88,
+          "matched_substring": "I don't know",
+          "pattern_name": "uncertainty_marker",
+          "category": "needs_improvement"
+        },
+        {
+          "text": "Looks like you guys are starting to learn on time",
+          "speaker": "speaker_1",
+          "timestamp": 3143.366,
+          "matched_substring": "like ",
+          "pattern_name": "filler_words",
+          "category": "needs_improvement"
+        }
+      ]
+    },
+    "speaker_scorecards": [
+      {
+        "speaker_id": "speaker_1",
+        "role": "Captain/Command",
+        "utterance_count": 49,
+        "overall_score": 2.4,
+        "metrics": [
+          {
+            "name": "Protocol Adherence",
+            "score": 1,
+            "evidence": "No protocol language detected (1/49 utterances, 2.0%)",
+            "supporting_quotes": [
+              "[24:18] \"Where should I go, Captain?\""
+            ],
+            "threshold_info": "Score 5: \u226530% | Score 4: \u226520% | Score 3: \u226510% | Score 2: \u22655% | Score 1: <5%",
+            "pattern_breakdown": {
+              "acknowledgments": 0,
+              "titles": 1,
+              "status": 0,
+              "confirmations": 0
+            },
+            "calculation_details": "Counted utterances containing protocol keywords. Rate = 1/49 = 2.0%. Threshold for score 1: <0%"
+          },
+          {
+            "name": "Communication Clarity",
+            "score": 2,
+            "evidence": "Clarity needs work (confidence: 0.22, 5 fillers)",
+            "supporting_quotes": [
+              "[5:33] \"Point number four, docking. We have to go get people from Landon?\"",
+              "[6:28] \"Where do we need you guys to go too?\"",
+              "[7:17] \"How's your mission? Are you locked in on the missions?\""
+            ],
+            "threshold_info": "Score 5: \u226580% | Score 4: \u226570% | Score 3: \u226560% | Score 2: \u226550% | Score 1: <50%",
+            "pattern_breakdown": {
+              "incomplete_sentences": 2,
+              "filler_words": 5,
+              "clear_utterances": 0,
+              "unclear_utterances": 49
+            },
+            "calculation_details": "Clarity = (confidence \u00d7 0.6) + (completeness \u00d7 0.2) + (no-fillers \u00d7 0.2). Confidence: 0.22, Incomplete: 4.1%, Fillers: 10.2%. Final clarity: 50.6%"
+          },
+          {
+            "name": "Response Time",
+            "score": 4,
+            "evidence": "High engagement (49 utterances, no command-response pairs detected)",
+            "supporting_quotes": [
+              "[5:33] \"Point number four, docking. We have to go get people from La...\"",
+              "[6:28] \"Where do we need you guys to go too?\"",
+              "[7:17] \"How's your mission? Are you locked in on the missions?\""
+            ],
+            "threshold_info": "Engagement-based: Score 4: \u226520% | Score 3: \u226510% | Score 2: <10%",
+            "pattern_breakdown": {
+              "utterance_count": 49,
+              "total_utterances": 49
+            },
+            "calculation_details": "No command-response pairs detected. Using engagement rate: 49/49 = 100.0%"
+          },
+          {
+            "name": "Technical Accuracy",
+            "score": 3,
+            "evidence": "Adequate terminology (10 technical utterances)",
+            "supporting_quotes": [
+              "[5:33] \"Point number four, docking. We have to go get people from Landon?\"",
+              "[10:38] \"using the weapon just want a shield seeing them on my map\"",
+              "[22:03] \"33 and we'll get the shield. Is is going to hit or miss there's so much\"",
+              "[22:56] \"It looks strong shields have\"",
+              "[23:07] \"It's a shield.\""
+            ],
+            "threshold_info": "Score 5: \u226540% | Score 4: \u226525% | Score 3: \u226515% | Score 2: \u22655% | Score 1: <5%",
+            "pattern_breakdown": {
+              "navigation": 0,
+              "systems": 6,
+              "weapons": 3,
+              "sensors": 0,
+              "spatial": 0,
+              "timing": 1
+            },
+            "calculation_details": "Counted utterances with technical terminology. Rate = 10/49 = 20.4%. Categories: systems=6, weapons=3, timing=1"
+          },
+          {
+            "name": "Team Coordination",
+            "score": 2,
+            "evidence": "Limited coordination (3 coordination utterances)",
+            "supporting_quotes": [
+              "[6:28] \"Where do we need you guys to go too?\"",
+              "[10:09] \"did not have any oh i think i see them it's where we need to read what happened ...\"",
+              "[14:31] \"I think we need to reverse a little bit.\""
+            ],
+            "threshold_info": "Score 5: \u226535% | Score 4: \u226525% | Score 3: \u226515% | Score 2: \u22655% | Score 1: <5%",
+            "pattern_breakdown": {
+              "assistance": 0,
+              "readiness": 0,
+              "acknowledgment": 0,
+              "team_language": 3,
+              "status_sharing": 0
+            },
+            "calculation_details": "Counted utterances with coordination language. Rate = 3/49 = 6.1%. Types: team_language=3"
+          }
+        ],
+        "strengths": [
+          "Response Time: High engagement (49 utterances, no command-response pairs detected)",
+          "High engagement with 49 utterances"
+        ],
+        "areas_for_improvement": [
+          "Protocol Adherence: No protocol language detected (1/49 utterances, 2.0%)",
+          "Communication Clarity: Clarity needs work (confidence: 0.22, 5 fillers)",
+          "Team Coordination: Limited coordination (3 coordination utterances)"
+        ]
+      }
+    ],
+    "role_assignments": [
+      {
+        "speaker_id": "speaker_1",
+        "role": "Captain/Command",
+        "confidence": 0.903,
+        "voice_confidence": 0.847,
+        "role_confidence": 0.91,
+        "evidence_factor": 1.0,
+        "keyword_matches": 20,
+        "key_indicators": [
+          "\"shields\" (3)",
+          "\"weapons\" (3)",
+          "\"docking\" (2)",
+          "\"turn\" (2)",
+          "\"hit\" (2)"
+        ],
+        "example_utterances": [
+          {
+            "timestamp": 3154.336,
+            "text": "versus pandora who wins jump turn left a few degrees jumping now don't jump it'll come to",
+            "confidence": 0.38148082741959527
+          },
+          {
+            "timestamp": 3210.636,
+            "text": "us as well point number five john canese i need to figure out what Hyperion felt like",
+            "confidence": 0.38148082741959527
+          },
+          {
+            "timestamp": 1382.87,
+            "text": "Have you targeted the right frequency?",
+            "confidence": 0.28547297082505785
+          },
+          {
+            "timestamp": 1387.19,
+            "text": "It's a shield.",
+            "confidence": 0.28547297082505785
+          },
+          {
+            "timestamp": 1388.87,
+            "text": "The shields have to burn.",
+            "confidence": 0.28547297082505785
+          }
+        ],
+        "methodology": "speaker_1 assigned Captain/Command based on 5 keyword types (\"we're going to\", \"let's\", \"are we able to\", \"that's good\", \"science\"), 9% keyword density, high speaking volume (100% of conversation). High conversation share strongly supports command role. Good supporting evidence. Combined confidence: 90% (voice=85%, role=91%, evidence=100%) Voice cluster: 77 embeddings, tightness=0.85"
+      }
+    ],
+    "confidence_distribution": {
+      "total_utterances": 57,
+      "average_confidence": 0.207,
+      "median_confidence": 0.2282714955508709,
+      "buckets": [
+        {
+          "label": "90% and above",
+          "count": 0,
+          "percentage": 0.0
+        },
+        {
+          "label": "80% to 89%",
+          "count": 0,
+          "percentage": 0.0
+        },
+        {
+          "label": "70% to 79%",
+          "count": 0,
+          "percentage": 0.0
+        },
+        {
+          "label": "60% to 69%",
+          "count": 0,
+          "percentage": 0.0
+        },
+        {
+          "label": "Below 60%",
+          "count": 57,
+          "percentage": 100.0
+        }
+      ],
+      "speaker_averages": {
+        "speaker_1": 0.207
+      },
+      "quality_assessment": "Poor - Major audio quality or speech clarity problems"
+    },
+    "learning_evaluation": {
+      "kirkpatrick_levels": [
+        {
+          "level": 1,
+          "name": "Reaction",
+          "score": 1.0,
+          "interpretation": "High participation equity across 1 speakers"
+        },
+        {
+          "level": 2,
+          "name": "Learning",
+          "score": 0.5,
+          "interpretation": "Completed 0/0 objectives with 2% protocol adherence"
+        },
+        {
+          "level": 3,
+          "name": "Behavior",
+          "score": 0.5,
+          "interpretation": "Team responded in avg 0.0s with 0 decision-making communications"
+        },
+        {
+          "level": 4,
+          "name": "Results",
+          "score": 0.5,
+          "interpretation": "Partial completion: 0% objectives completed"
+        }
+      ],
+      "blooms_level": "Remember",
+      "blooms_score": 0.5,
+      "nasa_tlx_score": 0.5,
+      "engagement_score": 0.5,
+      "overall_learning_score": 0.00625,
+      "top_communications": [
+        {
+          "speaker": "speaker_1",
+          "text": "versus pandora who wins jump turn left a few degrees jumping now don't jump it'll come to",
+          "timestamp": 3154.336,
+          "confidence": 0.38148082741959527
+        },
+        {
+          "speaker": "speaker_1",
+          "text": "us as well point number five john canese i need to figure out what Hyperion felt like",
+          "timestamp": 3210.636,
+          "confidence": 0.38148082741959527
+        },
+        {
+          "speaker": "speaker_1",
+          "text": "Have you targeted the right frequency?",
+          "timestamp": 1382.87,
+          "confidence": 0.28547297082505785
+        },
+        {
+          "speaker": "speaker_1",
+          "text": "It's a shield.",
+          "timestamp": 1387.19,
+          "confidence": 0.28547297082505785
+        },
+        {
+          "speaker": "speaker_1",
+          "text": "The shields have to burn.",
+          "timestamp": 1388.87,
+          "confidence": 0.28547297082505785
+        }
+      ],
+      "speaker_statistics": [
+        {
+          "speaker": "speaker_1",
+          "utterances": 49,
+          "percentage": 100.0
+        }
+      ]
+    },
+    "seven_habits": {
+      "overall_score": 2.0,
+      "habits": [
+        {
+          "habit_number": 1,
+          "habit_name": "Be Proactive",
+          "youth_friendly_name": "Take Initiative",
+          "score": 1,
+          "observation_count": 2,
+          "interpretation": "'Take Initiative' needs attention (2 examples) - priority development area",
+          "development_tip": "Practice saying 'I will' instead of 'Someone should.' Look for opportunities to help before being asked.",
+          "examples": [
+            {
+              "text": "Sounds like you've got a strategy I'll check back with and things are falling apart",
+              "speaker": "speaker_1",
+              "timestamp": 473.99
+            },
+            {
+              "text": "it's look at how fast where are the other shields let me reach one thousand get out of",
+              "speaker": "speaker_1",
+              "timestamp": 2131.7785000000003
+            }
+          ],
+          "pattern_breakdown": {
+            "pattern_0": 2
+          },
+          "speaker_contributions": {
+            "speaker_1": 2
+          },
+          "gap_to_next_score": "Need 2 more observations to reach score 2 (target: 5% frequency)"
+        },
+        {
+          "habit_number": 2,
+          "habit_name": "Begin With End In Mind",
+          "youth_friendly_name": "Know Your Goals",
+          "score": 2,
+          "observation_count": 4,
+          "interpretation": "Some evidence of 'Know Your Goals' (4 examples) - focus area for growth",
+          "development_tip": "Before starting any task, ask yourself: 'What does success look like?' State the goal clearly before taking action.",
+          "examples": [
+            {
+              "text": "How's your mission? Are you locked in on the missions?",
+              "speaker": "speaker_1",
+              "timestamp": 437.88
+            },
+            {
+              "text": "Found any of those pesky pirates lurking about yet? Who is going find them first?",
+              "speaker": "speaker_1",
+              "timestamp": 456.47
+            },
+            {
+              "text": "Sounds like you've got a strategy I'll check back with and things are falling apart",
+              "speaker": "speaker_1",
+              "timestamp": 473.99
+            },
+            {
+              "text": "the world we're gonna try and go straight first hit there and gotta wait for number five",
+              "speaker": "speaker_1",
+              "timestamp": 2374.8085
+            }
+          ],
+          "pattern_breakdown": {
+            "pattern_0": 1,
+            "pattern_1": 1,
+            "pattern_4": 2
+          },
+          "speaker_contributions": {
+            "speaker_1": 4
+          },
+          "gap_to_next_score": "Need 2 more observations to reach score 3 (target: 10% frequency)"
+        },
+        {
+          "habit_number": 3,
+          "habit_name": "Put First Things First",
+          "youth_friendly_name": "Prioritize What Matters",
+          "score": 2,
+          "observation_count": 4,
+          "interpretation": "Some evidence of 'Prioritize What Matters' (4 examples) - focus area for growth",
+          "development_tip": "When multiple things need attention, identify what's most important. Do the hard or urgent things first, not just the easy ones.",
+          "examples": [
+            {
+              "text": "Found any of those pesky pirates lurking about yet? Who is going find them first?",
+              "speaker": "speaker_1",
+              "timestamp": 456.47
+            },
+            {
+              "text": "Leave me give them gonna get more towards over there now really nothing",
+              "speaker": "speaker_1",
+              "timestamp": 490.94000000000005
+            },
+            {
+              "text": "the world we're gonna try and go straight first hit there and gotta wait for number five",
+              "speaker": "speaker_1",
+              "timestamp": 2374.8085
+            },
+            {
+              "text": "versus pandora who wins jump turn left a few degrees jumping now don't jump it'll come to",
+              "speaker": "speaker_1",
+              "timestamp": 3154.336
+            }
+          ],
+          "pattern_breakdown": {
+            "pattern_1": 2,
+            "pattern_3": 2
+          },
+          "speaker_contributions": {
+            "speaker_1": 4
+          },
+          "gap_to_next_score": "Need 2 more observations to reach score 3 (target: 10% frequency)"
+        },
+        {
+          "habit_number": 4,
+          "habit_name": "Think Win Win",
+          "youth_friendly_name": "Work Together for Success",
+          "score": 4,
+          "observation_count": 14,
+          "interpretation": "Excellent demonstration of 'Work Together for Success' (14 examples observed)",
+          "development_tip": "Ask 'How can we both succeed?' instead of 'How can I win?' Look for ways to help teammates while accomplishing your tasks.",
+          "examples": [
+            {
+              "text": "Point number four, docking. We have to go get people from Landon?",
+              "speaker": "speaker_1",
+              "timestamp": 333.41
+            },
+            {
+              "text": "Where do we need you guys to go too?",
+              "speaker": "speaker_1",
+              "timestamp": 388.48
+            },
+            {
+              "text": "did not have any oh i think i see them it's where we need to read what happened jump drive",
+              "speaker": "speaker_1",
+              "timestamp": 609.298
+            },
+            {
+              "text": "I think we need to reverse a little bit.",
+              "speaker": "speaker_1",
+              "timestamp": 871.608
+            },
+            {
+              "text": "We want the pilot!",
+              "speaker": "speaker_1",
+              "timestamp": 876.708
+            }
+          ],
+          "pattern_breakdown": {
+            "pattern_0": 14
+          },
+          "speaker_contributions": {
+            "speaker_1": 14
+          },
+          "gap_to_next_score": "Need 1 more observations to reach score 5 (target: 30% frequency)"
+        },
+        {
+          "habit_number": 5,
+          "habit_name": "Seek First To Understand",
+          "youth_friendly_name": "Listen Before Speaking",
+          "score": 3,
+          "observation_count": 6,
+          "interpretation": "Good practice of 'Listen Before Speaking' (6 examples) - continue developing",
+          "development_tip": "Practice repeating back what someone said before responding. Ask clarifying questions: 'Do you mean...?' or 'Can you explain...?'",
+          "examples": [
+            {
+              "text": "Where do we need you guys to go too?",
+              "speaker": "speaker_1",
+              "timestamp": 388.48
+            },
+            {
+              "text": "How's your mission? Are you locked in on the missions?",
+              "speaker": "speaker_1",
+              "timestamp": 437.88
+            },
+            {
+              "text": "Found any of those pesky pirates lurking about yet? Who is going find them first?",
+              "speaker": "speaker_1",
+              "timestamp": 456.47
+            },
+            {
+              "text": "Minimal energy. Put nuke in it, heal up! Can you see what they're at home with that?",
+              "speaker": "speaker_1",
+              "timestamp": 1199.31
+            },
+            {
+              "text": "Where should I go, Captain?",
+              "speaker": "speaker_1",
+              "timestamp": 1458.32
+            }
+          ],
+          "pattern_breakdown": {
+            "pattern_0": 6
+          },
+          "speaker_contributions": {
+            "speaker_1": 6
+          },
+          "gap_to_next_score": "Need 4 more observations to reach score 4 (target: 20% frequency)"
+        },
+        {
+          "habit_number": 6,
+          "habit_name": "Synergize",
+          "youth_friendly_name": "Create Better Solutions Together",
+          "score": 1,
+          "observation_count": 0,
+          "interpretation": "'Create Better Solutions Together' needs attention (0 examples) - priority development area",
+          "development_tip": "When facing a challenge, ask teammates for their ideas. Build on others' suggestions with 'Yes, and...' instead of 'No, but...'",
+          "examples": [],
+          "pattern_breakdown": {},
+          "speaker_contributions": {},
+          "gap_to_next_score": "Need 3 more observations to reach score 2 (target: 5% frequency)"
+        },
+        {
+          "habit_number": 7,
+          "habit_name": "Sharpen The Saw",
+          "youth_friendly_name": "Keep Learning and Growing",
+          "score": 1,
+          "observation_count": 1,
+          "interpretation": "'Keep Learning and Growing' needs attention (1 examples) - priority development area",
+          "development_tip": "After each mission, ask 'What did I learn?' and 'What would I do differently?' Practice weak areas during training, not just what you're already good at.",
+          "examples": [
+            {
+              "text": "Looks like you guys are starting to learn on time",
+              "speaker": "speaker_1",
+              "timestamp": 3143.366
+            }
+          ],
+          "pattern_breakdown": {
+            "pattern_0": 1
+          },
+          "speaker_contributions": {
+            "speaker_1": 1
+          },
+          "gap_to_next_score": "Need 3 more observations to reach score 2 (target: 5% frequency)"
+        }
+      ],
+      "strengths": [
+        {
+          "habit": "THINK_WIN_WIN",
+          "name": "Work Together for Success",
+          "score": 4,
+          "interpretation": "Excellent demonstration of 'Work Together for Success' (14 examples observed)",
+          "speaker_contributions": {
+            "speaker_1": 14
+          }
+        },
+        {
+          "habit": "SEEK_FIRST_TO_UNDERSTAND",
+          "name": "Listen Before Speaking",
+          "score": 3,
+          "interpretation": "Good practice of 'Listen Before Speaking' (6 examples) - continue developing",
+          "speaker_contributions": {
+            "speaker_1": 6
+          }
+        },
+        {
+          "habit": "BEGIN_WITH_END_IN_MIND",
+          "name": "Know Your Goals",
+          "score": 2,
+          "interpretation": "Some evidence of 'Know Your Goals' (4 examples) - focus area for growth",
+          "speaker_contributions": {
+            "speaker_1": 4
+          }
+        }
+      ],
+      "growth_areas": [
+        {
+          "habit": "SYNERGIZE",
+          "name": "Create Better Solutions Together",
+          "score": 1,
+          "development_tip": "When facing a challenge, ask teammates for their ideas. Build on others' suggestions with 'Yes, and...' instead of 'No, but...'",
+          "gap_to_next_score": "Need 3 more observations to reach score 2 (target: 5% frequency)"
+        },
+        {
+          "habit": "SHARPEN_THE_SAW",
+          "name": "Keep Learning and Growing",
+          "score": 1,
+          "development_tip": "After each mission, ask 'What did I learn?' and 'What would I do differently?' Practice weak areas during training, not just what you're already good at.",
+          "gap_to_next_score": "Need 3 more observations to reach score 2 (target: 5% frequency)"
+        },
+        {
+          "habit": "BE_PROACTIVE",
+          "name": "Take Initiative",
+          "score": 1,
+          "development_tip": "Practice saying 'I will' instead of 'Someone should.' Look for opportunities to help before being asked.",
+          "gap_to_next_score": "Need 2 more observations to reach score 2 (target: 5% frequency)"
+        }
+      ],
+      "score_thresholds": "Score 5: \u226530% | Score 4: \u226520% | Score 3: \u226510% | Score 2: \u22655% | Score 1: <5%"
+    },
+    "training_recommendations": {
+      "immediate_actions": [
+        {
+          "title": "Communication Clarity Drill",
+          "description": "Practice the 'Complete Thought' technique: Before speaking, form the complete sentence in your mind. No trailing off or filler words (um, uh, like). Each communication should have a clear subject, action, and target.",
+          "priority": "CRITICAL",
+          "category": "Communication",
+          "frameworks": [
+            "TeamSTEPPS: Communication",
+            "7 Habits: Seek First to Understand"
+          ],
+          "scout_connection": "A Scout is Trustworthy - clear communication builds trust",
+          "habit_connection": "Habit 5: Seek First to Understand - clarity enables understanding",
+          "success_criteria": "Reduce incomplete communications by 50%"
+        },
+        {
+          "title": "Voice Projection Training",
+          "description": "Practice speaking clearly and confidently. Use the 'Radio Voice' technique: imagine speaking into a radio where clarity is critical. Enunciate each word, speak at moderate pace, and project your voice.",
+          "priority": "HIGH",
+          "category": "Communication",
+          "frameworks": [
+            "Kirkpatrick Level 3: Behavior"
+          ],
+          "scout_connection": "A Scout is Brave - confidence in communication",
+          "habit_connection": "Habit 1: Be Proactive - take ownership of being understood",
+          "success_criteria": "Increase average transcription confidence above 75%"
+        },
+        {
+          "title": "Closed-Loop Communication Protocol",
+          "description": "Implement three-part acknowledgments: 1) Repeat the order, 2) Confirm understanding, 3) Report when complete. Example: 'Set course for sector 7' \u2192 'Course for sector 7, aye. Course laid in. Engaging now.'",
+          "priority": "HIGH",
+          "category": "Communication",
+          "frameworks": [
+            "TeamSTEPPS: Communication",
+            "NASA: Communication"
+          ],
+          "scout_connection": "A Scout is Obedient - following and confirming orders",
+          "habit_connection": "Habit 5: Seek First to Understand, Then to Be Understood",
+          "success_criteria": "100% of commands receive verbal acknowledgment"
+        }
+      ],
+      "communication_improvements": [],
+      "leadership_development": [],
+      "teamwork_enhancements": [],
+      "drills": [
+        {
+          "name": "Rapid Fire Communications",
+          "purpose": "Improve communication speed and clarity under pressure",
+          "duration": "10 minutes",
+          "participants": "full team",
+          "steps": [
+            "Leader reads scenario card",
+            "Target station must respond within 5 seconds",
+            "Response must include acknowledgment and action",
+            "Team evaluates clarity (thumbs up/down)",
+            "Repeat with increasing complexity"
+          ],
+          "debrief_questions": [
+            "Which responses were clearest? Why?",
+            "What made some responses difficult?",
+            "How can we improve response time without sacrificing clarity?"
+          ],
+          "frameworks_addressed": []
+        },
+        {
+          "name": "Station Swap Challenge",
+          "purpose": "Build cross-functional understanding and flexibility",
+          "duration": "20 minutes",
+          "participants": "full team",
+          "steps": [
+            "Original operator teaches partner the basics (5 min)",
+            "Partners swap stations",
+            "Run simple scenario with swapped roles (10 min)",
+            "Original operators can coach but not take over",
+            "Debrief as team"
+          ],
+          "debrief_questions": [
+            "What was harder than expected about the other role?",
+            "What did you learn that will help you support that station?",
+            "How does understanding other roles improve teamwork?"
+          ],
+          "frameworks_addressed": []
+        },
+        {
+          "name": "The Silent Bridge",
+          "purpose": "Practice non-verbal communication and situational awareness",
+          "duration": "15 minutes",
+          "participants": "full team",
+          "steps": [
+            "Review hand signals as a team",
+            "Run scenario with no verbal communication",
+            "All communication through hand signals, pointing, or written notes",
+            "Debrief challenges and successes"
+          ],
+          "debrief_questions": [
+            "What information was hardest to convey silently?",
+            "How did you adapt your communication?",
+            "What does this teach about clear verbal communication?"
+          ],
+          "frameworks_addressed": []
+        },
+        {
+          "name": "Proactive Initiative Round",
+          "purpose": "Build Habit 1: Be Proactive - taking initiative",
+          "duration": "15 minutes",
+          "participants": "full team",
+          "steps": [
+            "Run normal scenario",
+            "Each person tracks when they: volunteered information, offered help, anticipated needs",
+            "Cannot wait to be asked - must proactively contribute",
+            "Count initiatives at end",
+            "Discuss quality and impact of initiatives"
+          ],
+          "debrief_questions": [
+            "What proactive actions had the biggest impact?",
+            "When did you hesitate? Why?",
+            "How does being proactive change the team dynamic?"
+          ],
+          "frameworks_addressed": []
+        }
+      ],
+      "discussion_topics": [
+        {
+          "topic": "The Win-Win Mission",
+          "question": "How can we ensure that everyone on the crew 'wins' during a mission - not just completing objectives, but growing and contributing?",
+          "scout_connection": "A Scout is Helpful and Friendly - helping others succeed",
+          "discussion_points": [
+            "What does 'winning' look like for each role?",
+            "How can we celebrate individual contributions while focusing on team success?",
+            "What happens when roles are in conflict? How do we find win-win?"
+          ]
+        },
+        {
+          "topic": "First Things First Under Pressure",
+          "question": "When multiple emergencies happen at once, how do we decide what to do first?",
+          "scout_connection": "A Scout is Brave - making tough decisions under pressure",
+          "discussion_points": [
+            "What makes something 'urgent' vs 'important'?",
+            "How do we communicate priorities to the team?",
+            "Practice scenario: Three alerts at once - how do you prioritize?"
+          ]
+        },
+        {
+          "topic": "Learning from Failure",
+          "question": "What's the most valuable thing we learned from a mission that didn't go as planned?",
+          "scout_connection": "A Scout is Trustworthy and Cheerful - honest about mistakes, positive about learning",
+          "discussion_points": [
+            "What's the difference between a mistake and a failure?",
+            "How can we create an environment where it's safe to fail and learn?",
+            "What would you do differently knowing what you know now?"
+          ]
+        }
+      ],
+      "framework_alignment": {
+        "7 Habits \u2192 Scout Law": [
+          "Be Proactive \u2192 Trustworthy (take responsibility)",
+          "Begin with End in Mind \u2192 Obedient (understand purpose)",
+          "Put First Things First \u2192 Thrifty (prioritize resources)",
+          "Think Win-Win \u2192 Friendly, Helpful (mutual success)",
+          "Seek First to Understand \u2192 Courteous (listen with respect)",
+          "Synergize \u2192 Loyal (commit to team success)",
+          "Sharpen the Saw \u2192 Brave (pursue continuous growth)"
+        ],
+        "7 Habits \u2192 TeamSTEPPS": [
+          "Be Proactive \u2192 Situation Monitoring (proactive awareness)",
+          "Think Win-Win \u2192 Mutual Support (team success focus)",
+          "Seek First to Understand \u2192 Communication (clear exchange)",
+          "Synergize \u2192 Team Structure (effective collaboration)"
+        ],
+        "7 Habits \u2192 Bloom's Taxonomy": [
+          "Habit 1-3 (Personal): Remember, Understand, Apply",
+          "Habit 4-6 (Interpersonal): Analyze, Evaluate",
+          "Habit 7 (Renewal): Create (continuous improvement)"
+        ],
+        "Scout EDGE Method \u2192 Kirkpatrick": [
+          "Explain \u2192 Level 1: Reaction (engagement)",
+          "Demonstrate \u2192 Level 2: Learning (knowledge)",
+          "Guide \u2192 Level 3: Behavior (application)",
+          "Enable \u2192 Level 4: Results (independence)"
+        ]
+      },
+      "total_recommendations": 25
+    },
+    "narrative_summary": {
+      "narrative": "### Mission Grade: C\nThe crew showed promise but struggled with clear communication and goal-oriented actions.\n\n### Top 3 Strengths (with evidence)\n1. **Work Together for Success**: \"Point number four, docking. We have to go get people from Landon?\" - Captain\n2. **Listen Before Speaking**: \"Where do we need you guys to go too?\" - Captain\n3. **Prioritize What Matters**: \"Found any of those pesky pirates lurking about yet? Who is going find them first?\" - Captain\n\n### Top 2 Growth Areas\n1. **Take Initiative**: The captain seemed hesitant to take action without being prompted, e.g., \"Sounds like you've got a strategy I'll check back with and things are falling apart.\" Practice saying 'I will' instead of waiting for others.\n2. **Create Better Solutions Together**: No evidence of collaboration on problem-solving was observed. When facing challenges, ask teammates for their ideas.\n\n### Individual Performance\n| Role | Did Well | Work On |\n|------|----------|---------|\n| Captain | High engagement and clear communication | Taking initiative, creating better solutions together |\n| Helm | ... | ... |\n| Tactical | ... | ... |\n| (others) | ... | ... |\n\n### Quick Wins for Next Mission\n- [ ] Practice saying 'I will' instead of waiting to be asked.\n- [ ] Ask teammates for their ideas when facing challenges.\n- [ ] Repeat back what others say before responding.",
+      "model": "qwen2.5:14b-instruct",
+      "style": "entertaining",
+      "generated": true,
+      "validation_issues": 0,
+      "generation_time": 60.1
+    },
+    "saved_recording_path": "data/recordings/recording_20260121_011635.wav",
+    "processing_time_seconds": 350.4378342628479,
+    "language": "en",
+    "diarization_methodology": "Chunk-based diarization (7 chunks) to prevent speaker drift over 4009s audio",
+    "confidence_filter": {
+      "enabled": true,
+      "threshold": 0.1,
+      "total_segments": 57,
+      "included_segments": 49,
+      "excluded_segments": 8,
+      "excluded_percentage": 14.0,
+      "excluded_examples": [
+        {
+          "text": "I need an exact number.",
+          "confidence": 0.096,
+          "timestamp": 1770.788
+        },
+        {
+          "text": "Do the math.",
+          "confidence": 0.096,
+          "timestamp": 1789.218
+        },
+        {
+          "text": "Number three?",
+          "confidence": 0.096,
+          "timestamp": 1790.058
+        },
+        {
+          "text": "The numbers, right there?",
+          "confidence": 0.096,
+          "timestamp": 1790.758
+        },
+        {
+          "text": "Five pirates!",
+          "confidence": 0.096,
+          "timestamp": 1793.258
+        }
+      ]
+    },
+    "pre_llm_analysis_path": "data/analyses/analysis_20260121_011914_pre_llm.json",
+    "story_narrative": {
+      "story": "The bridge of the starship was abuzz with activity as the mission began. The Captain's voice cut through the static-filled communications, \"Point number four, docking. We have to go get people from Landon?\" As the crew assembled around their stations, the tension in the air was palpable.\n\nAs the session progressed, the team faced challenges that tested their resolve and coordination. The Captain asked, \"Where do we need you guys to go too?\" This question set off a flurry of activity as the crew scrambled to lock onto their mission objectives. Despite the urgency, there were moments of uncertainty and confusion. At one point, the Tactical Officer inquired, \"Found any of those pesky pirates lurking about yet? Who is going find them first?\"\n\nThe Captain's response was both reassuring and pragmatic: \"Sounds like you've got a strategy I'll check back with and things are falling apart.\" The crew worked to maintain their cohesion as they navigated through the complexities of space combat. When the shields began to take hits, the Tactical Officer shouted, \"Minimal energy. Put nuke in it, heal up! Can you see what they're at home with that?\" The urgency was clear, and every decision had to be made quickly.\n\nAs the session reached its climax, the Captain's voice echoed through the bridge: \"Frequency!\" The crew scrambled to target the right frequency as their shields began to crack under relentless fire. It wasn't long before the Tactical Officer declared, \"Weapons officer is laying down some heavy fire.\" But the enemy ship was resilient, and it looked like a direct hit might be necessary to break them.\n\nThe Captain's voice was calm but firm: \"Looks like he's on a collision course.\" The crew prepared for impact, their hearts pounding as they braced for the inevitable. Yet, in the heat of battle, there were moments of unexpected levity. One crew member quipped, \"There are no pirates in World of Warcraft,\" breaking the tension momentarily.\n\nAs the session drew to a close, the Captain's voice was filled with reflection: \"Debra you are doing very well.\" Despite the challenges faced throughout the mission, the team showed resilience and determination. The last words spoken on the bridge were hopeful: \"ABLE JUMP\" as they prepared for their next move in the vast expanse of space.\n\nThe session ended with a mix of frustration and resolve, reflecting the crew's journey from initial confusion to moments of clarity and teamwork.",
+      "model": "qwen2.5:14b-instruct",
+      "style": "narrative",
+      "generated": true,
+      "validation_issues": 0,
+      "generation_time": 90.9
+    }
+  }
+}
