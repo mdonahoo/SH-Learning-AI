@@ -424,6 +424,7 @@ class ArchiveManager:
                 self.add_analysis(
                     filename=filename,
                     recording_filename=metadata_data.get('recording_file'),
+                    auto_title=metadata_data.get('auto_title'),
                     duration_seconds=metadata_data.get('duration_seconds', 0),
                     speaker_count=metadata_data.get('speaker_count', 0),
                     segment_count=metadata_data.get('segment_count', 0)

@@ -334,9 +334,31 @@ class NarrativeSummaryGenerator:
                         sections.append(f"  [{role}]: \"{text[:250]}\"")
                         shown += 1
 
-            # Also include the full transcript for context
-            sections.append(f"\nFULL TRANSCRIPT ({len(transcripts)} utterances):")
-            for t in transcripts[:50]:  # First 50 utterances for context
+            # Include representative transcript sample for context
+            # For long recordings, sample from beginning, middle, and end
+            MAX_CONTEXT_SEGMENTS = 100
+            total_count = len(transcripts)
+
+            if total_count > MAX_CONTEXT_SEGMENTS:
+                # Sample: 30 from start, 40 from middle (high confidence), 30 from end
+                beginning = transcripts[:30]
+                ending = transcripts[-30:]
+                middle_pool = transcripts[30:-30]
+                # Take highest confidence from middle
+                middle_sorted = sorted(
+                    middle_pool,
+                    key=lambda x: x.get('confidence', 0.5),
+                    reverse=True
+                )[:40]
+                # Re-sort by time (using start_time)
+                middle_sorted.sort(key=lambda x: x.get('start_time', 0) if isinstance(x.get('start_time'), (int, float)) else 0)
+                context_sample = beginning + middle_sorted + ending
+                sections.append(f"\nTRANSCRIPT SAMPLE ({len(context_sample)} of {total_count} utterances):")
+            else:
+                context_sample = transcripts
+                sections.append(f"\nFULL TRANSCRIPT ({total_count} utterances):")
+
+            for t in context_sample:
                 speaker = t.get('speaker_id', 'Unknown')
                 role = role_map.get(speaker, {}).get('role', speaker)
                 text = t.get('text', '').strip()
@@ -723,13 +745,49 @@ Write your story now (remember: only use facts from the transcript, gender-neutr
                 utterances = s.get('utterance_count', 0)
                 sections.append(f"  - {role}: {utterances} communications")
 
-        # Full transcript for story context
+        # Transcript for story context (smart sampling for long recordings)
         transcripts = analysis.get('transcription', [])
         if transcripts:
-            sections.append(f"\nCOMPLETE MISSION LOG ({len(transcripts)} communications):")
-            sections.append("Use these actual communications to build your story:\n")
+            # For long transcripts, sample strategically to preserve narrative arc
+            # while keeping context size manageable
+            MAX_TRANSCRIPT_SEGMENTS = 300
+            total_count = len(transcripts)
 
-            for i, t in enumerate(transcripts):
+            if total_count > MAX_TRANSCRIPT_SEGMENTS:
+                # Smart sampling: beginning (scene setting), middle (action), end (resolution)
+                beginning_count = 50  # First ~5 min for scene setting
+                end_count = 50        # Last ~5 min for resolution
+                middle_count = MAX_TRANSCRIPT_SEGMENTS - beginning_count - end_count
+
+                # Get beginning and end segments
+                beginning = transcripts[:beginning_count]
+                ending = transcripts[-end_count:]
+
+                # Sample evenly from middle, preferring high-confidence segments
+                middle_transcripts = transcripts[beginning_count:-end_count]
+                if middle_transcripts:
+                    # Sort by confidence, take top ones, then re-sort by time
+                    middle_sorted = sorted(
+                        [(i, t) for i, t in enumerate(middle_transcripts)
+                         if t.get('text', '').strip()],
+                        key=lambda x: x[1].get('confidence', 0.5),
+                        reverse=True
+                    )[:middle_count]
+                    # Re-sort by original index to maintain chronological order
+                    middle_sorted.sort(key=lambda x: x[0])
+                    middle = [t for _, t in middle_sorted]
+                else:
+                    middle = []
+
+                sampled_transcripts = beginning + middle + ending
+                sections.append(f"\nMISSION LOG (sampled {len(sampled_transcripts)} of {total_count} communications):")
+                sections.append("Key communications from throughout the mission:\n")
+            else:
+                sampled_transcripts = transcripts
+                sections.append(f"\nCOMPLETE MISSION LOG ({total_count} communications):")
+                sections.append("Use these actual communications to build your story:\n")
+
+            for i, t in enumerate(sampled_transcripts):
                 speaker = t.get('speaker_id', 'Unknown')
                 role = role_map.get(speaker, speaker)
                 text = t.get('text', '').strip()

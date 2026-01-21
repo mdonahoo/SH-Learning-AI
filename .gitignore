@@ -106,4 +106,4 @@ claude_prompt.txt
 
 
 examples/screenshots/*.PNG
-# data/
+data/*

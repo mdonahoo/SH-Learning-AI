@@ -1666,6 +1666,42 @@ header {
     line-height: 1.5;
 }
 
+/* Read-Only Mode Notice */
+.read-only-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05));
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+}
+
+.read-only-notice .notice-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.read-only-notice .notice-text {
+    flex: 1;
+}
+
+.read-only-notice strong {
+    display: block;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #8b5cf6;
+    margin-bottom: 4px;
+}
+
+.read-only-notice p {
+    font-size: 0.875rem;
+    color: var(--text-dim);
+    margin: 0;
+    line-height: 1.5;
+}
+
 /* Recommendations Preview */
 /* ===== PRIORITY RECOMMENDATIONS (SUMMARY TAB) ===== */
 .recommendations-preview, .top-recommendations {

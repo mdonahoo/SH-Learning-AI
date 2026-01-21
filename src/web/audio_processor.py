@@ -209,7 +209,8 @@ class AudioProcessor:
     def __init__(
         self,
         whisper_model: Optional[str] = None,
-        preload_model: bool = False
+        preload_model: bool = False,
+        archive_manager: Optional['ArchiveManager'] = None
     ):
         """
         Initialize audio processor.
@@ -217,6 +218,7 @@ class AudioProcessor:
         Args:
             whisper_model: Whisper model size (tiny/base/small/medium/large-v3)
             preload_model: Whether to load Whisper model immediately
+            archive_manager: Optional shared ArchiveManager instance
         """
         self.whisper_model_size = whisper_model or os.getenv(
             'WHISPER_MODEL_SIZE', 'base'
@@ -300,9 +302,10 @@ class AudioProcessor:
             )
 
         # Initialize archive manager and title generator
-        self._archive_manager: Optional[ArchiveManager] = None
+        # Use shared archive_manager if provided, otherwise create new instance
+        self._archive_manager: Optional[ArchiveManager] = archive_manager
         self._title_generator: Optional[TitleGenerator] = None
-        if ARCHIVE_MANAGER_AVAILABLE:
+        if self._archive_manager is None and ARCHIVE_MANAGER_AVAILABLE:
             self._archive_manager = ArchiveManager()
         if TITLE_GENERATOR_AVAILABLE:
             self._title_generator = TitleGenerator()
@@ -518,7 +521,8 @@ class AudioProcessor:
         results: Dict[str, Any],
         recording_path: Optional[str] = None,
         suffix: str = "",
-        register_archive: bool = True
+        register_archive: bool = True,
+        timestamp: Optional[str] = None
     ) -> Optional[str]:
         """
         Save analysis results to JSON file with auto-generated title.
@@ -528,6 +532,7 @@ class AudioProcessor:
             recording_path: Path to associated recording (for linking)
             suffix: Optional suffix for filename (e.g., "_pre_llm")
             register_archive: Whether to register in archive index (False for intermediate saves)
+            timestamp: Optional timestamp string for filename (to ensure pre-LLM and final use same base)
 
         Returns:
             Path to saved analysis JSON, or None if saving is disabled
@@ -539,8 +544,9 @@ class AudioProcessor:
             import json
             from datetime import datetime
 
-            # Generate timestamped filename
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            # Generate timestamped filename (use provided timestamp for consistency)
+            if timestamp is None:
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             saved_name = f"analysis_{timestamp}{suffix}.json"
             saved_path = self.analyses_dir / saved_name
 
@@ -1025,6 +1031,9 @@ class AudioProcessor:
             Complete analysis results dictionary
         """
         start_time = time.time()
+        # Generate timestamp for consistent file naming (pre-LLM and final use same base)
+        from datetime import datetime
+        analysis_timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         logger.info(f"analyze_audio called with include_narrative={include_narrative}, include_story={include_story}")
 
         def update_progress(step_id: str, step_label: str, progress: int):
@@ -1237,22 +1246,24 @@ class AudioProcessor:
                 results,
                 results.get('saved_recording_path'),
                 suffix="_pre_llm",
-                register_archive=False  # Don't clutter archive with intermediate saves
+                register_archive=False,  # Don't clutter archive with intermediate saves
+                timestamp=analysis_timestamp
             )
             if pre_llm_path:
                 results['pre_llm_analysis_path'] = pre_llm_path
                 logger.info(f"Pre-LLM analysis saved: {pre_llm_path}")
 
             # Step 11: LLM Team Analysis Narrative
-            # Skip LLM for very long recordings (>60 min) to avoid timeouts
+            # Skip LLM for very long recordings to avoid context overflow
+            # Default increased to 180 min (3 hours) to support longer missions
             recording_duration_min = results.get('duration_seconds', 0) / 60
-            max_llm_duration_min = 60  # Skip LLM for recordings longer than 60 minutes
+            max_llm_duration_min = int(os.getenv('MAX_LLM_DURATION_MINUTES', '180'))
 
             if recording_duration_min > max_llm_duration_min:
                 results['llm_skipped_reason'] = (
                     f"Recording duration ({recording_duration_min:.0f} min) exceeds "
                     f"{max_llm_duration_min} min limit for LLM generation. "
-                    "Analysis metrics are available; narrative generation skipped to avoid timeouts."
+                    "Analysis metrics are available; narrative generation skipped to avoid context overflow."
                 )
                 logger.warning(
                     f"Skipping LLM generation for {recording_duration_min:.0f} min recording "
@@ -1320,8 +1331,12 @@ class AudioProcessor:
                 except Exception:
                     pass
 
-        # Save analysis results
-        saved_analysis_path = self.save_analysis(results, results.get('saved_recording_path'))
+        # Save analysis results (use same timestamp as pre-LLM save for consistency)
+        saved_analysis_path = self.save_analysis(
+            results,
+            results.get('saved_recording_path'),
+            timestamp=analysis_timestamp
+        )
         results['saved_analysis_path'] = saved_analysis_path
 
         return results

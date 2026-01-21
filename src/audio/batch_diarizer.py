@@ -221,10 +221,38 @@ class BatchSpeakerDiarizer:
             os.getenv('DIARIZATION_CHUNK_OVERLAP', '30')  # 30 second overlap
         )
 
+        # Sub-segment diarization for long segments with multiple speakers
+        # Segments longer than this threshold will be split into sub-segments
+        self.subsegment_threshold_seconds = float(
+            os.getenv('SUBSEGMENT_THRESHOLD', '3.0')  # Segments > 3s get sub-segmented
+        )
+        self.subsegment_window_seconds = float(
+            os.getenv('SUBSEGMENT_WINDOW', '1.5')  # Extract embedding every 1.5s (reduced for faster changes)
+        )
+        self.subsegment_hop_seconds = float(
+            os.getenv('SUBSEGMENT_HOP', '0.5')  # Hop 0.5s for fine-grained speaker change detection
+        )
+        # Minimum similarity to consider same speaker within a segment
+        self.subsegment_speaker_threshold = float(
+            os.getenv('SUBSEGMENT_SPEAKER_THRESHOLD', '0.75')
+        )
+        # Energy-based pause detection for finding speaker boundaries
+        self.pause_energy_threshold = float(
+            os.getenv('PAUSE_ENERGY_THRESHOLD', '0.02')  # RMS below this = silence/pause
+        )
+        self.min_pause_duration_seconds = float(
+            os.getenv('MIN_PAUSE_DURATION', '0.25')  # Minimum pause to consider as speaker boundary (increased)
+        )
+        # Minimum segment duration after splitting (prevents micro-segments)
+        self.min_split_segment_duration = float(
+            os.getenv('MIN_SPLIT_SEGMENT_DURATION', '1.0')  # At least 1 second per speaker
+        )
+
         logger.info(
             f"BatchSpeakerDiarizer initialized: threshold={self.similarity_threshold}, "
             f"speakers={self.min_speakers}-{self.max_speakers}, "
-            f"chunk_threshold={self.chunk_threshold_seconds}s"
+            f"chunk_threshold={self.chunk_threshold_seconds}s, "
+            f"subsegment_threshold={self.subsegment_threshold_seconds}s"
         )
 
     def diarize_complete(
@@ -303,6 +331,11 @@ class BatchSpeakerDiarizer:
             return self._diarize_chunked(audio_data, segments, sample_rate)
 
         # Standard processing for shorter audio
+        # Pass 0: Pre-process segments to split multi-speaker segments
+        segments = self._preprocess_segments_for_multi_speaker(
+            segments, audio_data, sample_rate
+        )
+
         # Pass 1: Extract all embeddings
         embeddings_data = self._extract_all_embeddings(audio_data, segments, sample_rate)
         logger.info(f"Extracted {len(embeddings_data)} embeddings")
@@ -399,6 +432,27 @@ class BatchSpeakerDiarizer:
 
             logger.info(f"Chunk {chunk_idx + 1}/{len(chunk_boundaries)}: {len(chunk_segments)} segments")
 
+            # Pre-process segments to split multi-speaker segments
+            # Track mapping from split segments back to original indices
+            original_segment_count = len(chunk_segments)
+            chunk_segments = self._preprocess_segments_for_multi_speaker(
+                chunk_segments, chunk_audio, sample_rate
+            )
+
+            # Build mapping from split segment index to original segment index
+            split_to_original = {}
+            for split_idx, seg in enumerate(chunk_segments):
+                # If segment was split, it has '_original_segment_idx' from the split
+                # But that's relative to pre-split chunk_segments, which maps to segment_indices
+                orig_idx = seg.get('_original_segment_idx')
+                if orig_idx is not None and orig_idx < len(segment_indices):
+                    split_to_original[split_idx] = segment_indices[orig_idx]
+                else:
+                    # Not split - use the segment's _idx which was set before preprocessing
+                    seg_idx = seg.get('_idx')
+                    if seg_idx is not None and seg_idx < len(segment_indices):
+                        split_to_original[split_idx] = segment_indices[seg_idx]
+
             # Extract embeddings for this chunk
             embeddings_data = self._extract_all_embeddings(chunk_audio, chunk_segments, sample_rate)
 
@@ -425,25 +479,17 @@ class BatchSpeakerDiarizer:
                 if cluster.centroid is not None:
                     centroids[speaker_id] = cluster.centroid
 
-            # Map segment indices to speaker IDs
-            segment_speakers = {}
-            for emb_idx, emb, start, end, duration in embeddings_data:
-                # Find which cluster this embedding belongs to
-                for speaker_id, cluster in speaker_clusters.items():
-                    if emb_idx in [e[0] for e in embeddings_data if any(
-                        np.array_equal(e[1], emb_vec) for emb_vec in cluster.embeddings
-                    )]:
-                        segment_speakers[segment_indices[emb_idx]] = speaker_id
-                        break
-
-            # Simpler approach: use cluster assignments directly
+            # Map segment indices to speaker IDs using split_to_original mapping
             segment_speakers = {}
             for data_idx, (emb_idx, emb, start, end, duration) in enumerate(embeddings_data):
                 label = cluster_labels[data_idx]
                 # Find speaker ID for this label
                 for speaker_id, cluster in speaker_clusters.items():
                     if emb_idx in cluster.segment_indices:
-                        segment_speakers[segment_indices[emb_idx]] = speaker_id
+                        # Map back to original segment index
+                        original_idx = split_to_original.get(emb_idx)
+                        if original_idx is not None:
+                            segment_speakers[original_idx] = speaker_id
                         break
 
             chunk_results.append({
@@ -910,6 +956,537 @@ class BatchSpeakerDiarizer:
         except Exception as e:
             logger.warning(f"Failed to extract embedding: {e}")
             return None
+
+    def _detect_pauses(
+        self,
+        audio_data: np.ndarray,
+        seg_start: float,
+        seg_end: float,
+        sample_rate: int
+    ) -> List[float]:
+        """
+        Detect pauses within a segment using energy analysis.
+
+        Finds brief silences that likely indicate speaker boundaries.
+        This is critical for rapid-fire bridge communications where
+        speakers hand off quickly with minimal pauses.
+
+        Args:
+            audio_data: Full audio samples
+            seg_start: Segment start time in seconds
+            seg_end: Segment end time in seconds
+            sample_rate: Audio sample rate
+
+        Returns:
+            List of pause midpoint timestamps (potential speaker boundaries)
+        """
+        start_sample = int(seg_start * sample_rate)
+        end_sample = int(seg_end * sample_rate)
+        segment_audio = audio_data[start_sample:end_sample]
+
+        if len(segment_audio) == 0:
+            return []
+
+        # Analyze energy in small frames (20ms)
+        frame_size = int(0.02 * sample_rate)  # 20ms frames
+        hop_size = int(0.01 * sample_rate)    # 10ms hop
+
+        pause_regions = []
+        in_pause = False
+        pause_start = None
+
+        pos = 0
+        while pos + frame_size <= len(segment_audio):
+            frame = segment_audio[pos:pos + frame_size]
+            rms = np.sqrt(np.mean(frame ** 2))
+
+            current_time = seg_start + (pos / sample_rate)
+
+            if rms < self.pause_energy_threshold:
+                if not in_pause:
+                    in_pause = True
+                    pause_start = current_time
+            else:
+                if in_pause:
+                    pause_end = current_time
+                    pause_duration = pause_end - pause_start
+
+                    # Only consider pauses longer than minimum
+                    if pause_duration >= self.min_pause_duration_seconds:
+                        # Use pause midpoint as potential speaker boundary
+                        pause_mid = (pause_start + pause_end) / 2
+                        pause_regions.append(pause_mid)
+                        logger.debug(
+                            f"Pause detected: {pause_start:.2f}s - {pause_end:.2f}s "
+                            f"(duration={pause_duration:.3f}s)"
+                        )
+
+                    in_pause = False
+                    pause_start = None
+
+            pos += hop_size
+
+        return pause_regions
+
+    def _extract_subsegment_embeddings(
+        self,
+        audio_data: np.ndarray,
+        seg_start: float,
+        seg_end: float,
+        sample_rate: int,
+        pause_points: Optional[List[float]] = None
+    ) -> List[Tuple[float, float, np.ndarray]]:
+        """
+        Extract multiple embeddings from a long segment.
+
+        Uses a hybrid approach:
+        1. If pause points are provided, extract embeddings for each region between pauses
+        2. Fall back to sliding window for regions without detected pauses
+
+        This handles segments that may contain multiple speakers by extracting
+        embeddings at natural speech boundaries.
+
+        Args:
+            audio_data: Full audio samples
+            seg_start: Segment start time in seconds
+            seg_end: Segment end time in seconds
+            sample_rate: Audio sample rate
+            pause_points: Optional list of pause timestamps from _detect_pauses
+
+        Returns:
+            List of (subseg_start, subseg_end, embedding) tuples
+        """
+        subsegments = []
+
+        start_sample = int(seg_start * sample_rate)
+        end_sample = int(seg_end * sample_rate)
+        segment_audio = audio_data[start_sample:end_sample]
+
+        # If we have pause points, use them to define regions
+        if pause_points:
+            # Create boundaries from pause points
+            boundaries = [seg_start] + sorted(pause_points) + [seg_end]
+
+            for i in range(len(boundaries) - 1):
+                region_start = boundaries[i]
+                region_end = boundaries[i + 1]
+                region_duration = region_end - region_start
+
+                # Skip very short regions
+                if region_duration < self.min_embedding_duration:
+                    continue
+
+                # Extract audio for this region
+                region_start_sample = int((region_start - seg_start) * sample_rate)
+                region_end_sample = int((region_end - seg_start) * sample_rate)
+                region_audio = segment_audio[region_start_sample:region_end_sample]
+
+                if len(region_audio) < int(self.min_embedding_duration * sample_rate):
+                    continue
+
+                # For long regions, use sliding window; for short ones, single embedding
+                if region_duration > self.subsegment_window_seconds * 1.5:
+                    # Sliding window within this region
+                    region_subsegments = self._sliding_window_embeddings(
+                        region_audio, region_start, sample_rate
+                    )
+                    subsegments.extend(region_subsegments)
+                else:
+                    # Single embedding for this region
+                    embedding = self._get_embedding(region_audio, sample_rate)
+                    if embedding is not None:
+                        subsegments.append((region_start, region_end, embedding))
+
+            if subsegments:
+                return subsegments
+
+        # Fall back to pure sliding window if no pause points or no valid regions
+        return self._sliding_window_embeddings(segment_audio, seg_start, sample_rate)
+
+    def _sliding_window_embeddings(
+        self,
+        segment_audio: np.ndarray,
+        seg_start: float,
+        sample_rate: int
+    ) -> List[Tuple[float, float, np.ndarray]]:
+        """
+        Extract embeddings using sliding window approach.
+
+        Args:
+            segment_audio: Audio samples for this segment
+            seg_start: Start time of this segment
+            sample_rate: Audio sample rate
+
+        Returns:
+            List of (subseg_start, subseg_end, embedding) tuples
+        """
+        subsegments = []
+        window_samples = int(self.subsegment_window_seconds * sample_rate)
+        hop_samples = int(self.subsegment_hop_seconds * sample_rate)
+
+        if len(segment_audio) < window_samples:
+            # Segment too short for windowing, extract single embedding
+            embedding = self._get_embedding(segment_audio, sample_rate)
+            if embedding is not None:
+                seg_end = seg_start + (len(segment_audio) / sample_rate)
+                subsegments.append((seg_start, seg_end, embedding))
+            return subsegments
+
+        # Sliding window extraction
+        pos = 0
+        while pos + window_samples <= len(segment_audio):
+            window_audio = segment_audio[pos:pos + window_samples]
+            embedding = self._get_embedding(window_audio, sample_rate)
+
+            if embedding is not None:
+                subseg_start = seg_start + (pos / sample_rate)
+                subseg_end = seg_start + ((pos + window_samples) / sample_rate)
+                subsegments.append((subseg_start, subseg_end, embedding))
+
+            pos += hop_samples
+
+        # Handle remaining audio at the end if significant
+        remaining = len(segment_audio) - pos
+        if remaining >= self.min_embedding_duration * sample_rate:
+            window_audio = segment_audio[pos:]
+            embedding = self._get_embedding(window_audio, sample_rate)
+            if embedding is not None:
+                subseg_start = seg_start + (pos / sample_rate)
+                subseg_end = seg_start + (len(segment_audio) / sample_rate)
+                subsegments.append((subseg_start, subseg_end, embedding))
+
+        return subsegments
+
+    def _detect_speaker_changes(
+        self,
+        subsegments: List[Tuple[float, float, np.ndarray]]
+    ) -> List[float]:
+        """
+        Detect speaker change points within a segment's sub-embeddings.
+
+        Compares consecutive embeddings and marks significant drops in
+        similarity as speaker change points.
+
+        Args:
+            subsegments: List of (start, end, embedding) tuples
+
+        Returns:
+            List of timestamps where speaker changes are detected
+        """
+        if len(subsegments) < 2:
+            return []
+
+        change_points = []
+
+        for i in range(1, len(subsegments)):
+            prev_emb = subsegments[i - 1][2]
+            curr_emb = subsegments[i][2]
+
+            # Calculate similarity between consecutive windows
+            similarity = 1.0 - cosine(prev_emb, curr_emb)
+
+            # If similarity drops below threshold, mark as speaker change
+            if similarity < self.subsegment_speaker_threshold:
+                # Speaker change at the boundary between windows
+                change_time = subsegments[i][0]  # Start of new speaker
+                change_points.append(change_time)
+                logger.debug(
+                    f"Speaker change detected at {change_time:.2f}s "
+                    f"(similarity={similarity:.3f})"
+                )
+
+        return change_points
+
+    def _snap_to_word_boundary(
+        self,
+        change_point: float,
+        words: List[Dict[str, Any]],
+        seg_start: float,
+        seg_end: float
+    ) -> float:
+        """
+        Snap a change point to the nearest word boundary.
+
+        Uses word end times to find natural breaks between speakers.
+        This prevents cutting words in half.
+
+        Args:
+            change_point: Original change point timestamp
+            words: List of word dicts with 'start', 'end', 'word' keys
+            seg_start: Segment start time
+            seg_end: Segment end time
+
+        Returns:
+            Adjusted change point at a word boundary
+        """
+        if not words:
+            return change_point
+
+        # Find the word that contains or is closest to the change point
+        best_boundary = change_point
+        min_distance = float('inf')
+
+        for word in words:
+            word_end = word.get('end', 0)
+
+            # Consider word end times as potential boundaries
+            if seg_start < word_end < seg_end:
+                distance = abs(word_end - change_point)
+                if distance < min_distance:
+                    min_distance = distance
+                    best_boundary = word_end
+
+        # Only snap if we found a nearby word boundary (within 0.5s)
+        if min_distance < 0.5:
+            logger.debug(
+                f"Snapped change point {change_point:.2f}s -> {best_boundary:.2f}s "
+                f"(distance={min_distance:.3f}s)"
+            )
+            return best_boundary
+
+        return change_point
+
+    def _split_segment_at_changes(
+        self,
+        segment: Dict[str, Any],
+        change_points: List[float],
+        audio_data: np.ndarray,
+        sample_rate: int
+    ) -> List[Dict[str, Any]]:
+        """
+        Split a segment at detected speaker change points.
+
+        Uses word timestamps to:
+        1. Snap change points to natural word boundaries
+        2. Accurately assign words to each split segment
+
+        Args:
+            segment: Original segment dict with 'start', 'end', 'text', optionally 'words'
+            change_points: List of timestamps where speakers change
+            audio_data: Full audio samples
+            sample_rate: Audio sample rate
+
+        Returns:
+            List of new segment dicts, one per detected speaker
+        """
+        if not change_points:
+            return [segment]
+
+        # Sort change points and filter to segment boundaries
+        seg_start = segment['start']
+        seg_end = segment['end']
+        valid_changes = sorted([
+            cp for cp in change_points
+            if seg_start < cp < seg_end
+        ])
+
+        if not valid_changes:
+            return [segment]
+
+        # Get word timestamps if available
+        words = segment.get('words', [])
+
+        # Snap change points to word boundaries if we have word timestamps
+        if words:
+            snapped_changes = []
+            for cp in valid_changes:
+                snapped = self._snap_to_word_boundary(cp, words, seg_start, seg_end)
+                snapped_changes.append(snapped)
+            # Remove duplicates and re-sort
+            valid_changes = sorted(set(snapped_changes))
+
+        # Create boundaries: [seg_start, change1, change2, ..., seg_end]
+        boundaries = [seg_start] + valid_changes + [seg_end]
+
+        new_segments = []
+
+        for i in range(len(boundaries) - 1):
+            split_start = boundaries[i]
+            split_end = boundaries[i + 1]
+
+            # Skip very short segments
+            if split_end - split_start < 0.3:
+                continue
+
+            # Create new segment
+            new_seg = {
+                'start': split_start,
+                'end': split_end,
+                '_original_segment_idx': segment.get('_idx'),
+                '_is_split': True
+            }
+
+            # Split text based on word timestamps or time proportion
+            if words:
+                # Use word timestamps for accurate text splitting
+                # A word belongs to this segment if its midpoint is within the segment
+                split_words = []
+                for w in words:
+                    word_start = w.get('start', 0)
+                    word_end = w.get('end', 0)
+                    word_mid = (word_start + word_end) / 2
+
+                    # Word belongs to this segment if its midpoint is within bounds
+                    if split_start <= word_mid < split_end:
+                        split_words.append(w)
+
+                new_seg['text'] = ' '.join(w.get('word', '') for w in split_words).strip()
+                new_seg['words'] = split_words
+
+                # Calculate confidence from word probabilities
+                if split_words:
+                    probs = [w.get('probability', 0) for w in split_words if w.get('probability')]
+                    new_seg['confidence'] = sum(probs) / len(probs) if probs else 0
+                else:
+                    new_seg['confidence'] = 0
+
+                # Update segment boundaries to match actual word boundaries
+                if split_words:
+                    new_seg['start'] = split_words[0].get('start', split_start)
+                    new_seg['end'] = split_words[-1].get('end', split_end)
+            else:
+                # Approximate text split by time proportion
+                full_text = segment.get('text', '')
+                full_duration = seg_end - seg_start
+                if full_duration > 0:
+                    start_ratio = (split_start - seg_start) / full_duration
+                    end_ratio = (split_end - seg_start) / full_duration
+
+                    # Split words approximately
+                    text_words = full_text.split()
+                    start_word_idx = int(len(text_words) * start_ratio)
+                    end_word_idx = max(start_word_idx + 1, int(len(text_words) * end_ratio))
+                    new_seg['text'] = ' '.join(text_words[start_word_idx:end_word_idx]).strip()
+                else:
+                    new_seg['text'] = full_text if i == 0 else ''
+
+                new_seg['confidence'] = segment.get('confidence', 0)
+
+            # Only add if there's actual content
+            if new_seg.get('text') or (new_seg['end'] - new_seg['start']) >= 0.5:
+                new_segments.append(new_seg)
+
+        logger.info(
+            f"Split segment [{seg_start:.1f}s-{seg_end:.1f}s] into "
+            f"{len(new_segments)} parts at {len(valid_changes)} change points"
+        )
+
+        return new_segments
+
+    def _preprocess_segments_for_multi_speaker(
+        self,
+        segments: List[Dict[str, Any]],
+        audio_data: np.ndarray,
+        sample_rate: int
+    ) -> List[Dict[str, Any]]:
+        """
+        Pre-process segments to split those containing multiple speakers.
+
+        Long segments are analyzed for speaker changes and split accordingly.
+        This ensures each segment passed to clustering contains only one speaker.
+
+        Args:
+            segments: Original transcription segments
+            audio_data: Full audio samples
+            sample_rate: Audio sample rate
+
+        Returns:
+            Processed segments, potentially more numerous than input
+        """
+        processed_segments = []
+
+        for idx, seg in enumerate(segments):
+            duration = seg['end'] - seg['start']
+            seg['_idx'] = idx  # Track original index
+
+            # Short segments: keep as-is
+            if duration < self.subsegment_threshold_seconds:
+                processed_segments.append(seg)
+                continue
+
+            # Long segment: check for multiple speakers
+            logger.debug(
+                f"Analyzing long segment [{seg['start']:.1f}s-{seg['end']:.1f}s] "
+                f"for multiple speakers"
+            )
+
+            # Step 1: Detect pauses (energy-based) - these are strong speaker boundaries
+            pause_points = self._detect_pauses(
+                audio_data, seg['start'], seg['end'], sample_rate
+            )
+
+            # Step 2: Extract sub-segment embeddings (using pause points if available)
+            subsegments = self._extract_subsegment_embeddings(
+                audio_data, seg['start'], seg['end'], sample_rate, pause_points
+            )
+
+            if len(subsegments) < 2:
+                # Not enough sub-segments for analysis
+                processed_segments.append(seg)
+                continue
+
+            # Step 3: Detect speaker changes based on embedding similarity
+            embedding_change_points = self._detect_speaker_changes(subsegments)
+
+            # Step 4: Combine pause-based and embedding-based change points
+            # Only use pause points that are confirmed by embedding changes (within 0.5s)
+            confirmed_pauses = []
+            for pause in pause_points:
+                for emb_change in embedding_change_points:
+                    if abs(pause - emb_change) < 0.5:
+                        confirmed_pauses.append(pause)
+                        break
+
+            # Also include strong embedding changes not near pauses
+            all_change_points = set(confirmed_pauses) | set(embedding_change_points)
+            change_points = sorted(all_change_points)
+
+            # Step 5: Filter change points to ensure minimum segment duration
+            if change_points:
+                filtered_changes = []
+                boundaries = [seg['start']] + change_points + [seg['end']]
+
+                for i in range(1, len(boundaries) - 1):
+                    prev_boundary = filtered_changes[-1] if filtered_changes else seg['start']
+                    next_boundary = boundaries[i + 1] if i + 1 < len(boundaries) else seg['end']
+                    current = boundaries[i]
+
+                    # Check if this change would create segments >= min duration
+                    before_duration = current - prev_boundary
+                    after_duration = next_boundary - current
+
+                    if before_duration >= self.min_split_segment_duration and \
+                       after_duration >= self.min_split_segment_duration:
+                        filtered_changes.append(current)
+
+                change_points = filtered_changes
+
+            if not change_points:
+                # No valid speaker changes after filtering
+                processed_segments.append(seg)
+                continue
+
+            logger.debug(
+                f"Found {len(pause_points)} pauses, {len(embedding_change_points)} embedding changes, "
+                f"{len(change_points)} after filtering for min duration"
+            )
+
+            # Split segment at change points
+            split_segments = self._split_segment_at_changes(
+                seg, change_points, audio_data, sample_rate
+            )
+            processed_segments.extend(split_segments)
+
+        original_count = len(segments)
+        new_count = len(processed_segments)
+
+        if new_count > original_count:
+            logger.info(
+                f"Multi-speaker preprocessing: {original_count} segments → "
+                f"{new_count} segments ({new_count - original_count} splits)"
+            )
+
+        return processed_segments
 
     def _cluster_globally(
         self,

@@ -1,49 +1,7 @@
 {
   "version": 1,
-  "updated_at": "2026-01-20T20:16:43.053544",
+  "updated_at": "2026-01-21T01:34:32.241453",
   "analyses": {
-    "analysis_20260120_153527": {
-      "filename": "analysis_20260120_153527.json",
-      "recording_filename": "recording_20260120_152237.wav",
-      "auto_title": null,
-      "user_title": "Hyperion_01",
-      "created_at": "2026-01-20T15:35:30.756482",
-      "duration_seconds": 3909.924,
-      "speaker_count": 19,
-      "segment_count": 1411,
-      "tags": [],
-      "notes": "",
-      "starred": false,
-      "display_title": "Hyperion_01"
-    },
-    "analysis_20260120_155549": {
-      "filename": "analysis_20260120_155549.json",
-      "recording_filename": "recording_20260120_154458.wav",
-      "auto_title": null,
-      "user_title": "Damocles_01",
-      "created_at": "2026-01-20T15:55:52.852019",
-      "duration_seconds": 3705.131,
-      "speaker_count": 17,
-      "segment_count": 947,
-      "tags": [],
-      "notes": "",
-      "starred": false,
-      "display_title": "Damocles_01"
-    },
-    "analysis_20260120_170114": {
-      "filename": "analysis_20260120_170114.json",
-      "recording_filename": "recording_20260120_164844.wav",
-      "auto_title": null,
-      "user_title": "Democles_02",
-      "created_at": "2026-01-20T17:01:16.561737",
-      "duration_seconds": 3807.33,
-      "speaker_count": 14,
-      "segment_count": 1031,
-      "tags": [],
-      "notes": "",
-      "starred": false,
-      "display_title": "Democles_02"
-    },
     "analysis_20260120_170457": {
       "filename": "analysis_20260120_170457.json",
       "recording_filename": "recording_20260120_165320.wav",
@@ -57,6 +15,76 @@
       "notes": "",
       "starred": false,
       "display_title": "Hyperion_02"
+    },
+    "analysis_20260120_235734": {
+      "filename": "analysis_20260120_235734.json",
+      "recording_filename": "recording_20260120_234712.wav",
+      "auto_title": "Combat scenario shield preparation and missile defense",
+      "user_title": "Hyperion_01",
+      "created_at": "2026-01-20T23:57:37.168654",
+      "duration_seconds": 3909.924,
+      "speaker_count": 14,
+      "segment_count": 1411,
+      "tags": [],
+      "notes": "",
+      "starred": false,
+      "display_title": "Hyperion_01"
+    },
+    "analysis_20260121_005825": {
+      "filename": "analysis_20260121_005825.json",
+      "recording_filename": "recording_20260121_004826.wav",
+      "auto_title": "Docking maneuver simulation under enemy fire",
+      "user_title": "Democles_01",
+      "created_at": "2026-01-21T00:58:27.907844",
+      "duration_seconds": 3705.131,
+      "speaker_count": 10,
+      "segment_count": 947,
+      "tags": [],
+      "notes": "",
+      "starred": false,
+      "display_title": "Democles_01"
+    },
+    "analysis_20260121_011129": {
+      "filename": "analysis_20260121_011129.json",
+      "recording_filename": "recording_20260121_010026.wav",
+      "auto_title": "Minefield navigation and drone combat simulation",
+      "user_title": "Democles_02",
+      "created_at": "2026-01-21T01:11:31.380597",
+      "duration_seconds": 3807.33,
+      "speaker_count": 16,
+      "segment_count": 1031,
+      "tags": [],
+      "notes": "",
+      "starred": false,
+      "display_title": "Democles_02"
+    },
+    "analysis_20260121_012209": {
+      "filename": "analysis_20260121_012209.json",
+      "recording_filename": "recording_20260121_011635.wav",
+      "auto_title": "Pirate encounter simulation and combat strategy session",
+      "user_title": "Endeavor_01",
+      "created_at": "2026-01-21T01:22:11.327042",
+      "duration_seconds": 4008.96,
+      "speaker_count": 1,
+      "segment_count": 57,
+      "tags": [],
+      "notes": "",
+      "starred": false,
+      "display_title": "Endeavor_01"
+    },
+    "analysis_20260121_013124": {
+      "filename": "analysis_20260121_013124.json",
+      "recording_filename": "recording_20260121_012645.wav",
+      "auto_title": "Crew coordination during evasion maneuver",
+      "user_title": "Endeavor_02",
+      "created_at": "2026-01-21T01:31:29.387429",
+      "duration_seconds": 3603.461,
+      "speaker_count": 3,
+      "segment_count": 94,
+      "tags": [],
+      "notes": "",
+      "starred": false,
+      "display_title": "Endeavor_02"
     }
   }
 }

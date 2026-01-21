@@ -2092,6 +2092,7 @@ class App {
         this.archiveData = [];
         this.collapsedSections = new Set();
         this.audioDisabled = false; // Server config for disabling audio uploads/downloads
+        this.readOnlyMode = false; // Server config for read-only mode (no analysis/regeneration)
 
         this.initElements();
         this.bindEvents();
@@ -2110,9 +2111,12 @@ class App {
             if (response.ok) {
                 const config = await response.json();
                 this.audioDisabled = config.audio_disabled || false;
-                this.applyAudioDisabledState();
+                this.readOnlyMode = config.read_only || false;
 
-                // Re-render archive list to apply audio disabled state to download buttons
+                this.applyAudioDisabledState();
+                this.applyReadOnlyState();
+
+                // Re-render archive list to apply config states
                 if (this.archiveData.length > 0) {
                     this.renderArchiveList(this.archiveData);
                 }
@@ -2158,6 +2162,46 @@ class App {
         }
         if (this.saveAudioBtn) {
             this.saveAudioBtn.classList.add('hidden');
+        }
+    }
+
+    applyReadOnlyState() {
+        if (!this.readOnlyMode) return;
+
+        // Hide the analyze button
+        if (this.analyzeBtn) {
+            this.analyzeBtn.classList.add('hidden');
+        }
+
+        // Hide the analysis options (LLM checkboxes)
+        const analysisOptions = document.querySelector('.analysis-options');
+        if (analysisOptions) {
+            analysisOptions.classList.add('hidden');
+        }
+
+        // Hide regenerate buttons
+        const regenerateNarrativeBtn = document.getElementById('regenerate-narrative-btn');
+        const regenerateStoryBtn = document.getElementById('regenerate-story-btn');
+        if (regenerateNarrativeBtn) {
+            regenerateNarrativeBtn.classList.add('hidden');
+        }
+        if (regenerateStoryBtn) {
+            regenerateStoryBtn.classList.add('hidden');
+        }
+
+        // Update the input section notice if audio is also disabled
+        // (READ_ONLY_MODE implies audio disabled, so update the message)
+        const existingNotice = document.querySelector('.audio-disabled-notice');
+        if (existingNotice) {
+            existingNotice.innerHTML = `
+                <span class="notice-icon">📖</span>
+                <div class="notice-text">
+                    <strong>Read-Only Mode</strong>
+                    <p>This server is in read-only mode. You can browse and download existing analyses from the archive below, but new analysis and regeneration are disabled.</p>
+                </div>
+            `;
+            existingNotice.classList.remove('audio-disabled-notice');
+            existingNotice.classList.add('read-only-notice');
         }
     }
 
@@ -2864,9 +2908,11 @@ class App {
                                 &#127911;
                             </button>
                         ` : ''}
-                        <button class="btn-icon delete" onclick="event.stopPropagation(); app.deleteAnalysis('${analysis.filename}')" title="Delete">
-                            &#128465;
-                        </button>
+                        ${!this.readOnlyMode ? `
+                            <button class="btn-icon delete" onclick="event.stopPropagation(); app.deleteAnalysis('${analysis.filename}')" title="Delete">
+                                &#128465;
+                            </button>
+                        ` : ''}
                     </div>
                 </div>
             `;

@@ -51,7 +51,9 @@ WEB_PORT = int(os.getenv('WEB_SERVER_PORT', '8000'))
 MAX_UPLOAD_MB = int(os.getenv('WEB_MAX_UPLOAD_MB', '2048'))
 MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
 CORS_ORIGINS = os.getenv('WEB_CORS_ORIGINS', '*').split(',')
-DISABLE_AUDIO_FILES = os.getenv('DISABLE_AUDIO_FILES', 'false').lower() == 'true'
+READ_ONLY_MODE = os.getenv('READ_ONLY_MODE', 'false').lower() == 'true'
+# READ_ONLY_MODE implies DISABLE_AUDIO_FILES
+DISABLE_AUDIO_FILES = READ_ONLY_MODE or os.getenv('DISABLE_AUDIO_FILES', 'false').lower() == 'true'
 
 # Global processor and archive manager instances
 _processor: Optional[AudioProcessor] = None
@@ -62,7 +64,8 @@ def get_processor() -> AudioProcessor:
     """Get or create the audio processor instance."""
     global _processor
     if _processor is None:
-        _processor = AudioProcessor()
+        # Pass shared archive_manager to avoid duplicate instances
+        _processor = AudioProcessor(archive_manager=get_archive_manager())
     return _processor
 
 
@@ -168,6 +171,7 @@ async def get_config():
     """
     return {
         "audio_disabled": DISABLE_AUDIO_FILES,
+        "read_only": READ_ONLY_MODE,
         "max_upload_mb": MAX_UPLOAD_MB
     }
 
@@ -683,6 +687,12 @@ async def get_analysis(filename: str):
 @app.delete("/api/analyses/{filename}")
 async def delete_analysis(filename: str):
     """Delete a saved analysis."""
+    if READ_ONLY_MODE:
+        raise HTTPException(
+            status_code=403,
+            detail="Server is in read-only mode. Deletion is disabled."
+        )
+
     processor = get_processor()
     archive_mgr = get_archive_manager()
 
@@ -706,6 +716,12 @@ async def delete_analysis(filename: str):
 @app.post("/api/analyses/{filename}/regenerate-narrative")
 async def regenerate_narrative(filename: str):
     """Regenerate the AI team analysis narrative for an existing analysis."""
+    if READ_ONLY_MODE:
+        raise HTTPException(
+            status_code=403,
+            detail="Server is in read-only mode. Analysis regeneration is disabled."
+        )
+
     if not NARRATIVE_AVAILABLE:
         raise HTTPException(
             status_code=503,
@@ -768,6 +784,12 @@ async def regenerate_narrative(filename: str):
 @app.post("/api/analyses/{filename}/regenerate-story")
 async def regenerate_story(filename: str):
     """Regenerate the AI mission story for an existing analysis."""
+    if READ_ONLY_MODE:
+        raise HTTPException(
+            status_code=403,
+            detail="Server is in read-only mode. Story regeneration is disabled."
+        )
+
     if not NARRATIVE_AVAILABLE:
         raise HTTPException(
             status_code=503,
@@ -830,6 +852,11 @@ async def regenerate_story(filename: str):
 @app.post("/api/analyses/{filename}/regenerate-narrative-stream")
 async def regenerate_narrative_stream(filename: str):
     """Regenerate narrative with streaming progress updates."""
+    if READ_ONLY_MODE:
+        async def readonly_stream():
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Server is in read-only mode. Regeneration is disabled.'})}\n\n"
+        return StreamingResponse(readonly_stream(), media_type="text/event-stream")
+
     if not NARRATIVE_AVAILABLE:
         async def error_stream():
             yield f"data: {json.dumps({'type': 'error', 'message': 'Narrative generation not available'})}\n\n"
@@ -941,6 +968,11 @@ async def regenerate_narrative_stream(filename: str):
 @app.post("/api/analyses/{filename}/regenerate-story-stream")
 async def regenerate_story_stream(filename: str):
     """Regenerate story with streaming progress updates."""
+    if READ_ONLY_MODE:
+        async def readonly_stream():
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Server is in read-only mode. Regeneration is disabled.'})}\n\n"
+        return StreamingResponse(readonly_stream(), media_type="text/event-stream")
+
     if not NARRATIVE_AVAILABLE:
         async def error_stream():
             yield f"data: {json.dumps({'type': 'error', 'message': 'Story generation not available'})}\n\n"
