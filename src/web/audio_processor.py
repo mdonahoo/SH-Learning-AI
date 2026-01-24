@@ -149,6 +149,14 @@ except ImportError:
     TELEMETRY_CORRELATOR_AVAILABLE = False
     TelemetryAudioCorrelator = None
 
+# Transcript post-processor for text cleanup and segment merging
+try:
+    from src.audio.transcript_postprocessor import TranscriptPostProcessor
+    POSTPROCESSOR_AVAILABLE = True
+except ImportError:
+    POSTPROCESSOR_AVAILABLE = False
+    TranscriptPostProcessor = None
+
 # Title generator and archive manager imports
 try:
     from src.web.title_generator import TitleGenerator
@@ -481,6 +489,85 @@ class AudioProcessor:
                     logger.debug(f"Cleaned up chunk: {chunk_path}")
                 except Exception as e:
                     logger.warning(f"Failed to cleanup chunk {chunk_path}: {e}")
+
+    def _load_telemetry_events(self, session_id: str) -> Optional[List[Dict[str, Any]]]:
+        """
+        Load telemetry events from a telemetry session.
+
+        Args:
+            session_id: The telemetry session ID
+
+        Returns:
+            List of telemetry events in correlator format, or None if not found
+        """
+        try:
+            events = []
+
+            # Try to load from server's telemetry sessions (active session)
+            try:
+                from src.web.server import _telemetry_sessions
+
+                if session_id in _telemetry_sessions:
+                    session = _telemetry_sessions[session_id]
+                    client = session.get('client')
+
+                    if client and hasattr(client, 'get_tracked_events'):
+                        # Get tracked events directly from client
+                        tracked = client.get_tracked_events()
+                        if tracked:
+                            events.extend(tracked)
+                            logger.info(f"Loaded {len(tracked)} tracked events from active session {session_id}")
+            except ImportError:
+                pass
+
+            # Try to load from telemetry file (stopped session)
+            if not events:
+                telemetry_file = Path(f"data/telemetry/telemetry_{session_id}.json")
+                if telemetry_file.exists():
+                    import json
+                    with open(telemetry_file, 'r') as f:
+                        data = json.load(f)
+
+                    # Load tracked events (new format)
+                    if data.get('tracked_events'):
+                        events = data['tracked_events']
+                        logger.info(f"Loaded {len(events)} tracked events from telemetry file")
+
+                    # Fallback: create events from packet data (old format compatibility)
+                    if not events:
+                        logger.info("No tracked events found, creating from packet data")
+                        # Create synthetic events from last_packets for basic correlation
+                        if data.get('last_packets', {}).get('ALERT'):
+                            events.append({
+                                'event_type': 'alert_change',
+                                'category': 'tactical',
+                                'timestamp': 0,
+                                'data': {'level': data['last_packets']['ALERT']}
+                            })
+                        if data.get('vessel_data', {}).get('navigation', {}).get('speed'):
+                            events.append({
+                                'event_type': 'throttle_change',
+                                'category': 'helm',
+                                'timestamp': 0,
+                                'data': {'speed': data['vessel_data']['navigation']['speed']}
+                            })
+
+            if events:
+                logger.info(f"Total telemetry events for correlation: {len(events)}")
+                # Log event type distribution
+                event_types = {}
+                for e in events:
+                    et = e.get('event_type', 'unknown')
+                    event_types[et] = event_types.get(et, 0) + 1
+                logger.info(f"Event types: {event_types}")
+                return events
+
+            logger.warning(f"No telemetry events found for session {session_id}")
+            return None
+
+        except Exception as e:
+            logger.error(f"Failed to load telemetry events: {e}", exc_info=True)
+            return None
 
     def save_recording(self, audio_path: str, original_filename: str = None) -> Optional[str]:
         """
@@ -1015,7 +1102,8 @@ class AudioProcessor:
         include_narrative: bool = True,
         include_story: bool = True,
         progress_callback: Optional[callable] = None,
-        events: Optional[List[Dict[str, Any]]] = None
+        events: Optional[List[Dict[str, Any]]] = None,
+        telemetry_session_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Run full audio analysis pipeline.
@@ -1029,10 +1117,14 @@ class AudioProcessor:
             include_story: Whether to generate LLM mission story
             progress_callback: Optional callback function(step_id, step_label, progress_pct)
             events: Optional list of telemetry events for role confidence boosting
+            telemetry_session_id: Optional telemetry session ID to load game data from
 
         Returns:
             Complete analysis results dictionary
         """
+        # Load telemetry from session if provided
+        if telemetry_session_id and events is None:
+            events = self._load_telemetry_events(telemetry_session_id)
         start_time = time.time()
         # Generate timestamp for consistent file naming (pre-LLM and final use same base)
         from datetime import datetime
@@ -1107,6 +1199,22 @@ class AudioProcessor:
                     results['diarization_methodology'] = diarization_result.methodology_note
             progress = 50
 
+            # Step 3b: Post-process transcription (cleanup and merge)
+            if POSTPROCESSOR_AVAILABLE and TranscriptPostProcessor and segments:
+                try:
+                    postprocessor = TranscriptPostProcessor(
+                        min_standalone_words=3,
+                        max_merge_gap=2.0
+                    )
+                    original_count = len(segments)
+                    segments = postprocessor.process(segments, speaker_aware=True)
+                    if len(segments) != original_count:
+                        logger.info(
+                            f"Post-processing: {original_count} -> {len(segments)} segments"
+                        )
+                except Exception as e:
+                    logger.warning(f"Transcript post-processing failed: {e}")
+
             # Format transcription segments for response
             results['transcription'] = [
                 {
@@ -1140,11 +1248,12 @@ class AudioProcessor:
                 )
 
                 # Step 4b: Telemetry-Audio Correlation (boosts role confidence)
-                if events and TELEMETRY_CORRELATOR_AVAILABLE and TelemetryAudioCorrelator:
+                # Uses SMART correlation: density matching, command/report detection, negative evidence
+                # Note: Captain detection works even without telemetry events (based on speech patterns)
+                if TELEMETRY_CORRELATOR_AVAILABLE and TelemetryAudioCorrelator and transcripts:
                     try:
                         correlator = TelemetryAudioCorrelator()
-                        correlator.load_data(events, transcripts)
-                        correlator.correlate_all()
+                        correlator.load_data(events or [], transcripts)
 
                         # Build speaker_roles dict for correlation
                         speaker_roles = {}
@@ -1155,8 +1264,8 @@ class AudioProcessor:
                                 'keyword_matches': ra.get('keyword_matches', 0)
                             }
 
-                        # Update confidences with telemetry evidence
-                        updates = correlator.update_role_confidences(speaker_roles)
+                        # Use SMART correlation (density + command/report + negative)
+                        updates = correlator.update_role_confidences_smart(speaker_roles)
 
                         # Merge enhanced data back into role_assignments
                         for ra in results['role_assignments']:
@@ -1168,15 +1277,30 @@ class AudioProcessor:
                                 ra['confidence'] = update.boosted_confidence
                                 ra['evidence_count'] = update.evidence_count
                                 ra['methodology'] = update.methodology_note
+                                # Add detailed smart correlation data
+                                ra['density_boost'] = update.density_boost
+                                ra['command_report_boost'] = update.command_report_boost
+                                ra['negative_adjustment'] = update.negative_adjustment
+                                ra['captain_boost'] = update.captain_boost
+                                # Override role if telemetry suggests Captain
+                                if update.role != ra['role']:
+                                    ra['original_role'] = ra['role']
+                                    ra['role'] = update.role
+                                    logger.info(
+                                        f"Role override for {speaker_id}: "
+                                        f"{ra['original_role']} -> {update.role} (Captain detection)"
+                                    )
 
                         # Add correlation summary to results
-                        results['telemetry_correlation'] = correlator.get_correlation_summary()
+                        results['telemetry_correlation'] = correlator.get_smart_correlation_summary()
                         logger.info(
-                            f"Telemetry correlation: {len(updates)} speakers enhanced "
-                            f"with {results['telemetry_correlation']['total_correlations']} correlations"
+                            f"Smart telemetry correlation: {len(updates)} speakers analyzed, "
+                            f"{results['telemetry_correlation'].get('density_correlations', 0)} density matches, "
+                            f"{results['telemetry_correlation'].get('command_patterns', 0)} commands, "
+                            f"{results['telemetry_correlation'].get('report_patterns', 0)} reports"
                         )
                     except Exception as e:
-                        logger.warning(f"Telemetry correlation failed: {e}")
+                        logger.warning(f"Telemetry correlation failed: {e}", exc_info=True)
 
             progress = 60
 
@@ -1222,22 +1346,42 @@ class AudioProcessor:
             # Step 10: Training recommendations (uses FILTERED transcripts)
             if include_detailed and TRAINING_RECOMMENDATIONS_AVAILABLE and filtered_transcripts:
                 update_progress("training", "Generating training recommendations", progress)
-                # Pass analysis results wrapped in expected format for training engine
+                # Pass comprehensive analysis results for data-driven recommendations
                 comm_quality = results.get('communication_quality') or {}
                 conf_dist = results.get('confidence_distribution') or {}
+
+                # Calculate total utterances from effective + improvement counts
+                effective_count = comm_quality.get('effective_count', 0)
+                improvement_count = comm_quality.get('improvement_count', 0)
+                total_utterances = effective_count + improvement_count if (effective_count or improvement_count) else None
+
                 analysis_context = {
                     'communication_quality': {
                         'statistics': {
-                            'improvement_count': comm_quality.get('improvement_count', 0),
-                            'total_utterances': comm_quality.get('effective_count', 0) + comm_quality.get('improvement_count', 0),
-                        }
+                            'improvement_count': improvement_count,
+                            'effective_count': effective_count,
+                            'total_utterances': total_utterances,
+                            # Per-speaker breakdowns for targeted recommendations
+                            'speaker_effective': comm_quality.get('speaker_effective', {}),
+                            'speaker_improvement': comm_quality.get('speaker_improvement', {}),
+                        },
+                        # Pattern counts for acknowledgment and command detection
+                        'pattern_counts': comm_quality.get('pattern_counts', {}),
                     },
                     'confidence_analysis': {
                         'statistics': {
-                            'average_confidence': conf_dist.get('average_confidence', 0),
-                        }
+                            'average_confidence': conf_dist.get('average_confidence'),
+                            'std_deviation': conf_dist.get('std_deviation'),
+                            'min_confidence': conf_dist.get('min_confidence'),
+                        },
+                        # Per-speaker confidence for targeted recommendations
+                        'speaker_stats': conf_dist.get('speaker_stats', {}),
                     },
                     'role_analysis': results.get('role_assignments') or [],
+                    # 7 Habits framework scores
+                    'seven_habits': results.get('seven_habits'),
+                    # Learning evaluation metrics
+                    'learning_evaluation': results.get('learning_evaluation'),
                 }
                 results['training_recommendations'] = self._generate_training_recommendations(
                     filtered_transcripts, analysis_context

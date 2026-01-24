@@ -139,9 +139,12 @@ class TrainingRecommendationEngine:
         # Check communication quality
         comm_stats = self.analysis.get('communication_quality', {}).get('statistics', {})
         improvement_count = comm_stats.get('improvement_count', 0)
-        total = comm_stats.get('total_utterances', 1)
+        total = comm_stats.get('total_utterances')
 
-        if improvement_count / total > 0.15:
+        # Only generate clarity recommendation if we have valid data
+        if total is None or total == 0:
+            logger.debug("No utterance data available for communication quality check")
+        elif improvement_count / total > 0.15:
             actions.append(TrainingRecommendation(
                 title="Communication Clarity Drill",
                 description=(
@@ -164,9 +167,12 @@ class TrainingRecommendationEngine:
 
         # Check confidence levels
         conf_stats = self.analysis.get('confidence_analysis', {}).get('statistics', {})
-        avg_confidence = conf_stats.get('average_confidence', 1)
+        avg_confidence = conf_stats.get('average_confidence')
 
-        if avg_confidence < 0.7:
+        # Only generate voice projection recommendation if we have valid confidence data
+        if avg_confidence is None:
+            logger.debug("No confidence data available for voice projection check")
+        elif avg_confidence < 0.7:
             actions.append(TrainingRecommendation(
                 title="Voice Projection Training",
                 description=(
@@ -186,26 +192,265 @@ class TrainingRecommendationEngine:
                 bloom_level="Apply"
             ))
 
-        # Check acknowledgment patterns
-        actions.append(TrainingRecommendation(
-            title="Closed-Loop Communication Protocol",
-            description=(
-                "Implement three-part acknowledgments: 1) Repeat the order, "
-                "2) Confirm understanding, 3) Report when complete. "
-                "Example: 'Set course for sector 7' → 'Course for sector 7, aye. "
-                "Course laid in. Engaging now.'"
-            ),
-            priority=RecommendationPriority.HIGH,
-            category=SkillCategory.COMMUNICATION,
-            frameworks=["TeamSTEPPS: Communication", "NASA: Communication"],
-            target_audience="team",
-            time_estimate="Practice each mission",
-            activity_type="drill",
-            success_criteria="100% of commands receive verbal acknowledgment",
-            scout_connection="A Scout is Obedient - following and confirming orders",
-            habit_connection="Habit 5: Seek First to Understand, Then to Be Understood",
-            bloom_level="Apply"
-        ))
+        # Check acknowledgment patterns - only recommend if we have evidence of low acknowledgment rates
+        pattern_counts = self.analysis.get('communication_quality', {}).get('pattern_counts', {})
+        effective_patterns = pattern_counts.get('effective', {})
+
+        # Get counts for acknowledgments and commands
+        acknowledgment_count = effective_patterns.get('proper_acknowledgment', 0)
+        command_count = effective_patterns.get('clear_command', 0)
+
+        # Calculate acknowledgment ratio if we have command data
+        # Only trigger recommendation if acknowledgment rate is below 50%
+        if command_count > 0:
+            ack_ratio = acknowledgment_count / command_count if command_count > 0 else 1.0
+
+            if ack_ratio < 0.50:
+                # Determine priority based on severity
+                priority = (
+                    RecommendationPriority.CRITICAL if ack_ratio < 0.25
+                    else RecommendationPriority.HIGH
+                )
+
+                actions.append(TrainingRecommendation(
+                    title="Closed-Loop Communication Protocol",
+                    description=(
+                        f"Only {acknowledgment_count} acknowledgments detected for {command_count} commands "
+                        f"({ack_ratio:.0%} rate). Implement three-part acknowledgments: 1) Repeat the order, "
+                        "2) Confirm understanding, 3) Report when complete. "
+                        "Example: 'Set course for sector 7' → 'Course for sector 7, aye. "
+                        "Course laid in. Engaging now.'"
+                    ),
+                    priority=priority,
+                    category=SkillCategory.COMMUNICATION,
+                    frameworks=["TeamSTEPPS: Communication", "NASA: Communication"],
+                    target_audience="team",
+                    time_estimate="Practice each mission",
+                    activity_type="drill",
+                    success_criteria="100% of commands receive verbal acknowledgment",
+                    scout_connection="A Scout is Obedient - following and confirming orders",
+                    habit_connection="Habit 5: Seek First to Understand, Then to Be Understood",
+                    bloom_level="Apply"
+                ))
+        else:
+            logger.debug("No clear commands detected - skipping closed-loop communication check")
+
+        # Dynamic priority: Check confidence variance for stress indicator
+        std_deviation = conf_stats.get('std_deviation')
+        if std_deviation is not None and std_deviation > 0.2:
+            actions.append(TrainingRecommendation(
+                title="Stress Management Training",
+                description=(
+                    f"High confidence variance detected (std dev: {std_deviation:.2f}) indicating "
+                    "inconsistent voice clarity. This often correlates with stress or pressure. "
+                    "Practice steady breathing and deliberate pacing during high-intensity situations."
+                ),
+                priority=RecommendationPriority.HIGH,
+                category=SkillCategory.PERSONAL_DEVELOPMENT,
+                frameworks=["TeamSTEPPS: Situation Monitoring", "NASA: Stress Management"],
+                target_audience="team",
+                time_estimate="5 minutes before high-stress scenarios",
+                activity_type="exercise",
+                success_criteria="Reduce confidence variance below 0.15",
+                scout_connection="A Scout is Brave - maintaining composure under pressure",
+                habit_connection="Habit 1: Be Proactive - control responses to stress",
+                bloom_level="Apply"
+            ))
+
+        # Dynamic priority: Check for speaker dominance (one speaker > 50% of talk time)
+        speaker_stats = conf_stats.get('speaker_stats') or {}
+        if speaker_stats:
+            total_speaker_utterances = sum(
+                s.get('count', 0) for s in speaker_stats.values()
+            ) if isinstance(speaker_stats, dict) else 0
+
+            if total_speaker_utterances > 0:
+                for speaker, stats in speaker_stats.items():
+                    if isinstance(stats, dict):
+                        count = stats.get('count', 0)
+                        ratio = count / total_speaker_utterances
+                        if ratio > 0.5 and total_speaker_utterances >= 10:
+                            actions.append(TrainingRecommendation(
+                                title="Team Participation Balance",
+                                description=(
+                                    f"One speaker ({speaker}) dominated communication with {ratio:.0%} "
+                                    f"of all utterances. Encourage balanced participation to leverage "
+                                    "diverse perspectives and develop all team members."
+                                ),
+                                priority=RecommendationPriority.HIGH,
+                                category=SkillCategory.TEAMWORK,
+                                frameworks=["TeamSTEPPS: Team Structure", "7 Habits: Synergize"],
+                                target_audience="team",
+                                time_estimate="Ongoing awareness",
+                                activity_type="discussion",
+                                success_criteria="No single speaker exceeds 40% of communications",
+                                scout_connection="A Scout is Friendly - creating space for all voices",
+                                habit_connection="Habit 6: Synergize - value diverse contributions",
+                                bloom_level="Analyze"
+                            ))
+                            break  # Only add once for the dominant speaker
+
+        # Per-speaker recommendations for individuals with combined issues
+        speaker_improvement = comm_stats.get('speaker_improvement', {})
+        speaker_effective = comm_stats.get('speaker_effective', {})
+
+        # Only generate per-speaker recommendations if we have data
+        if speaker_improvement and speaker_stats:
+            for speaker in speaker_improvement.keys():
+                improvement_for_speaker = speaker_improvement.get(speaker, 0)
+                effective_for_speaker = speaker_effective.get(speaker, 0)
+                total_for_speaker = improvement_for_speaker + effective_for_speaker
+
+                # Skip if insufficient data
+                if total_for_speaker < 3:
+                    continue
+
+                # Calculate improvement ratio for this speaker
+                improvement_ratio = improvement_for_speaker / total_for_speaker if total_for_speaker > 0 else 0
+
+                # Get confidence for this speaker
+                speaker_conf = speaker_stats.get(speaker, {})
+                speaker_avg_conf = speaker_conf.get('avg', 1.0) if isinstance(speaker_conf, dict) else 1.0
+
+                # Flag speakers with both high improvement needs (>30%) AND low confidence (<0.75)
+                if improvement_ratio > 0.30 and speaker_avg_conf < 0.75:
+                    actions.append(TrainingRecommendation(
+                        title=f"Individual Coaching: {speaker}",
+                        description=(
+                            f"{speaker} shows combined challenges: {improvement_ratio:.0%} of communications "
+                            f"need improvement and average transcription confidence is {speaker_avg_conf:.0%}. "
+                            "Recommend one-on-one practice focusing on clarity, pacing, and projection."
+                        ),
+                        priority=RecommendationPriority.HIGH,
+                        category=SkillCategory.COMMUNICATION,
+                        frameworks=["Kirkpatrick Level 3: Behavior", "EDGE Method: Guide"],
+                        target_audience="individual",
+                        time_estimate="10 minutes individual practice",
+                        activity_type="exercise",
+                        success_criteria=f"{speaker} reduces improvement needs to <15% and confidence >80%",
+                        scout_connection="A Scout is Helpful - supporting individual growth",
+                        habit_connection="Habit 7: Sharpen the Saw - personal development",
+                        bloom_level="Apply"
+                    ))
+
+        # Performance degradation detection: Compare early vs late confidence
+        if self.transcripts and len(self.transcripts) >= 10:
+            # Split transcripts into halves and compare confidence
+            mid_point = len(self.transcripts) // 2
+            early_transcripts = self.transcripts[:mid_point]
+            late_transcripts = self.transcripts[mid_point:]
+
+            early_confidence = [
+                t.get('confidence', 0) for t in early_transcripts
+                if isinstance(t.get('confidence'), (int, float))
+            ]
+            late_confidence = [
+                t.get('confidence', 0) for t in late_transcripts
+                if isinstance(t.get('confidence'), (int, float))
+            ]
+
+            if early_confidence and late_confidence:
+                avg_early = sum(early_confidence) / len(early_confidence)
+                avg_late = sum(late_confidence) / len(late_confidence)
+
+                # Check for significant degradation (>15% drop)
+                if avg_early > 0 and (avg_early - avg_late) / avg_early > 0.15:
+                    degradation_pct = ((avg_early - avg_late) / avg_early) * 100
+                    actions.append(TrainingRecommendation(
+                        title="Stress Inoculation Training",
+                        description=(
+                            f"Performance degradation detected: confidence dropped {degradation_pct:.0f}% "
+                            f"from early mission ({avg_early:.0%}) to late mission ({avg_late:.0%}). "
+                            "This suggests fatigue or stress accumulation. Practice graduated stress "
+                            "exposure with debriefs to build resilience."
+                        ),
+                        priority=RecommendationPriority.HIGH,
+                        category=SkillCategory.PERSONAL_DEVELOPMENT,
+                        frameworks=["NASA: Stress Management", "Kirkpatrick Level 3: Behavior"],
+                        target_audience="team",
+                        time_estimate="Progressive training across sessions",
+                        activity_type="exercise",
+                        success_criteria="Maintain consistent confidence throughout missions",
+                        scout_connection="A Scout is Brave - building mental resilience",
+                        habit_connection="Habit 7: Sharpen the Saw - balanced renewal",
+                        bloom_level="Apply"
+                    ))
+
+        # 7 Habits integration: Check for low-scoring habits
+        seven_habits = self.analysis.get('seven_habits', {})
+        habits_data = seven_habits.get('habits', {}) if isinstance(seven_habits, dict) else {}
+
+        # Mapping of habit names to user-friendly descriptions and focus areas
+        habit_focus_areas = {
+            'BE_PROACTIVE': {
+                'name': 'Be Proactive',
+                'focus': 'initiative and responsibility',
+                'scout': 'A Scout is Trustworthy - taking ownership',
+            },
+            'BEGIN_WITH_END_IN_MIND': {
+                'name': 'Begin with End in Mind',
+                'focus': 'goal-setting and planning',
+                'scout': 'A Scout is Obedient - understanding purpose',
+            },
+            'PUT_FIRST_THINGS_FIRST': {
+                'name': 'Put First Things First',
+                'focus': 'prioritization and time management',
+                'scout': 'A Scout is Thrifty - wise use of resources',
+            },
+            'THINK_WIN_WIN': {
+                'name': 'Think Win-Win',
+                'focus': 'mutual benefit and cooperation',
+                'scout': 'A Scout is Friendly - working for mutual success',
+            },
+            'SEEK_FIRST_TO_UNDERSTAND': {
+                'name': 'Seek First to Understand',
+                'focus': 'active listening and clarification',
+                'scout': 'A Scout is Courteous - listening with respect',
+            },
+            'SYNERGIZE': {
+                'name': 'Synergize',
+                'focus': 'creative cooperation and building on ideas',
+                'scout': 'A Scout is Loyal - commitment to team success',
+            },
+            'SHARPEN_THE_SAW': {
+                'name': 'Sharpen the Saw',
+                'focus': 'continuous improvement and learning',
+                'scout': 'A Scout is Brave - pursuing growth',
+            },
+        }
+
+        for habit_name, habit_info in habits_data.items():
+            if not isinstance(habit_info, dict):
+                continue
+
+            score = habit_info.get('score', 5)
+            youth_name = habit_info.get('youth_name', habit_name)
+            development_tip = habit_info.get('development_tip', '')
+            gap = habit_info.get('gap_to_next_score', '')
+
+            # Only trigger for low-scoring habits (score <= 2)
+            if score <= 2:
+                focus_info = habit_focus_areas.get(habit_name, {})
+                priority = RecommendationPriority.CRITICAL if score == 1 else RecommendationPriority.HIGH
+
+                actions.append(TrainingRecommendation(
+                    title=f"7 Habits Focus: {focus_info.get('name', youth_name)}",
+                    description=(
+                        f"Habit score of {score}/5 indicates development opportunity in "
+                        f"{focus_info.get('focus', 'this area')}. {development_tip} "
+                        f"{gap if gap else ''}"
+                    ),
+                    priority=priority,
+                    category=SkillCategory.PERSONAL_DEVELOPMENT,
+                    frameworks=[f"7 Habits: {focus_info.get('name', youth_name)}"],
+                    target_audience="team",
+                    time_estimate="Ongoing practice",
+                    activity_type="exercise",
+                    success_criteria=f"Increase {youth_name} score to 4+",
+                    scout_connection=focus_info.get('scout', 'Scout Law alignment'),
+                    habit_connection=f"Habit: {focus_info.get('name', youth_name)}",
+                    bloom_level="Apply"
+                ))
 
         return actions
 

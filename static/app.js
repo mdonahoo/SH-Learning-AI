@@ -159,6 +159,9 @@ class ApiClient {
             if (options.includeStory !== undefined) {
                 params.append('include_story', options.includeStory);
             }
+            if (options.telemetrySessionId) {
+                params.append('telemetry_session_id', options.telemetrySessionId);
+            }
             const queryString = params.toString();
             const url = queryString
                 ? `${this.baseUrl}/api/analyze-stream?${queryString}`
@@ -276,6 +279,40 @@ class ApiClient {
             },
             body: JSON.stringify(metadata)
         });
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+    }
+
+    async startTelemetry() {
+        const response = await fetch(`${this.baseUrl}/api/telemetry/start`, {
+            method: 'POST'
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+            throw new Error(error.detail || error.error || `HTTP ${response.status}`);
+        }
+        return response.json();
+    }
+
+    async stopTelemetry(sessionId) {
+        const response = await fetch(`${this.baseUrl}/api/telemetry/stop`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ session_id: sessionId })
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+            throw new Error(error.detail || error.error || `HTTP ${response.status}`);
+        }
+        return response.json();
+    }
+
+    async getTelemetryStatus(sessionId) {
+        const response = await fetch(`${this.baseUrl}/api/telemetry/status/${sessionId}`);
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
@@ -2093,6 +2130,8 @@ class App {
         this.collapsedSections = new Set();
         this.audioDisabled = false; // Server config for disabling audio uploads/downloads
         this.readOnlyMode = false; // Server config for read-only mode (no analysis/regeneration)
+        this.horizonsAvailable = false; // Whether Horizons game server is connected
+        this.telemetrySessionId = null; // Active telemetry recording session
 
         this.initElements();
         this.bindEvents();
@@ -2322,6 +2361,10 @@ class App {
         const readyCount = coreServices.filter(s => s.available).length;
         const horizonsConnected = status.horizons?.available;
 
+        // Track horizons availability for telemetry recording
+        this.horizonsAvailable = horizonsConnected;
+        this.updateTelemetryCheckboxState();
+
         if (summaryEl) {
             if (readyCount === 3) {
                 summaryEl.textContent = horizonsConnected ? 'All services ready' : 'Services ready (no game)';
@@ -2332,6 +2375,32 @@ class App {
             } else {
                 summaryEl.textContent = 'No services available';
                 summaryEl.style.color = 'var(--danger)';
+            }
+        }
+    }
+
+    updateTelemetryCheckboxState() {
+        const telemetryOption = document.getElementById('telemetry-option');
+        const telemetryCheckbox = document.getElementById('include-telemetry');
+        const badge = telemetryOption?.querySelector('.option-badge');
+
+        if (telemetryOption && telemetryCheckbox) {
+            if (this.horizonsAvailable) {
+                telemetryOption.classList.remove('unavailable');
+                telemetryCheckbox.disabled = false;
+                if (badge) {
+                    badge.textContent = 'LIVE';
+                    badge.classList.remove('unavailable');
+                }
+                telemetryOption.title = 'Record game telemetry alongside audio';
+            } else {
+                telemetryOption.classList.add('unavailable');
+                telemetryCheckbox.disabled = true;
+                telemetryCheckbox.checked = false;
+                if (badge) {
+                    badge.textContent = 'OFFLINE';
+                }
+                telemetryOption.title = 'Horizons game server not connected';
             }
         }
     }
@@ -2369,6 +2438,15 @@ class App {
             this.recordBtn.classList.remove('recording');
             clearInterval(this.timerInterval);
 
+            // Stop telemetry recording if active
+            if (this.telemetrySessionId) {
+                try {
+                    await this.api.stopTelemetry(this.telemetrySessionId);
+                } catch (error) {
+                    console.error('Failed to stop telemetry:', error);
+                }
+            }
+
             const blob = await this.recorder.stop();
             if (blob) {
                 this.currentBlob = blob;
@@ -2379,6 +2457,24 @@ class App {
         } else {
             // Start recording
             try {
+                // Check if telemetry recording is enabled
+                const includeTelemetry = document.getElementById('include-telemetry')?.checked && this.horizonsAvailable;
+
+                // Start telemetry recording first if enabled
+                if (includeTelemetry) {
+                    try {
+                        const telemetryResult = await this.api.startTelemetry();
+                        this.telemetrySessionId = telemetryResult.session_id;
+                        console.log('Telemetry recording started:', this.telemetrySessionId);
+                    } catch (error) {
+                        console.error('Failed to start telemetry:', error);
+                        this.showStatus('Warning: Telemetry recording failed to start', 'warning');
+                        this.telemetrySessionId = null;
+                    }
+                } else {
+                    this.telemetrySessionId = null;
+                }
+
                 await this.recorder.start();
                 this.recordBtn.innerHTML = '<span class="icon">&#9632;</span> Stop';
                 this.recordBtn.classList.add('recording');
@@ -2395,9 +2491,33 @@ class App {
                 this.fileName.textContent = '';
                 this.hideStatus();
                 this.saveAudioBtn.classList.add('hidden');
+
+                // Disable telemetry checkbox during recording
+                const telemetryOption = document.getElementById('telemetry-option');
+                if (telemetryOption) {
+                    telemetryOption.style.pointerEvents = 'none';
+                    telemetryOption.style.opacity = '0.6';
+                }
             } catch (error) {
                 this.showStatus('Failed to access microphone: ' + error.message, 'error');
+                // Clean up telemetry if audio failed
+                if (this.telemetrySessionId) {
+                    try {
+                        await this.api.stopTelemetry(this.telemetrySessionId);
+                    } catch (e) {}
+                    this.telemetrySessionId = null;
+                }
             }
+        }
+
+        // Re-enable telemetry checkbox when not recording
+        if (!this.recorder.isRecording) {
+            const telemetryOption = document.getElementById('telemetry-option');
+            if (telemetryOption) {
+                telemetryOption.style.pointerEvents = '';
+                telemetryOption.style.opacity = '';
+            }
+            this.updateTelemetryCheckboxState();
         }
     }
 
@@ -2443,13 +2563,20 @@ class App {
             const includeNarrative = document.getElementById('include-narrative')?.checked ?? true;
             const includeStory = document.getElementById('include-story')?.checked ?? true;
 
+            // Include telemetry session ID if available
+            const telemetrySessionId = this.telemetrySessionId;
+
             // Use streaming endpoint with progress updates
             const results = await this.api.analyzeWithProgress(file, {
                 includeNarrative,
-                includeStory
+                includeStory,
+                telemetrySessionId
             }, (step, label, progress) => {
                 this.updateProgress(step, label, progress);
             });
+
+            // Clear telemetry session after analysis
+            this.telemetrySessionId = null;
 
             this.currentResults = results;
             this.savedRecordingPath = results.saved_recording_path || null;

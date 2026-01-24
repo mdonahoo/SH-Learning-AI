@@ -1,0 +1,4178 @@
+{
+  "session_id": "daaae1b0",
+  "start_time": "2026-01-22T23:14:48.091860",
+  "end_time": "2026-01-22T23:18:34.974490",
+  "duration_seconds": 226.88263,
+  "packet_counts": {
+    "SESSION": 1,
+    "VESSEL-ID": 1,
+    "PING": 17,
+    "SETTINGS": 1,
+    "SVRS": 1,
+    "FACTIONS": 2,
+    "MISSION": 52,
+    "BATCH": 1137,
+    "VESSEL-COMPONENTS": 1137,
+    "VESSEL-VALUES": 1137,
+    "WEAPON-GROUPS": 1137,
+    "WEAPONS": 1137,
+    "CONTACTS": 992,
+    "DRONES": 1138,
+    "ALERT": 2,
+    "VESSEL-CLASSES": 1,
+    "VESSEL-OCCUPANTS": 2,
+    "DAMAGE": 1,
+    "DAMAGE-TEAMS": 1,
+    "CARGO": 3,
+    "TARGET-FLIGHT": 9,
+    "MISSIONS": 1,
+    "PLAYER-OBJECTIVES": 51,
+    "GM-OBJECTIVES": 49,
+    "ENCOUNTERS": 1,
+    "DECKS": 1,
+    "LOCATION-CURRENT": 11,
+    "PERSONNEL": 1,
+    "CAMERAS": 1,
+    "COMPONENTS": 1,
+    "COMPONENT-PARTS": 1,
+    "MODELS": 1,
+    "MAP": 1,
+    "PRE-FLIGHT": 1,
+    "ORDNANCE": 3,
+    "CHANNELS": 1,
+    "PLAYER-VESSELS": 3,
+    "CONTROLLERS": 1,
+    "CARGO-REPAIR": 2,
+    "VARIABLES": 2,
+    "SYSTEM-LOG": 1,
+    "PLAYERS": 24,
+    "EVENTS": 1,
+    "GM-OBJECTS": 1106,
+    "ROLES": 8,
+    "SCREENS": 1,
+    "PONG": 47,
+    "TARGET-SCIENCE": 8,
+    "VESSEL-WAYPOINTS": 8,
+    "AUTO-PILOT": 8,
+    "CHANNEL-UPDATE": 14,
+    "CHANNEL-MESSAGE": 4,
+    "CONTACT-REMOVE": 10,
+    "CONTACTS-CLEAR": 1,
+    "TARGET-TACTICAL": 1,
+    "EVENTSTATE": 3
+  },
+  "tracked_events": [
+    {
+      "event_type": "alert_change",
+      "category": "tactical",
+      "timestamp": 0.7217824459075928,
+      "data": {
+        "old_level": null,
+        "new_level": 2,
+        "level_name": "Green"
+      }
+    },
+    {
+      "event_type": "cargo_operation",
+      "category": "operations",
+      "timestamp": 1.4115617275238037,
+      "data": {
+        "operation_type": "CARGO"
+      }
+    },
+    {
+      "event_type": "cargo_operation",
+      "category": "operations",
+      "timestamp": 5.314931392669678,
+      "data": {
+        "operation_type": "CARGO"
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 10.97117567062378,
+      "data": {
+        "target_id": 11919
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 12.497363090515137,
+      "data": {
+        "target_id": 3
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 14.997077941894531,
+      "data": {
+        "target_id": 11919
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 138.71588706970215,
+      "data": {
+        "target_id": 11953
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 139.35749697685242,
+      "data": {
+        "target_id": 11948
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 140.9641010761261,
+      "data": {
+        "target_id": 11953
+      }
+    },
+    {
+      "event_type": "cargo_operation",
+      "category": "operations",
+      "timestamp": 172.7534601688385,
+      "data": {
+        "operation_type": "CARGO"
+      }
+    }
+  ],
+  "tracked_events_count": 10,
+  "vessel_data": {
+    "hull_percentage": 100.0,
+    "shield_percentage": 100,
+    "shield_frequency": 0,
+    "shield_harmonics": 0,
+    "shield_sections": {
+      "forward": 100,
+      "aft": 100,
+      "port": 100,
+      "starboard": 100,
+      "dorsal": 100,
+      "ventral": 100
+    },
+    "shield_distribution": {
+      "forward": 25,
+      "aft": 25,
+      "port": 25,
+      "starboard": 25
+    },
+    "damage_events": [],
+    "cumulative_damage": 0,
+    "last_damage_time": null,
+    "damage_sources": {},
+    "systems": {
+      "engines": 100,
+      "weapons": 100,
+      "shields": 100,
+      "sensors": 100,
+      "life_support": 100,
+      "warp_drive": 100,
+      "impulse_drive": 100,
+      "communications": 100,
+      "transporters": 100,
+      "tractor_beam": 100
+    },
+    "power": {
+      "total_available": 100,
+      "engines": 0,
+      "weapons": 0,
+      "shields": 0,
+      "auxiliary": 0,
+      "life_support": 0
+    },
+    "engineering": {
+      "reactor_output": 100,
+      "reactor_efficiency": 100,
+      "coolant_level": 100,
+      "coolant_pressure": 0,
+      "repair_teams": [],
+      "damage_control_teams": []
+    },
+    "navigation": {
+      "position": {
+        "X": -8066.91,
+        "Y": 132865.62,
+        "Z": 826.05
+      },
+      "heading": 0,
+      "pitch": 0,
+      "roll": 0,
+      "speed": 0,
+      "warp_speed": 0,
+      "impulse_speed": 0
+    },
+    "combat": {
+      "weapons_armed": false,
+      "weapons_locked": false,
+      "current_target": null,
+      "torpedo_count": {},
+      "phaser_charge": 100
+    },
+    "game_settings": {
+      "LocalIP": "192.168.68.56",
+      "IPs": [
+        "192.168.68.56",
+        "172.21.112.1"
+      ],
+      "Debug": false,
+      "Production": true,
+      "ServerName": "Mike's Server",
+      "ServerDescription": "",
+      "ServerPublic": false,
+      "ServerLocked": false,
+      "ServerPassword": "",
+      "AdminPassword": "",
+      "UseAstralOcclusion": false,
+      "UseComponentDamage": true,
+      "UseCrew": true,
+      "SoundLevels": {
+        "Master": {
+          "ID": "Master",
+          "Base": 1,
+          "Level": 1,
+          "Mute": false
+        },
+        "Effects": {
+          "ID": "Effects",
+          "Base": 1,
+          "Level": 1,
+          "Mute": false
+        },
+        "UI": {
+          "ID": "UI",
+          "Base": 1,
+          "Level": 1,
+          "Mute": false
+        },
+        "Videos": {
+          "ID": "Videos",
+          "Base": 1,
+          "Level": 1,
+          "Mute": false
+        },
+        "Music": {
+          "ID": "Music",
+          "Base": 1,
+          "Level": 1,
+          "Mute": true
+        }
+      },
+      "AllowRoleJumping": true,
+      "PublicIP": "47.221.138.34",
+      "Port": 1864,
+      "SecurePort": 1866,
+      "WebSocketPort": 1865,
+      "SecureWebSocketPort": 1867,
+      "WebSocketHeartbeat": 200,
+      "Headless": false,
+      "UseCollision": true,
+      "Updated": false,
+      "Language": "eng",
+      "ActiveModules": [
+        {
+          "Parent": "Horizons",
+          "Folder": "Custom",
+          "ID": "Custom",
+          "UID": "",
+          "GUID": "00000000-0000-0000-0000-00000000000c",
+          "Priority": 2,
+          "Name": "Custom",
+          "Icon": "",
+          "Image": "",
+          "Banner": "",
+          "Watermark": "",
+          "Description": "Use this Module for your lighting and effects",
+          "DefaultMap": "",
+          "Version": "1.0.0",
+          "Active": true
+        },
+        {
+          "Parent": "Horizons",
+          "Folder": "CW",
+          "ID": "CW",
+          "UID": "",
+          "GUID": "c29b1085-e0be-4aac-992c-41ac6a6cbed7",
+          "Priority": 10,
+          "Name": "Cyber Warfare Simulator",
+          "Icon": "",
+          "Image": "",
+          "Banner": "",
+          "Watermark": "",
+          "Description": "Educational cyber warfare simulator with realistic 2024-2025 hacking scenarios. Play as Legion Anonymous hacktivist group. Features real APT groups, modern tools (Metasploit, CrowdStrike, Splunk), and ethical considerations. All mechanics translated from space combat to network warfare.",
+          "DefaultMap": "The Internet",
+          "Version": "1.0.0",
+          "Active": true
+        },
+        {
+          "Parent": "",
+          "Folder": "Horizons",
+          "ID": "Horizons",
+          "UID": "",
+          "GUID": "00000000-0000-0000-0000-00000000000a",
+          "Priority": 1,
+          "Name": "Horizons",
+          "Icon": "images/module-icon.png",
+          "Image": "",
+          "Banner": "",
+          "Watermark": "images/module-watermark.png",
+          "Description": "The Starship Horizons Universe",
+          "DefaultMap": "Milky Way",
+          "Version": "1.0.0",
+          "Active": true
+        },
+        {
+          "Parent": "Horizons",
+          "Folder": "M1",
+          "ID": "M1",
+          "UID": "",
+          "GUID": "26a5bfda-94e3-4674-82e9-e4f669f5b84f",
+          "Priority": 10,
+          "Name": "Captain Mike's Mod",
+          "Icon": "",
+          "Image": "",
+          "Banner": "",
+          "Watermark": "",
+          "Description": "This module contains the \"Intolerance\" mission\u2014an educational scenario that blends AP Physics principles with asteroid deflection mechanics. Inspired by official mission examples, it encourages critical thinking, teamwork and physics problem-solving.",
+          "DefaultMap": "",
+          "Version": "1.0.0",
+          "Active": true
+        }
+      ],
+      "Version": "41"
+    },
+    "game_svrs": "2026-01-22T08:48:18",
+    "vessel_value_Hailed": "1",
+    "contacts": [
+      {
+        "ID": 11920,
+        "Integrity": 100,
+        "Shields": 0,
+        "Planet": "Vareidan III",
+        "MapPosition": {
+          "X": -50,
+          "Y": 10,
+          "Z": -40
+        },
+        "StarPosition": {
+          "X": 2.57,
+          "Y": 0,
+          "Z": -3.06
+        },
+        "Position": {
+          "X": 20000,
+          "Y": 120000,
+          "Z": 1000
+        },
+        "SeekPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Orientation": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0,
+          "W": 1
+        },
+        "Altitude": 0,
+        "Relative": {
+          "X": 0.25,
+          "Y": -0.05,
+          "Z": -0.97
+        }
+      },
+      {
+        "ID": 11925,
+        "Integrity": 1500,
+        "Shields": 1,
+        "Planet": "Vareidan III",
+        "MapPosition": {
+          "X": -50,
+          "Y": 10,
+          "Z": -40
+        },
+        "StarPosition": {
+          "X": 2.57,
+          "Y": 0,
+          "Z": -3.06
+        },
+        "Position": {
+          "X": 0,
+          "Y": 120000,
+          "Z": 500
+        },
+        "SeekPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Orientation": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0,
+          "W": 1
+        },
+        "Altitude": 0,
+        "Relative": {
+          "X": 0.13,
+          "Y": 0,
+          "Z": -0.99
+        }
+      },
+      {
+        "ID": 24,
+        "Planet": "Vareidan III",
+        "MapPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "StarPosition": {
+          "X": 2.57,
+          "Y": 0,
+          "Z": -3.06
+        },
+        "Position": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Orientation": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0,
+          "W": 1
+        },
+        "Relative": {
+          "X": -0.89,
+          "Y": -0.07,
+          "Z": -0.45
+        }
+      }
+    ],
+    "all_vessel_status": {
+      "11920": {
+        "name": "Unknown",
+        "faction": "Unknown",
+        "type": "Unknown",
+        "hull": 10000,
+        "shields": 0
+      },
+      "11925": {
+        "name": "Unknown",
+        "faction": "Unknown",
+        "type": "Unknown",
+        "hull": 150000,
+        "shields": 100
+      },
+      "24": {
+        "name": "Unknown",
+        "faction": "Unknown",
+        "type": "Unknown",
+        "hull": 100,
+        "shields": 0
+      }
+    },
+    "hull_integrity": 1400,
+    "hull_max": 1400,
+    "hull_heal": 1400,
+    "energy": 2000,
+    "energy_max": 4000,
+    "energy_percentage": 50.0,
+    "vessel_name": "Horizons",
+    "vessel_class": "Horizons",
+    "vessel_id": 11938,
+    "faction": "Alliance",
+    "location": "Sol",
+    "maneuver": "Cruise",
+    "state": "Alive",
+    "var_GravityAnomalyDestroyed": "false",
+    "var_ModVar1": "1",
+    "var_ModVar2": "2",
+    "var_Power-Internal": "true",
+    "var_Total-Systems": "2",
+    "crew": [
+      {
+        "roles": [],
+        "screens": 0,
+        "vessel": 0
+      },
+      {
+        "roles": [],
+        "screens": 3,
+        "vessel": 11938
+      },
+      {
+        "roles": [],
+        "screens": 0,
+        "vessel": 0
+      },
+      {
+        "roles": [],
+        "screens": 0,
+        "vessel": 0
+      },
+      {
+        "roles": [],
+        "screens": 0,
+        "vessel": 0
+      },
+      {
+        "roles": [],
+        "screens": 0,
+        "vessel": 0
+      },
+      {
+        "roles": [],
+        "screens": 0,
+        "vessel": 0
+      },
+      {
+        "roles": [],
+        "screens": 0,
+        "vessel": 0
+      },
+      {
+        "roles": [],
+        "screens": 0,
+        "vessel": 0
+      }
+    ],
+    "game_roles": [
+      {
+        "Abbr": "CAP",
+        "Name": "Captain",
+        "Screen": "captain",
+        "PediaID": "",
+        "Training": "",
+        "Icon": "/images/badge-captain.png",
+        "PlayerID": 0,
+        "Color": {
+          "R": 255,
+          "G": 255,
+          "B": 255,
+          "A": 255
+        },
+        "Commander": true,
+        "InUse": true,
+        "Visible": false,
+        "User": {
+          "ID": null,
+          "UserID": 0,
+          "CharacterID": 0,
+          "VesselNo": 0,
+          "VesselID": 0,
+          "PreVesselID": "",
+          "Roles": [],
+          "Screens": 0,
+          "FirstName": "",
+          "LastName": "",
+          "Faction": "Alliance",
+          "Rank": "Cadet",
+          "Race": "Human",
+          "CallSign": "",
+          "ETS": "",
+          "LastUpdated": "2026-01-22T16:26:02.8845146-06:00",
+          "VisualStyle": "",
+          "VocalAssist": false,
+          "IP": "",
+          "Location": "",
+          "IsRole": false,
+          "IsMainViewer": false,
+          "IsSpectator": false
+        }
+      },
+      {
+        "Abbr": "FLT",
+        "Name": "Flight",
+        "Screen": "flight",
+        "PediaID": "",
+        "Training": "",
+        "Icon": "/images/badge-flight.png",
+        "PlayerID": 0,
+        "Color": {
+          "R": 255,
+          "G": 255,
+          "B": 255,
+          "A": 255
+        },
+        "Commander": false,
+        "InUse": true,
+        "Visible": true,
+        "User": {
+          "ID": null,
+          "UserID": 0,
+          "CharacterID": 0,
+          "VesselNo": 0,
+          "VesselID": 0,
+          "PreVesselID": "",
+          "Roles": [],
+          "Screens": 0,
+          "FirstName": "",
+          "LastName": "",
+          "Faction": "Alliance",
+          "Rank": "Cadet",
+          "Race": "Human",
+          "CallSign": "",
+          "ETS": "",
+          "LastUpdated": "2026-01-22T16:26:02.8845201-06:00",
+          "VisualStyle": "",
+          "VocalAssist": false,
+          "IP": "",
+          "Location": "",
+          "IsRole": false,
+          "IsMainViewer": false,
+          "IsSpectator": false
+        }
+      },
+      {
+        "Abbr": "TAC",
+        "Name": "Tactical",
+        "Screen": "tactical",
+        "PediaID": "",
+        "Training": "",
+        "Icon": "/images/badge-tactical.png",
+        "PlayerID": 0,
+        "Color": {
+          "R": 255,
+          "G": 255,
+          "B": 255,
+          "A": 255
+        },
+        "Commander": false,
+        "InUse": false,
+        "Visible": true,
+        "User": {
+          "ID": null,
+          "UserID": 0,
+          "CharacterID": 0,
+          "VesselNo": 0,
+          "VesselID": 0,
+          "PreVesselID": "",
+          "Roles": [],
+          "Screens": 0,
+          "FirstName": "",
+          "LastName": "",
+          "Faction": "Alliance",
+          "Rank": "Cadet",
+          "Race": "Human",
+          "CallSign": "",
+          "ETS": "",
+          "LastUpdated": "2026-01-22T16:26:02.8845205-06:00",
+          "VisualStyle": "",
+          "VocalAssist": false,
+          "IP": "",
+          "Location": "",
+          "IsRole": false,
+          "IsMainViewer": false,
+          "IsSpectator": false
+        }
+      },
+      {
+        "Abbr": "OPS",
+        "Name": "Operations",
+        "Screen": "operations",
+        "PediaID": "",
+        "Training": "",
+        "Icon": "/images/badge-comms.png",
+        "PlayerID": 0,
+        "Color": {
+          "R": 255,
+          "G": 255,
+          "B": 255,
+          "A": 255
+        },
+        "Commander": false,
+        "InUse": true,
+        "Visible": true,
+        "User": {
+          "ID": null,
+          "UserID": 0,
+          "CharacterID": 0,
+          "VesselNo": 0,
+          "VesselID": 0,
+          "PreVesselID": "",
+          "Roles": [],
+          "Screens": 0,
+          "FirstName": "",
+          "LastName": "",
+          "Faction": "Alliance",
+          "Rank": "Cadet",
+          "Race": "Human",
+          "CallSign": "",
+          "ETS": "",
+          "LastUpdated": "2026-01-22T16:26:02.8845211-06:00",
+          "VisualStyle": "",
+          "VocalAssist": false,
+          "IP": "",
+          "Location": "",
+          "IsRole": false,
+          "IsMainViewer": false,
+          "IsSpectator": false
+        }
+      },
+      {
+        "Abbr": "SCI",
+        "Name": "Sciences",
+        "Screen": "science",
+        "PediaID": "",
+        "Training": "",
+        "Icon": "/images/badge-sciences.png",
+        "PlayerID": 0,
+        "Color": {
+          "R": 255,
+          "G": 255,
+          "B": 255,
+          "A": 255
+        },
+        "Commander": false,
+        "InUse": false,
+        "Visible": true,
+        "User": {
+          "ID": null,
+          "UserID": 0,
+          "CharacterID": 0,
+          "VesselNo": 0,
+          "VesselID": 0,
+          "PreVesselID": "",
+          "Roles": [],
+          "Screens": 0,
+          "FirstName": "",
+          "LastName": "",
+          "Faction": "Alliance",
+          "Rank": "Cadet",
+          "Race": "Human",
+          "CallSign": "",
+          "ETS": "",
+          "LastUpdated": "2026-01-22T16:26:02.8845233-06:00",
+          "VisualStyle": "",
+          "VocalAssist": false,
+          "IP": "",
+          "Location": "",
+          "IsRole": false,
+          "IsMainViewer": false,
+          "IsSpectator": false
+        }
+      },
+      {
+        "Abbr": "ENG",
+        "Name": "Engineer",
+        "Screen": "engineer",
+        "PediaID": "",
+        "Training": "",
+        "Icon": "/images/badge-engineer.png",
+        "PlayerID": 0,
+        "Color": {
+          "R": 255,
+          "G": 255,
+          "B": 255,
+          "A": 255
+        },
+        "Commander": false,
+        "InUse": false,
+        "Visible": true,
+        "User": {
+          "ID": null,
+          "UserID": 0,
+          "CharacterID": 0,
+          "VesselNo": 0,
+          "VesselID": 0,
+          "PreVesselID": "",
+          "Roles": [],
+          "Screens": 0,
+          "FirstName": "",
+          "LastName": "",
+          "Faction": "Alliance",
+          "Rank": "Cadet",
+          "Race": "Human",
+          "CallSign": "",
+          "ETS": "",
+          "LastUpdated": "2026-01-22T16:26:02.8845239-06:00",
+          "VisualStyle": "",
+          "VocalAssist": false,
+          "IP": "",
+          "Location": "",
+          "IsRole": false,
+          "IsMainViewer": false,
+          "IsSpectator": false
+        }
+      }
+    ],
+    "game_screens": {
+      "default": {
+        "Name": "Horizons",
+        "ModuleID": "Horizons",
+        "Group": "  Main",
+        "Base": "console.htm",
+        "Url": "default",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "default",
+        "Source": "default.htm",
+        "Icon": "Monitor",
+        "Description": "Console Selection Screen",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [],
+        "Tags": []
+      },
+      "flight": {
+        "Name": "Flight",
+        "ModuleID": "Horizons",
+        "Group": "  Main",
+        "Base": "console.htm",
+        "Url": "flight",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "flight",
+        "Source": "flight.htm",
+        "Icon": "badge-flight.png",
+        "Description": "Flight Control, including Helm and Navigation.",
+        "Role": "Flight",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": true,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": [
+          "role-primary",
+          "flight"
+        ]
+      },
+      "tactical": {
+        "Name": "Tactical",
+        "ModuleID": "Horizons",
+        "Group": "  Main",
+        "Base": "console.htm",
+        "Url": "tactical",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "tactical",
+        "Source": "tactical.htm",
+        "Icon": "badge-tactical.png",
+        "Description": "",
+        "Role": "Tactical",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": true,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": [
+          "role-primary",
+          "tactical"
+        ]
+      },
+      "operations": {
+        "Name": "Operations",
+        "ModuleID": "Horizons",
+        "Group": "  Main",
+        "Base": "console.htm",
+        "Url": "operations",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "operations",
+        "Source": "operations.htm",
+        "Icon": "badge-operations.png",
+        "Description": "",
+        "Role": "Operations",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": true,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": [
+          "role-primary",
+          "operations"
+        ]
+      },
+      "science": {
+        "Name": "Sciences",
+        "ModuleID": "Horizons",
+        "Group": "  Main",
+        "Base": "console.htm",
+        "Url": "science",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "science",
+        "Source": "science.htm",
+        "Icon": "badge-sciences.png",
+        "Description": "",
+        "Role": "Science",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": true,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": [
+          "role-primary",
+          "science"
+        ]
+      },
+      "engineer": {
+        "Name": "Engineer",
+        "ModuleID": "Horizons",
+        "Group": "  Main",
+        "Base": "console.htm",
+        "Url": "engineer",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "engineer",
+        "Source": "engineer.htm",
+        "Icon": "badge-engineer.png",
+        "Description": "",
+        "Role": "Engineer",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": true,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": [
+          "role-primary",
+          "engineer"
+        ]
+      },
+      "captain": {
+        "Name": "Captain",
+        "ModuleID": "Horizons",
+        "Group": "  Main",
+        "Base": "console.htm",
+        "Url": "captain",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "captain",
+        "Source": "captain.htm",
+        "Icon": "badge-captain.png",
+        "Description": "Captains panel. Used for the arm of the Captain's chair.",
+        "Role": "Captain",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": [
+          "role-primary",
+          "captain"
+        ]
+      },
+      "pilot": {
+        "Name": "Pilot",
+        "ModuleID": "Horizons",
+        "Group": "  Main",
+        "Base": "console.htm",
+        "Url": "pilot",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "pilot",
+        "Source": "pilot.htm",
+        "Icon": "badge-pilot.png",
+        "Description": "Pilot's Cockpit.",
+        "Role": "Pilot",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": true,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [],
+        "Tags": []
+      },
+      "main-viewer": {
+        "Name": "Main Viewer",
+        "ModuleID": "Horizons",
+        "Group": "  Main",
+        "Base": "console.htm",
+        "Url": "main-viewer",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "main-viewer",
+        "Source": "main-viewer.htm",
+        "Icon": "badge-viewer.png",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": true,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": [
+          "main-viewer"
+        ]
+      },
+      "viewport": {
+        "Name": "Viewport",
+        "ModuleID": "Horizons",
+        "Group": "  Main",
+        "Base": "console.htm",
+        "Url": "viewport",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "viewport",
+        "Source": "viewport.htm",
+        "Icon": "badge-viewer.png",
+        "Description": "Viewport for all camera views for this vessel.",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "center": {
+        "Name": "Center",
+        "ModuleID": "Horizons",
+        "Group": "  Secondary",
+        "Base": "console.htm",
+        "Url": "center",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "center",
+        "Source": "center.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "stellarnav": {
+        "Name": "Stellar Navigation",
+        "ModuleID": "Horizons",
+        "Group": "  Secondary",
+        "Base": "console.htm",
+        "Url": "stellarnav",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "stellarnav",
+        "Source": "stellar-nav.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "stellarbody": {
+        "Name": "Stellar Body",
+        "ModuleID": "Horizons",
+        "Group": "  Secondary",
+        "Base": "console.htm",
+        "Url": "stellarbody",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "stellarbody",
+        "Source": "stellar-body.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "starsystem": {
+        "Name": "Star System",
+        "ModuleID": "Horizons",
+        "Group": "  Secondary",
+        "Base": "console.htm",
+        "Url": "starsystem",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "starsystem",
+        "Source": "star-system.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "alertstatus": {
+        "Name": "Alert Status",
+        "ModuleID": "Horizons",
+        "Group": "  Secondary",
+        "Base": "console.htm",
+        "Url": "alertstatus",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "alertstatus",
+        "Source": "alert-status.htm",
+        "Icon": "",
+        "Description": "Screen showing the current Alert Condition for the Ship",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "shieldstatus": {
+        "Name": "Shield Status",
+        "ModuleID": "Horizons",
+        "Group": "  Secondary",
+        "Base": "console.htm",
+        "Url": "shieldstatus",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "shieldstatus",
+        "Source": "shield-status.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "cargo-hold": {
+        "Name": "Cargo Hold",
+        "ModuleID": "Horizons",
+        "Group": "  Secondary",
+        "Base": "console.htm",
+        "Url": "cargo-hold",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "cargo-hold",
+        "Source": "cargo-hold.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "radar": {
+        "Name": "Radar",
+        "ModuleID": "Horizons",
+        "Group": "  Secondary",
+        "Base": "console.htm",
+        "Url": "radar",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "radar",
+        "Source": "radar.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "mfd": {
+        "Name": "MFD",
+        "ModuleID": "Horizons",
+        "Group": "  Secondary",
+        "Base": "console.htm",
+        "Url": "mfd",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "mfd",
+        "Source": "mfd.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": true,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [],
+        "Tags": []
+      },
+      "iris": {
+        "Name": "IRIS",
+        "ModuleID": "Horizons",
+        "Group": "  Secondary",
+        "Base": "console.htm",
+        "Url": "iris",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "iris",
+        "Source": "iris.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "media": {
+        "Name": "Media",
+        "ModuleID": "Horizons",
+        "Group": "  Secondary",
+        "Base": "console.htm",
+        "Url": "media",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "media",
+        "Source": "media-player.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [],
+        "Tags": []
+      },
+      "comm-link": {
+        "Name": "Comm Link",
+        "ModuleID": "Horizons",
+        "Group": "  Secondary",
+        "Base": "console.htm",
+        "Url": "comm-link",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "comm-link",
+        "Source": "comm-link.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [],
+        "Tags": []
+      },
+      "mission-status": {
+        "Name": "Mission Status",
+        "ModuleID": "Horizons",
+        "Group": "  Secondary",
+        "Base": "console-admin.htm",
+        "Url": "mission-status",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "mission-status",
+        "Source": "mission-status.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": true,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [
+          "MSG",
+          "DBG"
+        ],
+        "Tags": []
+      },
+      "crew": {
+        "Name": "Crew Roster",
+        "ModuleID": "Horizons",
+        "Group": " In Progress (Incomplete)",
+        "Base": "console.htm",
+        "Url": "crew",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "crew",
+        "Source": "crew.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "collision-alarm": {
+        "Name": "Collision Alarm",
+        "ModuleID": "Horizons",
+        "Group": " In Progress (Incomplete)",
+        "Base": "console.htm",
+        "Url": "collision-alarm",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "collision-alarm",
+        "Source": "collision-alarm.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "bridgemonitor": {
+        "Name": "Dashboard",
+        "ModuleID": "Horizons",
+        "Group": " In Progress (Incomplete)",
+        "Base": "console.htm",
+        "Url": "bridgemonitor",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "bridgemonitor",
+        "Source": "bridge-monitor.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "target": {
+        "Name": "Target",
+        "ModuleID": "Horizons",
+        "Group": " In Progress (Incomplete)",
+        "Base": "console.htm",
+        "Url": "target",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "target",
+        "Source": "tactical-target.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "Tactical",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [],
+        "Tags": []
+      },
+      "scans": {
+        "Name": "Scan",
+        "ModuleID": "Horizons",
+        "Group": " In Progress (Incomplete)",
+        "Base": "console.htm",
+        "Url": "scans",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "scans",
+        "Source": "science-target.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "Science",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [],
+        "Tags": []
+      },
+      "vessel-status": {
+        "Name": "Vessel Status",
+        "ModuleID": "Horizons",
+        "Group": " In Progress (Incomplete)",
+        "Base": "console.htm",
+        "Url": "vessel-status",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "vessel-status",
+        "Source": "vessel-status.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "gamemaster": {
+        "Name": "Game Master",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "console-admin.htm",
+        "Url": "gamemaster",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "gamemaster",
+        "Source": "gamemaster.htm",
+        "Icon": "badge-game-master.png",
+        "Description": "",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "gallery": {
+        "Name": "Gallery",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "console-admin.htm",
+        "Url": "gallery",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "gallery",
+        "Source": "system/gallery.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "events": {
+        "Name": "Events",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "console-admin.htm",
+        "Url": "events",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "events",
+        "Source": "gamemaster-events.htm",
+        "Icon": "badge-game-master.png",
+        "Description": "Game Master's Event Panel",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [],
+        "Tags": []
+      },
+      "events-monitor": {
+        "Name": "Events Monitor",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "console-admin.htm",
+        "Url": "events-monitor",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "events-monitor",
+        "Source": "gamemaster-events-monitor.htm",
+        "Icon": "badge-game-master.png",
+        "Description": "Game Master's Event Monitor",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [],
+        "Tags": []
+      },
+      "designer": {
+        "Name": "Designer",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "console-admin.htm",
+        "Url": "designer",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "designer",
+        "Source": "system/designer.htm",
+        "Icon": "badge-designer.png",
+        "Description": "",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [
+          "MISSION",
+          "EVENTS",
+          "CONTACTS",
+          "SCREEN",
+          "GVC",
+          "GFC",
+          "ASC",
+          "HUEBL",
+          "MQTT",
+          "DEVICES"
+        ],
+        "Tags": []
+      },
+      "mqtt": {
+        "Name": "MQTT Viewer",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "dialog.htm",
+        "Url": "mqtt",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "mqtt",
+        "Source": "system/mqtt.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [
+          "CNTL",
+          "MQTT"
+        ],
+        "Tags": []
+      },
+      "mqtt-log": {
+        "Name": "MQTT Log",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "dialog.htm",
+        "Url": "mqtt-log",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "mqtt-log",
+        "Source": "system/mqtt-log.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [
+          "CNTL",
+          "MQTT",
+          "MSG"
+        ],
+        "Tags": []
+      },
+      "module": {
+        "Name": "Module",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "console-admin.htm",
+        "Url": "module",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "module",
+        "Source": "system/module.htm",
+        "Icon": "badge-designer.png",
+        "Description": "",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [
+          "MISSION",
+          "SCREEN",
+          "GVC",
+          "GFC",
+          "SCREENS"
+        ],
+        "Tags": []
+      },
+      "campaign": {
+        "Name": "Campaign",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "console-admin.htm",
+        "Url": "campaign",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "campaign",
+        "Source": "system/campaign.htm",
+        "Icon": "badge-designer.png",
+        "Description": "",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [
+          "SCREEN",
+          "GVC",
+          "GFC"
+        ],
+        "Tags": []
+      },
+      "map": {
+        "Name": "Map",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "console-admin.htm",
+        "Url": "map",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "map",
+        "Source": "system/map.htm",
+        "Icon": "badge-designer.png",
+        "Description": "",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [],
+        "Tags": []
+      },
+      "mission": {
+        "Name": "Mission",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "console-admin.htm",
+        "Url": "mission",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "mission",
+        "Source": "system/mission.htm",
+        "Icon": "badge-designer.png",
+        "Description": "",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [
+          "MISSION",
+          "SCREEN",
+          "GVC",
+          "GFC"
+        ],
+        "Tags": []
+      },
+      "models": {
+        "Name": "Models",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "console-admin.htm",
+        "Url": "models",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "models",
+        "Source": "system/models.htm",
+        "Icon": "badge-designer.png",
+        "Description": "",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [],
+        "Tags": []
+      },
+      "vesselclass": {
+        "Name": "Vessel Class",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "console-admin.htm",
+        "Url": "vesselclass",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "vesselclass",
+        "Source": "system/vessel.htm",
+        "Icon": "badge-designer.png",
+        "Description": "",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [
+          "MISSION",
+          "SCREEN",
+          "GVC",
+          "GFC"
+        ],
+        "Tags": []
+      },
+      "gamepads": {
+        "Name": "GamePads",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "console-admin.htm",
+        "Url": "gamepads",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "gamepads",
+        "Source": "gamepad-monitor.htm",
+        "Icon": "Monitor",
+        "Description": "",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [],
+        "Tags": []
+      },
+      "portal": {
+        "Name": "Portal",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "console-admin.htm",
+        "Url": "portal",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "portal",
+        "Source": "system/portal.htm",
+        "Icon": "Monitor",
+        "Description": "Classic Portal Screen",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [],
+        "Tags": []
+      },
+      "texas": {
+        "Name": "Texas Captain",
+        "ModuleID": "M1",
+        "Group": "  Main",
+        "Base": "console.htm",
+        "Url": "texas",
+        "Path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Starship Horizons\\Modules\\M1\\Html\\",
+        "OriginalUrl": "texas",
+        "Source": "texas.htm",
+        "Icon": "Monitor",
+        "Description": "For Texas",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": true,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": [
+          "Texas"
+        ]
+      }
+    },
+    "science_target": 11953,
+    "waypoints": [
+      {
+        "Name": "COMM STATION",
+        "Type": "Destination",
+        "Target": "",
+        "Speed": -1,
+        "Visited": false
+      }
+    ]
+  },
+  "mission_data": {
+    "current_mission": null,
+    "mission_briefing": {},
+    "mission_summary": {},
+    "objectives": [],
+    "player_objectives": [
+      {
+        "Name": "Hail All Comm Stations",
+        "PediaID": "long-patrol-hail",
+        "Group": "",
+        "Description": "Operations should hail and check the status on each Comm Station encountered.",
+        "Type": "Objects_Hailed",
+        "Rank": "Primary",
+        "TriggerEvent": "",
+        "Tags": [
+          "commstation"
+        ],
+        "Required": false,
+        "Visible": true,
+        "Value": "",
+        "Count": 3,
+        "CurrentCount": 1,
+        "Complete": false,
+        "Started": "2026-01-22T08:48:15.7663819-06:00"
+      },
+      {
+        "Name": "Scan All Comm Stations",
+        "PediaID": "long-patrol-scan",
+        "Group": "",
+        "Description": "Sciences should scan each comm station they come in contact with.",
+        "Type": "Objects_Scanned",
+        "Rank": "Primary",
+        "TriggerEvent": "",
+        "Tags": [
+          "commstation"
+        ],
+        "Required": false,
+        "Visible": true,
+        "Value": "",
+        "Count": 3,
+        "CurrentCount": 0,
+        "Complete": false,
+        "Started": "2026-01-22T08:48:15.7664143-06:00"
+      },
+      {
+        "Name": "All Stations Must Survive",
+        "PediaID": "",
+        "Group": "",
+        "Description": "Prevent any of the comm stations from being destroyed.",
+        "Type": "Objects_Survived",
+        "Rank": "Primary",
+        "TriggerEvent": "",
+        "Tags": [
+          "commstation"
+        ],
+        "Required": false,
+        "Visible": true,
+        "Value": "",
+        "Count": 3,
+        "CurrentCount": 2,
+        "Complete": false,
+        "Started": "2026-01-22T08:48:15.7664161-06:00"
+      },
+      {
+        "Name": "Destroy All Enemy Vessels",
+        "PediaID": "",
+        "Group": "",
+        "Description": "All discovered enemy vessels have been destroyed.",
+        "Type": "Objects_Destroyed",
+        "Rank": "Secondary",
+        "TriggerEvent": "",
+        "Tags": [
+          "enemy"
+        ],
+        "Required": false,
+        "Visible": true,
+        "Value": "",
+        "Count": 9,
+        "CurrentCount": 63,
+        "Complete": false,
+        "Started": "2026-01-22T08:48:15.7664205-06:00"
+      }
+    ],
+    "gm_objectives": {
+      "Hail All Comm Stations": {
+        "Name": "Hail All Comm Stations",
+        "PediaID": "long-patrol-hail",
+        "Group": "",
+        "Description": "Operations should hail and check the status on each Comm Station encountered.",
+        "Type": "Objects_Hailed",
+        "Rank": "Primary",
+        "TriggerEvent": "",
+        "Tags": [
+          "commstation"
+        ],
+        "Required": false,
+        "Visible": true,
+        "Value": "",
+        "Count": 3,
+        "CurrentCount": 1,
+        "Complete": false,
+        "Started": "2026-01-22T08:48:15.7663819-06:00"
+      },
+      "Scan All Comm Stations": {
+        "Name": "Scan All Comm Stations",
+        "PediaID": "long-patrol-scan",
+        "Group": "",
+        "Description": "Sciences should scan each comm station they come in contact with.",
+        "Type": "Objects_Scanned",
+        "Rank": "Primary",
+        "TriggerEvent": "",
+        "Tags": [
+          "commstation"
+        ],
+        "Required": false,
+        "Visible": true,
+        "Value": "",
+        "Count": 3,
+        "CurrentCount": 0,
+        "Complete": false,
+        "Started": "2026-01-22T08:48:15.7664143-06:00"
+      },
+      "All Stations Must Survive": {
+        "Name": "All Stations Must Survive",
+        "PediaID": "",
+        "Group": "",
+        "Description": "Prevent any of the comm stations from being destroyed.",
+        "Type": "Objects_Survived",
+        "Rank": "Primary",
+        "TriggerEvent": "",
+        "Tags": [
+          "commstation"
+        ],
+        "Required": false,
+        "Visible": true,
+        "Value": "",
+        "Count": 3,
+        "CurrentCount": 2,
+        "Complete": false,
+        "Started": "2026-01-22T08:48:15.7664161-06:00"
+      },
+      "Return To Space Dock": {
+        "Name": "Return To Space Dock",
+        "PediaID": "",
+        "Group": "",
+        "Description": "Return Home.",
+        "Type": "Docked",
+        "Rank": "Primary",
+        "TriggerEvent": "",
+        "Tags": [
+          "return-home"
+        ],
+        "Required": false,
+        "Visible": false,
+        "Value": "1",
+        "Count": 1,
+        "CurrentCount": 0,
+        "Complete": false,
+        "Started": "2026-01-22T08:48:15.7664172-06:00"
+      },
+      "Destroy All Enemy Vessels": {
+        "Name": "Destroy All Enemy Vessels",
+        "PediaID": "",
+        "Group": "",
+        "Description": "All discovered enemy vessels have been destroyed.",
+        "Type": "Objects_Destroyed",
+        "Rank": "Secondary",
+        "TriggerEvent": "",
+        "Tags": [
+          "enemy"
+        ],
+        "Required": false,
+        "Visible": true,
+        "Value": "",
+        "Count": 9,
+        "CurrentCount": 63,
+        "Complete": false,
+        "Started": "2026-01-22T08:48:15.7664205-06:00"
+      },
+      "Destroy Something Big": {
+        "Name": "Destroy Something Big",
+        "PediaID": "",
+        "Group": "",
+        "Description": "It must go down, and it must go down hard!",
+        "Type": "Objects_Destroyed",
+        "Rank": "Secondary",
+        "TriggerEvent": "",
+        "Tags": [
+          "somethingbig"
+        ],
+        "Required": false,
+        "Visible": false,
+        "Value": "",
+        "Count": 0,
+        "CurrentCount": 0,
+        "Complete": false,
+        "Started": "2026-01-22T08:48:15.7664216-06:00"
+      },
+      "Destroy The Imperial": {
+        "Name": "Destroy The Imperial",
+        "PediaID": "",
+        "Group": "",
+        "Description": "Defeat the Imperial Armada.",
+        "Type": "Objects_Destroyed",
+        "Rank": "Secondary",
+        "TriggerEvent": "",
+        "Tags": [
+          "imperial"
+        ],
+        "Required": false,
+        "Visible": false,
+        "Value": "",
+        "Count": 0,
+        "CurrentCount": 0,
+        "Complete": false,
+        "Started": "2026-01-22T08:48:15.7664229-06:00"
+      }
+    },
+    "encounters": {
+      "Alliance Encounters": {
+        "Name": "Alliance Encounters",
+        "ModuleID": "Horizons",
+        "MissionID": "",
+        "Chance": 0.15,
+        "Max": 20,
+        "Active": true,
+        "ActiveBase": true,
+        "AllowRepeating": true,
+        "Location": "",
+        "Planet": "",
+        "Faction": "Alliance",
+        "LastRoll": 0.0,
+        "LastGroupRoll": 0.0,
+        "LastGroup": 0,
+        "LastEncounter": "",
+        "Encounters": {
+          "10": {
+            "ID": 10,
+            "Name": "Commercial Traffic 1",
+            "Minimum": 1,
+            "Maximum": 1,
+            "PlayerMultiplier": false,
+            "Multiplier": 1.0,
+            "Active": true,
+            "Actions": [],
+            "Objects": [
+              {
+                "ID": 0,
+                "Type": "Vessel",
+                "Name": "ANNAV A-1R",
+                "PediaID": "",
+                "Group": "",
+                "Designation": "",
+                "VesselClass": "ANNAV",
+                "Faction": "Daichi",
+                "Icon": "",
+                "Image": "",
+                "Controller": "",
+                "Dock": "",
+                "BroadcastingKey": false,
+                "CrewSize": -1,
+                "Location": "[RANDOM:Sol:400:1]",
+                "Position": {
+                  "X": -13915.23,
+                  "Y": 654.8887,
+                  "Z": 1538.337
+                },
+                "Rotation": {
+                  "X": 0.0,
+                  "Y": 0.0,
+                  "Z": 0.0
+                },
+                "Range": 0,
+                "CustomDialog": {
+                  "ID": "",
+                  "IDL": "",
+                  "ModuleID": "",
+                  "Description": "",
+                  "Inherits": "",
+                  "Language": "",
+                  "ActiveGroupID": "Main",
+                  "ActiveGroup": null,
+                  "DefaultGroup": "",
+                  "Groups": {}
+                },
+                "DefaultAnimation": "",
+                "Animations": {},
+                "Breaches": [],
+                "Cargo": {},
+                "Components": {},
+                "Occupants": [],
+                "Properties": {},
+                "Tags": [
+                  "somethingbig"
+                ],
+                "Tasks": [],
+                "StoredWaypoints": [],
+                "Players": {},
+                "Roles": {},
+                "Upgrades": [
+                  "",
+                  "",
+                  "",
+                  "",
+                  "",
+                  ""
+                ],
+                "CoreBehavior": "Idle",
+                "Behavior": "PlayerHold",
+                "Maneuver": "Cruise",
+                "SpawnID": "",
+                "Seed": 0,
+                "Integrity": 0,
+                "TargetSpeed": 0.5,
+                "Scale": 1.0,
+                "Description": "",
+                "Debug": false,
+                "Detectible": true,
+                "Immortal": false,
+                "Invincible": false,
+                "Loaded": false,
+                "Rigid": true,
+                "Sentient": true,
+                "Static": false,
+                "Required": false
+              },
+              {
+                "ID": 0,
+                "Type": "Vessel",
+                "Name": "Colonial Movers",
+                "PediaID": "",
+                "Group": "",
+                "Designation": "",
+                "VesselClass": "CargoTrain",
+                "Faction": "Neutral",
+                "Icon": "",
+                "Image": "",
+                "Controller": "",
+                "Dock": "",
+                "BroadcastingKey": false,
+                "CrewSize": -1,
+                "Location": "Betelgeuse",
+                "Position": {
+                  "X": 5443.511,
+                  "Y": -805.2443,
+                  "Z": 12898.38
+                },
+                "Rotation": {
+                  "X": 0.0,
+                  "Y": 0.0,
+                  "Z": 0.0
+                },
+                "Range": 0,
+                "CustomDialog": {
+                  "ID": "Generic",
+                  "IDL": "Generic",
+                  "ModuleID": "",
+                  "Description": "",
+                  "Inherits": "Generic",
+                  "Language": "",
+                  "ActiveGroupID": "Main",
+                  "ActiveGroup": null,
+                  "DefaultGroup": "",
+                  "Groups": {
+                    "going near it": {
+                      "ID": "going near it",
+                      "Inherits": "",
+                      "LinksTo": "",
+                      "LinksToReceiver": "",
+                      "TriggerEvent": "",
+                      "MinimumEncounters": 0,
+                      "Text": [
+                        {
+                          "Text": "If you are really that interested, we've transmitted a mission waypoint over to your Flight officer.",
+                          "Language": "en",
+                          "Audio": ""
+                        }
+                      ],
+                      "Topics": {},
+                      "Actions": [
+                        {
+                          "Name": "Something Big",
+                          "Color": {
+                            "R": 0,
+                            "G": 0,
+                            "B": 0,
+                            "A": 255
+                          },
+                          "Type": "SetWaypoint",
+                          "Text": "",
+                          "Tags": "",
+                          "Bool1": false,
+                          "Bool2": false,
+                          "Bool3": false,
+                          "Bool4": false,
+                          "Int1": 0,
+                          "Int2": 0,
+                          "Int3": 0,
+                          "Int4": 0,
+                          "Float1": 0,
+                          "Float2": 0,
+                          "String1": "Planet",
+                          "String2": "[Planet:somethingbig]",
+                          "String3": "",
+                          "String4": "",
+                          "Value": null,
+                          "Properties": {},
+                          "Values": [],
+                          "Occurred": 0,
+                          "OccurredMax": 0
+                        }
+                      ],
+                      "RemoveOnAsk": false
+                    },
+                    "something big": {
+                      "ID": "something big",
+                      "Inherits": "",
+                      "LinksTo": "",
+                      "LinksToReceiver": "",
+                      "TriggerEvent": "",
+                      "MinimumEncounters": 0,
+                      "Text": [
+                        {
+                          "Text": "It was huge! I wouldn't recommend [Topic:going near it] if I were you.",
+                          "Language": "en",
+                          "Audio": ""
+                        }
+                      ],
+                      "Topics": {},
+                      "Actions": [],
+                      "RemoveOnAsk": false
+                    },
+                    "Status-Good": {
+                      "ID": "Status-Good",
+                      "Inherits": "",
+                      "LinksTo": "",
+                      "LinksToReceiver": "",
+                      "TriggerEvent": "",
+                      "MinimumEncounters": 0,
+                      "Text": [
+                        {
+                          "Text": "We just narrowly evaded something and are happy to be here to [Topic:talk about it]!",
+                          "Language": "en",
+                          "Audio": ""
+                        }
+                      ],
+                      "Topics": {},
+                      "Actions": [],
+                      "RemoveOnAsk": false
+                    },
+                    "talk about it": {
+                      "ID": "talk about it",
+                      "Inherits": "",
+                      "LinksTo": "",
+                      "LinksToReceiver": "",
+                      "TriggerEvent": "",
+                      "MinimumEncounters": 0,
+                      "Text": [
+                        {
+                          "Text": "We were on our way here and we detected [Topic:something big] on our long range sensors. It started an approach vector on us so we high tailed it out of there!",
+                          "Language": "en",
+                          "Audio": ""
+                        }
+                      ],
+                      "Topics": {},
+                      "Actions": [],
+                      "RemoveOnAsk": false
+                    }
+                  }
+                },
+                "DefaultAnimation": "",
+                "Animations": {},
+                "Breaches": [],
+                "Cargo": {
+                  "RANDOMIZE": "80, 360"
+                },
+                "Components": {},
+                "Occupants": [],
+                "Properties": {},
+                "Tags": [],
+                "Tasks": [],
+                "StoredWaypoints": [],
+                "Players": {},
+                "Roles": {},
+                "Upgrades": [
+                  "",
+                  "",
+                  "",
+                  "",
+                  "",
+                  ""
+                ],
+                "CoreBehavior": "Idle",
+                "Behavior": "Active",
+                "Maneuver": "Cruise",
+                "SpawnID": "",
+                "Seed": 0,
+                "Integrity": 0,
+                "TargetSpeed": 0.5,
+                "Scale": 1.0,
+                "Description": "",
+                "Debug": false,
+                "Detectible": true,
+                "Immortal": false,
+                "Invincible": false,
+                "Loaded": false,
+                "Rigid": true,
+                "Sentient": true,
+                "Static": false,
+                "Required": false
+              }
+            ]
+          },
+          "20": {
+            "ID": 20,
+            "Name": "Commercial Traffic 2",
+            "Minimum": 1,
+            "Maximum": 1,
+            "PlayerMultiplier": false,
+            "Multiplier": 1.0,
+            "Active": true,
+            "Actions": [],
+            "Objects": [
+              {
+                "ID": 0,
+                "Type": "Vessel",
+                "Name": "Imperator",
+                "PediaID": "",
+                "Group": "",
+                "Designation": "",
+                "VesselClass": "Paladin",
+                "Faction": "Imperial",
+                "Icon": "",
+                "Image": "",
+                "Controller": "",
+                "Dock": "",
+                "BroadcastingKey": false,
+                "CrewSize": -1,
+                "Location": "[RANDOM:Sol:400:1]",
+                "Position": {
+                  "X": -9948.595,
+                  "Y": -251.2964,
+                  "Z": -9850.15
+                },
+                "Rotation": {
+                  "X": 0.0,
+                  "Y": 0.0,
+                  "Z": 0.0
+                },
+                "Range": 0,
+                "CustomDialog": {
+                  "ID": "",
+                  "IDL": "",
+                  "ModuleID": "",
+                  "Description": "",
+                  "Inherits": "",
+                  "Language": "",
+                  "ActiveGroupID": "Main",
+                  "ActiveGroup": null,
+                  "DefaultGroup": "",
+                  "Groups": {}
+                },
+                "DefaultAnimation": "",
+                "Animations": {},
+                "Breaches": [],
+                "Cargo": {},
+                "Components": {},
+                "Occupants": [],
+                "Properties": {},
+                "Tags": [
+                  "imperial"
+                ],
+                "Tasks": [],
+                "StoredWaypoints": [],
+                "Players": {},
+                "Roles": {},
+                "Upgrades": [
+                  "",
+                  "",
+                  "",
+                  "",
+                  "",
+                  ""
+                ],
+                "CoreBehavior": "Idle",
+                "Behavior": "PlayerHold",
+                "Maneuver": "Cruise",
+                "SpawnID": "",
+                "Seed": 0,
+                "Integrity": 0,
+                "TargetSpeed": 0.5,
+                "Scale": 1.0,
+                "Description": "",
+                "Debug": false,
+                "Detectible": true,
+                "Immortal": false,
+                "Invincible": false,
+                "Loaded": false,
+                "Rigid": true,
+                "Sentient": true,
+                "Static": false,
+                "Required": false
+              },
+              {
+                "ID": 0,
+                "Type": "Vessel",
+                "Name": "Traveller",
+                "PediaID": "",
+                "Group": "",
+                "Designation": "",
+                "VesselClass": "Freighter",
+                "Faction": "Neutral",
+                "Icon": "",
+                "Image": "",
+                "Controller": "",
+                "Dock": "",
+                "BroadcastingKey": true,
+                "CrewSize": -1,
+                "Location": "Betelgeuse",
+                "Position": {
+                  "X": -1915.638,
+                  "Y": -620.4739,
+                  "Z": 13868.32
+                },
+                "Rotation": {
+                  "X": 0.0,
+                  "Y": 0.0,
+                  "Z": 0.0
+                },
+                "Range": 0,
+                "CustomDialog": {
+                  "ID": "Generic",
+                  "IDL": "Generic",
+                  "ModuleID": "",
+                  "Description": "",
+                  "Inherits": "Generic",
+                  "Language": "",
+                  "ActiveGroupID": "Main",
+                  "ActiveGroup": null,
+                  "DefaultGroup": "",
+                  "Groups": {
+                    "Imperial entanglements": {
+                      "ID": "Imperial entanglements",
+                      "Inherits": "",
+                      "LinksTo": "",
+                      "LinksToReceiver": "",
+                      "TriggerEvent": "",
+                      "MinimumEncounters": 0,
+                      "Text": [
+                        {
+                          "Text": "Trust me, you don't want to hear about it!",
+                          "Language": "en",
+                          "Audio": ""
+                        }
+                      ],
+                      "Topics": {
+                        "Imperial-Yes": {
+                          "SourceID": 0,
+                          "Type": "Open",
+                          "Key": "Imperial-Yes",
+                          "Text": "Yes we do. Please tell us more!",
+                          "Subject": "",
+                          "Demeanor": 0.0,
+                          "LinksTo": "Part2",
+                          "LinksToReceiver": "",
+                          "TriggerEvent": "",
+                          "RemoveOnAsk": false,
+                          "Visible": true
+                        },
+                        "Imperial-No": {
+                          "SourceID": 0,
+                          "Type": "Open",
+                          "Key": "Imperial-No",
+                          "Text": "Your right, I think we'll pass.",
+                          "Subject": "",
+                          "Demeanor": 0.0,
+                          "LinksTo": "Part5",
+                          "LinksToReceiver": "",
+                          "TriggerEvent": "",
+                          "RemoveOnAsk": false,
+                          "Visible": true
+                        },
+                        "Imperial-NoWay": {
+                          "SourceID": 0,
+                          "Type": "Open",
+                          "Key": "Imperial-NoWay",
+                          "Text": "No thank you. Plausible deniability you know...",
+                          "Subject": "",
+                          "Demeanor": 0.0,
+                          "LinksTo": "Main",
+                          "LinksToReceiver": "",
+                          "TriggerEvent": "",
+                          "RemoveOnAsk": false,
+                          "Visible": true
+                        }
+                      },
+                      "Actions": [],
+                      "RemoveOnAsk": false
+                    },
+                    "nearby system": {
+                      "ID": "nearby system",
+                      "Inherits": "",
+                      "LinksTo": "Main",
+                      "LinksToReceiver": "",
+                      "TriggerEvent": "",
+                      "MinimumEncounters": 0,
+                      "Text": [
+                        {
+                          "Text": "It wasn't that far. We will trasmit the coordinates to your flight officer. Good hunting!",
+                          "Language": "en",
+                          "Audio": ""
+                        }
+                      ],
+                      "Topics": {},
+                      "Actions": [
+                        {
+                          "Name": "Imperials",
+                          "Color": {
+                            "R": 0,
+                            "G": 0,
+                            "B": 0,
+                            "A": 255
+                          },
+                          "Type": "SetWaypoint",
+                          "Text": "",
+                          "Tags": "",
+                          "Bool1": false,
+                          "Bool2": false,
+                          "Bool3": false,
+                          "Bool4": false,
+                          "Int1": 0,
+                          "Int2": 0,
+                          "Int3": 0,
+                          "Int4": 0,
+                          "Float1": 0,
+                          "Float2": 0,
+                          "String1": "Planet",
+                          "String2": "[Planet:imperial]",
+                          "String3": "",
+                          "String4": "",
+                          "Value": null,
+                          "Properties": {},
+                          "Values": [],
+                          "Occurred": 0,
+                          "OccurredMax": 0
+                        }
+                      ],
+                      "RemoveOnAsk": false
+                    },
+                    "Part2": {
+                      "ID": "Part2",
+                      "Inherits": "",
+                      "LinksTo": "",
+                      "LinksToReceiver": "",
+                      "TriggerEvent": "",
+                      "MinimumEncounters": 0,
+                      "Text": [
+                        {
+                          "Text": "No. I don't think it's a good idea!",
+                          "Language": "en",
+                          "Audio": ""
+                        }
+                      ],
+                      "Topics": {
+                        "Please-Yes": {
+                          "SourceID": 0,
+                          "Type": "Open",
+                          "Key": "Please-Yes",
+                          "Text": "Oh come on!",
+                          "Subject": "",
+                          "Demeanor": 0.0,
+                          "LinksTo": "Part3",
+                          "LinksToReceiver": "",
+                          "TriggerEvent": "",
+                          "RemoveOnAsk": false,
+                          "Visible": true
+                        },
+                        "Please-No": {
+                          "SourceID": 0,
+                          "Type": "Open",
+                          "Key": "Please-No",
+                          "Text": "Fair enough",
+                          "Subject": "",
+                          "Demeanor": 0.0,
+                          "LinksTo": "Part5",
+                          "LinksToReceiver": "",
+                          "TriggerEvent": "",
+                          "RemoveOnAsk": false,
+                          "Visible": true
+                        }
+                      },
+                      "Actions": [],
+                      "RemoveOnAsk": false
+                    },
+                    "Part3": {
+                      "ID": "Part3",
+                      "Inherits": "",
+                      "LinksTo": "Main",
+                      "LinksToReceiver": "",
+                      "TriggerEvent": "",
+                      "MinimumEncounters": 0,
+                      "Text": [
+                        {
+                          "Text": "We nearly had a run in with them over in a [Topic:nearby system]",
+                          "Language": "en",
+                          "Audio": ""
+                        }
+                      ],
+                      "Topics": {},
+                      "Actions": [],
+                      "RemoveOnAsk": false
+                    },
+                    "Part5": {
+                      "ID": "Part5",
+                      "Inherits": "",
+                      "LinksTo": "Main",
+                      "LinksToReceiver": "",
+                      "TriggerEvent": "",
+                      "MinimumEncounters": 0,
+                      "Text": [
+                        {
+                          "Text": "Thanks for wasting our time, [Name]",
+                          "Language": "en",
+                          "Audio": ""
+                        }
+                      ],
+                      "Topics": {},
+                      "Actions": [],
+                      "RemoveOnAsk": false
+                    },
+                    "Status-Good": {
+                      "ID": "Status-Good",
+                      "Inherits": "",
+                      "LinksTo": "",
+                      "LinksToReceiver": "",
+                      "TriggerEvent": "",
+                      "MinimumEncounters": 0,
+                      "Text": [
+                        {
+                          "Text": "We are making a civilian delivery, and just happy to be avoiding any [Topic:Imperial entanglements]",
+                          "Language": "en",
+                          "Audio": ""
+                        }
+                      ],
+                      "Topics": {},
+                      "Actions": [],
+                      "RemoveOnAsk": false
+                    }
+                  }
+                },
+                "DefaultAnimation": "",
+                "Animations": {},
+                "Breaches": [],
+                "Cargo": {
+                  "RANDOMIZE": "10, 60"
+                },
+                "Components": {},
+                "Occupants": [],
+                "Properties": {},
+                "Tags": [],
+                "Tasks": [],
+                "StoredWaypoints": [],
+                "Players": {},
+                "Roles": {},
+                "Upgrades": [
+                  "",
+                  "",
+                  "",
+                  "",
+                  "",
+                  ""
+                ],
+                "CoreBehavior": "Idle",
+                "Behavior": "Active",
+                "Maneuver": "Cruise",
+                "SpawnID": "",
+                "Seed": 0,
+                "Integrity": 0,
+                "TargetSpeed": 1,
+                "Scale": 1.0,
+                "Description": "",
+                "Debug": false,
+                "Detectible": true,
+                "Immortal": false,
+                "Invincible": false,
+                "Loaded": false,
+                "Rigid": true,
+                "Sentient": true,
+                "Static": false,
+                "Required": false
+              }
+            ]
+          }
+        }
+      },
+      "Daichi Encounters": {
+        "Name": "Daichi Encounters",
+        "ModuleID": "Horizons",
+        "MissionID": "",
+        "Chance": 0.2,
+        "Max": 20,
+        "Active": true,
+        "ActiveBase": true,
+        "AllowRepeating": true,
+        "Location": "",
+        "Planet": "",
+        "Faction": "Daichi",
+        "LastRoll": 0.0,
+        "LastGroupRoll": 0.0,
+        "LastGroup": 0,
+        "LastEncounter": "",
+        "Encounters": {
+          "10": {
+            "ID": 10,
+            "Name": "DARTs",
+            "Minimum": 2,
+            "Maximum": 8,
+            "PlayerMultiplier": false,
+            "Multiplier": 1.0,
+            "Active": true,
+            "Actions": [],
+            "Objects": [
+              {
+                "ID": 0,
+                "Type": "Vessel",
+                "Name": "",
+                "PediaID": "",
+                "Group": "",
+                "Designation": "",
+                "VesselClass": "DART",
+                "Faction": "Daichi",
+                "Icon": "",
+                "Image": "",
+                "Controller": "",
+                "Dock": "",
+                "BroadcastingKey": false,
+                "CrewSize": -1,
+                "Location": "Betelgeuse",
+                "Position": {
+                  "X": -1141.6298,
+                  "Y": -469.8355,
+                  "Z": -12690.755
+                },
+                "Rotation": {
+                  "X": 0.0,
+                  "Y": 0.0,
+                  "Z": 0.0
+                },
+                "Range": 0,
+                "CustomDialog": {
+                  "ID": "",
+                  "IDL": "",
+                  "ModuleID": "",
+                  "Description": "",
+                  "Inherits": "",
+                  "Language": "",
+                  "ActiveGroupID": "Main",
+                  "ActiveGroup": null,
+                  "DefaultGroup": "",
+                  "Groups": {}
+                },
+                "DefaultAnimation": "",
+                "Animations": {},
+                "Breaches": [],
+                "Cargo": {},
+                "Components": {},
+                "Occupants": [],
+                "Properties": {},
+                "Tags": [
+                  "enemy"
+                ],
+                "Tasks": [
+                  {
+                    "Type": "Attack",
+                    "Started": "2026-01-22T08:48:15.1705397-06:00",
+                    "LastUpdate": "2026-01-22T08:48:15.1705421-06:00",
+                    "Description": "",
+                    "MaxDuraction": 0,
+                    "Location": {
+                      "X": 0.0,
+                      "Y": 0.0,
+                      "Z": 0.0
+                    },
+                    "Values": [],
+                    "Tag": "Player",
+                    "Focus": 0.0,
+                    "ClearOnComplete": false,
+                    "Completed": false
+                  }
+                ],
+                "StoredWaypoints": [],
+                "Players": {},
+                "Roles": {},
+                "Upgrades": [
+                  "",
+                  "",
+                  "",
+                  "",
+                  "",
+                  ""
+                ],
+                "CoreBehavior": "Idle",
+                "Behavior": "Active",
+                "Maneuver": "Cruise",
+                "SpawnID": "",
+                "Seed": 0,
+                "Integrity": 0,
+                "TargetSpeed": -1,
+                "Scale": 1.0,
+                "Description": "",
+                "Debug": false,
+                "Detectible": true,
+                "Immortal": false,
+                "Invincible": false,
+                "Loaded": false,
+                "Rigid": true,
+                "Sentient": true,
+                "Static": false,
+                "Required": false
+              }
+            ]
+          },
+          "20": {
+            "ID": 20,
+            "Name": "ANNAV",
+            "Minimum": 1,
+            "Maximum": 2,
+            "PlayerMultiplier": false,
+            "Multiplier": 1.0,
+            "Active": true,
+            "Actions": [],
+            "Objects": [
+              {
+                "ID": 0,
+                "Type": "Vessel",
+                "Name": "",
+                "PediaID": "",
+                "Group": "",
+                "Designation": "",
+                "VesselClass": "ANNAV",
+                "Faction": "Daichi",
+                "Icon": "",
+                "Image": "",
+                "Controller": "",
+                "Dock": "",
+                "BroadcastingKey": false,
+                "CrewSize": -1,
+                "Location": "Mars",
+                "Position": {
+                  "X": 1410.347,
+                  "Y": 349.2679,
+                  "Z": 12663.71
+                },
+                "Rotation": {
+                  "X": 0.0,
+                  "Y": 0.0,
+                  "Z": 0.0
+                },
+                "Range": 0,
+                "CustomDialog": {
+                  "ID": "",
+                  "IDL": "",
+                  "ModuleID": "",
+                  "Description": "",
+                  "Inherits": "",
+                  "Language": "",
+                  "ActiveGroupID": "Main",
+                  "ActiveGroup": null,
+                  "DefaultGroup": "",
+                  "Groups": {}
+                },
+                "DefaultAnimation": "",
+                "Animations": {},
+                "Breaches": [],
+                "Cargo": {},
+                "Components": {},
+                "Occupants": [],
+                "Properties": {},
+                "Tags": [
+                  "enemy"
+                ],
+                "Tasks": [
+                  {
+                    "Type": "Attack",
+                    "Started": "2026-01-22T08:48:15.1706243-06:00",
+                    "LastUpdate": "2026-01-22T08:48:15.1706244-06:00",
+                    "Description": "",
+                    "MaxDuraction": 0,
+                    "Location": {
+                      "X": 0.0,
+                      "Y": 0.0,
+                      "Z": 0.0
+                    },
+                    "Values": [],
+                    "Tag": "Player",
+                    "Focus": 0.0,
+                    "ClearOnComplete": false,
+                    "Completed": false
+                  }
+                ],
+                "StoredWaypoints": [],
+                "Players": {},
+                "Roles": {},
+                "Upgrades": [
+                  "",
+                  "",
+                  "",
+                  "",
+                  "",
+                  ""
+                ],
+                "CoreBehavior": "Idle",
+                "Behavior": "Active",
+                "Maneuver": "Cruise",
+                "SpawnID": "",
+                "Seed": 0,
+                "Integrity": 0,
+                "TargetSpeed": -1,
+                "Scale": 1.0,
+                "Description": "",
+                "Debug": false,
+                "Detectible": true,
+                "Immortal": false,
+                "Invincible": false,
+                "Loaded": false,
+                "Rigid": true,
+                "Sentient": true,
+                "Static": false,
+                "Required": false
+              }
+            ]
+          }
+        }
+      },
+      "Open Encounters": {
+        "Name": "Open Encounters",
+        "ModuleID": "Horizons",
+        "MissionID": "",
+        "Chance": 0.1,
+        "Max": 10,
+        "Active": true,
+        "ActiveBase": true,
+        "AllowRepeating": true,
+        "Location": "",
+        "Planet": "",
+        "Faction": "",
+        "LastRoll": 0.0,
+        "LastGroupRoll": 0.0,
+        "LastGroup": 0,
+        "LastEncounter": "",
+        "Encounters": {
+          "10": {
+            "ID": 10,
+            "Name": "DARTs",
+            "Minimum": 2,
+            "Maximum": 8,
+            "PlayerMultiplier": false,
+            "Multiplier": 1.0,
+            "Active": true,
+            "Actions": [],
+            "Objects": [
+              {
+                "ID": 0,
+                "Type": "Vessel",
+                "Name": "DT-818",
+                "PediaID": "",
+                "Group": "",
+                "Designation": "",
+                "VesselClass": "DART",
+                "Faction": "Daichi",
+                "Icon": "",
+                "Image": "",
+                "Controller": "",
+                "Dock": "",
+                "BroadcastingKey": false,
+                "CrewSize": -1,
+                "Location": "",
+                "Position": {
+                  "X": 0.0,
+                  "Y": 0.0,
+                  "Z": 0.0
+                },
+                "Rotation": {
+                  "X": 0.0,
+                  "Y": 0.0,
+                  "Z": 0.0
+                },
+                "Range": 0,
+                "CustomDialog": {
+                  "ID": "Daichi",
+                  "IDL": "Daichi",
+                  "ModuleID": "",
+                  "Description": "",
+                  "Inherits": "Daichi",
+                  "Language": "",
+                  "ActiveGroupID": "Main",
+                  "ActiveGroup": null,
+                  "DefaultGroup": "",
+                  "Groups": {}
+                },
+                "DefaultAnimation": "",
+                "Animations": {},
+                "Breaches": [],
+                "Cargo": {},
+                "Components": {},
+                "Occupants": [],
+                "Properties": {},
+                "Tags": [
+                  "enemy"
+                ],
+                "Tasks": [
+                  {
+                    "Type": "Attack",
+                    "Started": "2026-01-22T08:48:15.1706711-06:00",
+                    "LastUpdate": "2026-01-22T08:48:15.1706712-06:00",
+                    "Description": "",
+                    "MaxDuraction": 0,
+                    "Location": {
+                      "X": 0.0,
+                      "Y": 0.0,
+                      "Z": 0.0
+                    },
+                    "Values": [],
+                    "Tag": "Player",
+                    "Focus": 0.0,
+                    "ClearOnComplete": false,
+                    "Completed": false
+                  }
+                ],
+                "StoredWaypoints": [],
+                "Players": {},
+                "Roles": {},
+                "Upgrades": [
+                  "",
+                  "",
+                  "",
+                  "",
+                  "",
+                  ""
+                ],
+                "CoreBehavior": "Idle",
+                "Behavior": "Active",
+                "Maneuver": "Cruise",
+                "SpawnID": "",
+                "Seed": 0,
+                "Integrity": 0,
+                "TargetSpeed": -1,
+                "Scale": 1.0,
+                "Description": "",
+                "Debug": false,
+                "Detectible": true,
+                "Immortal": false,
+                "Invincible": false,
+                "Loaded": false,
+                "Rigid": true,
+                "Sentient": true,
+                "Static": false,
+                "Required": false
+              }
+            ]
+          }
+        }
+      }
+    },
+    "scenario": {},
+    "npcs": {},
+    "available_missions": [
+      {
+        "ID": "AA-Long Patrol",
+        "Name": "The Long Patrol",
+        "ModuleID": "Horizons",
+        "Description": "Patrol several key star systems during a routine patrol and check in on various Comm Stations to ensure they are safe.\n\nA good starter mission for beginners.\n  ",
+        "Category": " Academy",
+        "Tags": [
+          "live-mission"
+        ],
+        "Rating": 2,
+        "Players": 6,
+        "Complete": false,
+        "Active": true
+      },
+      {
+        "ID": "Art of Detente",
+        "Name": "The Art of Detente",
+        "ModuleID": "Horizons",
+        "Description": "A operations ship has become disabled and is stranded in enemy territory. Can the Horizons get them out safely?",
+        "Category": "General",
+        "Tags": [],
+        "Rating": 3,
+        "Players": 4,
+        "Complete": false,
+        "Active": true
+      },
+      {
+        "ID": "CW-Tutorial-FirstHack",
+        "Name": "Your First Hack: University Breach",
+        "ModuleID": "CW",
+        "Description": "Learn the basics of cyber warfare. Breach Westbridge University's network to expose grade manipulation by corrupt administrators. Navigate through network space, scan targets for vulnerabilities, deploy DDoS attacks, and extract evidence before security traces your location. Optional objectives include collecting abandoned data and destroying backup servers. Practice stealth by avoiding security patrols.",
+        "Category": "CyberWarfare",
+        "Tags": [
+          "cyberwarfare",
+          "tutorial",
+          "beginner"
+        ],
+        "Rating": 1,
+        "Players": 6,
+        "Complete": false,
+        "Active": true
+      },
+      {
+        "ID": "Fighter: Skirmish",
+        "Name": "Fighter: Skirmish",
+        "ModuleID": "Horizons",
+        "Description": "",
+        "Category": "",
+        "Tags": [],
+        "Rating": 2,
+        "Players": 4,
+        "Complete": false,
+        "Active": false
+      },
+      {
+        "ID": "Homestead Company",
+        "Name": "The Homestead Company",
+        "ModuleID": "Horizons",
+        "Description": "The Homestead Company has requested an escort to help them get to Chara Proxima. Lead their convoy to the safety of their new home.\r\n\r\nA great mix of action and deduction.\r\n  ",
+        "Category": "General",
+        "Tags": [],
+        "Rating": 4,
+        "Players": 4,
+        "Complete": false,
+        "Active": true
+      },
+      {
+        "ID": "Hot Pursuit",
+        "Name": "Hot Pursuit",
+        "ModuleID": "Horizons",
+        "Description": "\r\n    A stolen capitol ship and no time to waste. Catch the Daichi criminals before they can complete their mission.\r\n  ",
+        "Category": "General",
+        "Tags": [],
+        "Rating": 2,
+        "Players": 6,
+        "Complete": false,
+        "Active": false
+      },
+      {
+        "ID": "Invasion",
+        "Name": "Daichi Invasion",
+        "ModuleID": "Horizons",
+        "Description": "Survive wave after wave of enemy ships as you defend 4 stations from their assault. Difficulty increases with each wave. \n    \nA great mission for an action hungry crew.\n  ",
+        "Category": "General",
+        "Tags": [],
+        "Rating": 3,
+        "Players": 4,
+        "Complete": false,
+        "Active": true
+      },
+      {
+        "ID": "Last Horizon",
+        "Name": "The Last Horizon",
+        "ModuleID": "Horizons",
+        "Description": "\r\n    I wonder what's happening over at Mars...\r\n  ",
+        "Category": "General",
+        "Tags": [],
+        "Rating": 2,
+        "Players": 4,
+        "Complete": false,
+        "Active": false
+      },
+      {
+        "ID": "MM01",
+        "Name": "Mike's Masteries",
+        "ModuleID": "M1",
+        "Description": "Test mission - minimal version",
+        "Category": "Training",
+        "Tags": [],
+        "Rating": 1,
+        "Players": 1,
+        "Complete": false,
+        "Active": true
+      },
+      {
+        "ID": "Playground",
+        "Name": "Open Playground",
+        "ModuleID": "Horizons",
+        "Description": "First Star To The Right, And Straight On Until Morning...\r\n    \r\nExplore the universe in a fighter with no enemies.\r\n  ",
+        "Category": "Single Player: Fighters",
+        "Tags": [],
+        "Rating": 1,
+        "Players": 4,
+        "Complete": false,
+        "Active": true
+      },
+      {
+        "ID": "Radical Action",
+        "Name": "Radical Action",
+        "ModuleID": "Horizons",
+        "Description": "The new Opal Bay outpost and mining operations are almost complete. Assist Alliance command in getting these facilities finished.",
+        "Category": "General",
+        "Tags": [],
+        "Rating": 2,
+        "Players": 6,
+        "Complete": false,
+        "Active": true
+      },
+      {
+        "ID": "SC_2025",
+        "Name": "Intolerance: Liberation and Diplomacy",
+        "ModuleID": "M1",
+        "Description": "\n        A massive asteroid on collision course with Mars threatens extinction-level\n        impact in 72 hours. The USS Donahoo must travel to Mars orbit and work with\n        Research Lab R-1 to deflect the asteroid using the principles of Newtonian\n        mechanics, momentum, impulse and energy. Complete the AP Physics certification\n        exam, gather critical data through uranium sampling and seismic analysis, then\n        use precision calculations to save millions of lives on Mars.\n\n        This scenario is designed as a capstone activity for AP Physics integrating\n        real-world physics problems with mission-critical decision making.\n    ",
+        "Category": "Educational",
+        "Tags": [],
+        "Rating": 3,
+        "Players": 6,
+        "Complete": false,
+        "Active": true
+      },
+      {
+        "ID": "What Lies Beyond Mars",
+        "Name": "What Lies Beyond Mars",
+        "ModuleID": "Horizons",
+        "Description": "Can you withstand the assault from a squadron of Daichi DARTs that never give up? \r\n    \r\n*** This Is A Sample Fighter Mission ***\r\n  ",
+        "Category": "Single Player: Fighters",
+        "Tags": [],
+        "Rating": 2,
+        "Players": 4,
+        "Complete": false,
+        "Active": true
+      },
+      {
+        "ID": "Wrong Place Wrong Time",
+        "Name": "The Wrong Place, The Wrong Time",
+        "ModuleID": "Horizons",
+        "Description": "It might just be a case of the Mondays... \r\n\r\nAt least your last Monday...",
+        "Category": "General",
+        "Tags": [],
+        "Rating": 4,
+        "Players": 4,
+        "Complete": false,
+        "Active": true
+      }
+    ]
+  },
+  "combat_data": {
+    "ordnance": [
+      {
+        "Name": "Silkworm [Evil]",
+        "Count": 7,
+        "Max": 10,
+        "Description": "Packs a real punch against both shields and hull with a decent blast radius.",
+        "Icon": "/images/ordnance/silkworm.jpg",
+        "Image": "/images/ordnance/silkworm.jpg",
+        "PediaID": "",
+        "Damage": 600,
+        "Speed": 3,
+        "Range": 50000
+      }
+    ],
+    "ordnance_selected": null,
+    "projectiles": [],
+    "drones": [
+      {
+        "ID": 11948,
+        "BaseType": "Drone",
+        "SubType": "Cargo",
+        "Class": "Mark II Shuttle",
+        "Name": "Shuttle Aleana",
+        "CurrentTargetID": "",
+        "Behavior": "Active",
+        "Maneuver": "Docked",
+        "ControllerID": 11938,
+        "DockedAt": "",
+        "Integrity": 1000,
+        "Shields": 1,
+        "CargoSpace": 0,
+        "Map": "Milky Way",
+        "Location": "Sol",
+        "Planet": "Earth",
+        "MapPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "StarPosition": {
+          "X": -0.5,
+          "Y": 0,
+          "Z": -0.87
+        },
+        "Position": {
+          "X": -7395.02,
+          "Y": 133224.19,
+          "Z": 834.94
+        },
+        "Activity": "Idle",
+        "Immortal": false,
+        "Invincible": false,
+        "State": "Alive",
+        "IsPlayer": false
+      },
+      {
+        "ID": 11953,
+        "BaseType": "Drone",
+        "SubType": "Cargo",
+        "Class": "Mark II Shuttle",
+        "Name": "Shuttle Epsilon",
+        "CurrentTargetID": "",
+        "Behavior": "Active",
+        "Maneuver": "Docked",
+        "ControllerID": 11938,
+        "DockedAt": "",
+        "Integrity": 1000,
+        "Shields": 1,
+        "CargoSpace": 0,
+        "Map": "Milky Way",
+        "Location": "Sol",
+        "Planet": "Earth",
+        "MapPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "StarPosition": {
+          "X": -0.5,
+          "Y": 0,
+          "Z": -0.87
+        },
+        "Position": {
+          "X": -7395.22,
+          "Y": 133224.06,
+          "Z": 834.94
+        },
+        "Activity": "Idle",
+        "Immortal": false,
+        "Invincible": false,
+        "State": "Alive",
+        "IsPlayer": false
+      },
+      {
+        "ID": 11947,
+        "BaseType": "Vessel",
+        "SubType": "Fighter",
+        "Class": "Jackal",
+        "Name": "Blue-01",
+        "CurrentTargetID": "",
+        "Behavior": "Active",
+        "Maneuver": "Docked",
+        "ControllerID": 11938,
+        "DockedAt": "Launch Bay Alpha 1",
+        "Integrity": 30,
+        "Shields": 0,
+        "CargoSpace": 0,
+        "Map": "",
+        "Location": "",
+        "Planet": "",
+        "MapPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "StarPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Position": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Activity": "Idle",
+        "Immortal": false,
+        "Invincible": false,
+        "State": "Alive",
+        "IsPlayer": false
+      },
+      {
+        "ID": 11957,
+        "BaseType": "Vessel",
+        "SubType": "Fighter",
+        "Class": "Jackal",
+        "Name": "Blue-02",
+        "CurrentTargetID": "",
+        "Behavior": "Active",
+        "Maneuver": "Docked",
+        "ControllerID": 11938,
+        "DockedAt": "Flight Deck",
+        "Integrity": 30,
+        "Shields": 0,
+        "CargoSpace": 0,
+        "Map": "",
+        "Location": "",
+        "Planet": "",
+        "MapPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "StarPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Position": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Activity": "Idle",
+        "Immortal": false,
+        "Invincible": false,
+        "State": "Alive",
+        "IsPlayer": false
+      },
+      {
+        "ID": 11958,
+        "BaseType": "Vessel",
+        "SubType": "Fighter",
+        "Class": "Jackal",
+        "Name": "Red-01",
+        "CurrentTargetID": "",
+        "Behavior": "Active",
+        "Maneuver": "Docked",
+        "ControllerID": 11938,
+        "DockedAt": "Flight Deck",
+        "Integrity": 30,
+        "Shields": 0,
+        "CargoSpace": 0,
+        "Map": "",
+        "Location": "",
+        "Planet": "",
+        "MapPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "StarPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Position": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Activity": "Idle",
+        "Immortal": false,
+        "Invincible": false,
+        "State": "Alive",
+        "IsPlayer": false
+      },
+      {
+        "ID": 11959,
+        "BaseType": "Vessel",
+        "SubType": "Fighter",
+        "Class": "Jackal",
+        "Name": "Red-02",
+        "CurrentTargetID": "",
+        "Behavior": "Active",
+        "Maneuver": "Docked",
+        "ControllerID": 11938,
+        "DockedAt": "Flight Deck",
+        "Integrity": 30,
+        "Shields": 0,
+        "CargoSpace": 0,
+        "Map": "",
+        "Location": "",
+        "Planet": "",
+        "MapPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "StarPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Position": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Activity": "Idle",
+        "Immortal": false,
+        "Invincible": false,
+        "State": "Alive",
+        "IsPlayer": false
+      },
+      {
+        "ID": 11951,
+        "BaseType": "Drone",
+        "SubType": "Mining",
+        "Class": "WY-79 Mining Drone",
+        "Name": "Minerbot WY-71",
+        "CurrentTargetID": "",
+        "Behavior": "Active",
+        "Maneuver": "Docked",
+        "ControllerID": 11938,
+        "DockedAt": "Shuttle Bay Alpha",
+        "Integrity": 100,
+        "Shields": 0,
+        "CargoSpace": 0,
+        "Map": "",
+        "Location": "",
+        "Planet": "",
+        "MapPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "StarPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Position": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Activity": "Idle",
+        "Immortal": false,
+        "Invincible": false,
+        "State": "Alive",
+        "IsPlayer": false
+      },
+      {
+        "ID": 11952,
+        "BaseType": "Vessel",
+        "SubType": "Probe",
+        "Class": "Probe Class 1",
+        "Name": "PROBE-3462",
+        "CurrentTargetID": "",
+        "Behavior": "Active",
+        "Maneuver": "Docked",
+        "ControllerID": 11938,
+        "DockedAt": "Shuttle Bay Alpha",
+        "Integrity": 40,
+        "Shields": 0,
+        "CargoSpace": 0,
+        "Map": "",
+        "Location": "",
+        "Planet": "",
+        "MapPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "StarPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Position": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Activity": "Idle",
+        "Immortal": false,
+        "Invincible": false,
+        "State": "Alive",
+        "IsPlayer": false
+      },
+      {
+        "ID": 11956,
+        "BaseType": "Vessel",
+        "SubType": "Probe",
+        "Class": "Probe Class 1",
+        "Name": "PROBE-6433",
+        "CurrentTargetID": "",
+        "Behavior": "Active",
+        "Maneuver": "Docked",
+        "ControllerID": 11938,
+        "DockedAt": "Shuttle Bay Beta",
+        "Integrity": 40,
+        "Shields": 0,
+        "CargoSpace": 0,
+        "Map": "",
+        "Location": "",
+        "Planet": "",
+        "MapPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "StarPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Position": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Activity": "Idle",
+        "Immortal": false,
+        "Invincible": false,
+        "State": "Alive",
+        "IsPlayer": false
+      },
+      {
+        "ID": 11949,
+        "BaseType": "Drone",
+        "SubType": "Repair",
+        "Class": "XR1 Repair Drone",
+        "Name": "Repair Drone XR1-A",
+        "CurrentTargetID": "",
+        "Behavior": "Active",
+        "Maneuver": "Docked",
+        "ControllerID": 11938,
+        "DockedAt": "Shuttle Bay Alpha",
+        "Integrity": 100,
+        "Shields": 0,
+        "CargoSpace": 0,
+        "Map": "",
+        "Location": "",
+        "Planet": "",
+        "MapPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "StarPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Position": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Activity": "Idle",
+        "Immortal": false,
+        "Invincible": false,
+        "State": "Alive",
+        "IsPlayer": false
+      },
+      {
+        "ID": 11950,
+        "BaseType": "Drone",
+        "SubType": "Repair",
+        "Class": "XR1 Repair Drone",
+        "Name": "Repair Drone XR1-B",
+        "CurrentTargetID": "",
+        "Behavior": "Active",
+        "Maneuver": "Docked",
+        "ControllerID": 11938,
+        "DockedAt": "Shuttle Bay Alpha",
+        "Integrity": 100,
+        "Shields": 0,
+        "CargoSpace": 0,
+        "Map": "",
+        "Location": "",
+        "Planet": "",
+        "MapPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "StarPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Position": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Activity": "Idle",
+        "Immortal": false,
+        "Invincible": false,
+        "State": "Alive",
+        "IsPlayer": false
+      },
+      {
+        "ID": 11954,
+        "BaseType": "Drone",
+        "SubType": "Repair",
+        "Class": "XR1 Repair Drone",
+        "Name": "Repair Drone XR1-C",
+        "CurrentTargetID": "",
+        "Behavior": "Active",
+        "Maneuver": "Docked",
+        "ControllerID": 11938,
+        "DockedAt": "Shuttle Bay Beta",
+        "Integrity": 100,
+        "Shields": 0,
+        "CargoSpace": 0,
+        "Map": "",
+        "Location": "",
+        "Planet": "",
+        "MapPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "StarPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Position": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Activity": "Idle",
+        "Immortal": false,
+        "Invincible": false,
+        "State": "Alive",
+        "IsPlayer": false
+      },
+      {
+        "ID": 11955,
+        "BaseType": "Drone",
+        "SubType": "Turret",
+        "Class": "Sentry Turret",
+        "Name": "Sentry 013",
+        "CurrentTargetID": "",
+        "Behavior": "Active",
+        "Maneuver": "Docked",
+        "ControllerID": 11938,
+        "DockedAt": "Shuttle Bay Beta",
+        "Integrity": 200,
+        "Shields": 0,
+        "CargoSpace": 0,
+        "Map": "",
+        "Location": "",
+        "Planet": "",
+        "MapPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "StarPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Position": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Activity": "Idle",
+        "Immortal": false,
+        "Invincible": false,
+        "State": "Alive",
+        "IsPlayer": false
+      }
+    ],
+    "drone_targets": {}
+  },
+  "last_packets": {
+    "MISSION": {
+      "ID": "AA-Long Patrol",
+      "Name": "The Long Patrol",
+      "Date": "07/20/2218",
+      "TotalObjectives": 7,
+      "TotalWaypoints": 4,
+      "Started": "01/22/2026 16:26:02",
+      "Timer": "0",
+      "ElapsedTime": "3145.5934567",
+      "State": "Running",
+      "PediaID": "Operational Orders",
+      "Complete": false,
+      "Success": false,
+      "Grade": 0,
+      "Groups": [],
+      "Objectives": {
+        "Hail All Comm Stations": {
+          "Name": "Hail All Comm Stations",
+          "PediaID": "long-patrol-hail",
+          "Group": "",
+          "Description": "Operations should hail and check the status on each Comm Station encountered.",
+          "Type": "Objects_Hailed",
+          "Rank": "Primary",
+          "TriggerEvent": "",
+          "Tags": [
+            "commstation"
+          ],
+          "Required": false,
+          "Visible": true,
+          "Value": "",
+          "Count": 3,
+          "CurrentCount": 1,
+          "Complete": false,
+          "Started": "2026-01-22T08:48:15.7663819-06:00"
+        },
+        "Scan All Comm Stations": {
+          "Name": "Scan All Comm Stations",
+          "PediaID": "long-patrol-scan",
+          "Group": "",
+          "Description": "Sciences should scan each comm station they come in contact with.",
+          "Type": "Objects_Scanned",
+          "Rank": "Primary",
+          "TriggerEvent": "",
+          "Tags": [
+            "commstation"
+          ],
+          "Required": false,
+          "Visible": true,
+          "Value": "",
+          "Count": 3,
+          "CurrentCount": 0,
+          "Complete": false,
+          "Started": "2026-01-22T08:48:15.7664143-06:00"
+        },
+        "All Stations Must Survive": {
+          "Name": "All Stations Must Survive",
+          "PediaID": "",
+          "Group": "",
+          "Description": "Prevent any of the comm stations from being destroyed.",
+          "Type": "Objects_Survived",
+          "Rank": "Primary",
+          "TriggerEvent": "",
+          "Tags": [
+            "commstation"
+          ],
+          "Required": false,
+          "Visible": true,
+          "Value": "",
+          "Count": 3,
+          "CurrentCount": 2,
+          "Complete": false,
+          "Started": "2026-01-22T08:48:15.7664161-06:00"
+        },
+        "Return To Space Dock": {
+          "Name": "Return To Space Dock",
+          "PediaID": "",
+          "Group": "",
+          "Description": "Return Home.",
+          "Type": "Docked",
+          "Rank": "Primary",
+          "TriggerEvent": "",
+          "Tags": [
+            "return-home"
+          ],
+          "Required": false,
+          "Visible": false,
+          "Value": "1",
+          "Count": 1,
+          "CurrentCount": 0,
+          "Complete": false,
+          "Started": "2026-01-22T08:48:15.7664172-06:00"
+        },
+        "Destroy All Enemy Vessels": {
+          "Name": "Destroy All Enemy Vessels",
+          "PediaID": "",
+          "Group": "",
+          "Description": "All discovered enemy vessels have been destroyed.",
+          "Type": "Objects_Destroyed",
+          "Rank": "Secondary",
+          "TriggerEvent": "",
+          "Tags": [
+            "enemy"
+          ],
+          "Required": false,
+          "Visible": true,
+          "Value": "",
+          "Count": 9,
+          "CurrentCount": 63,
+          "Complete": false,
+          "Started": "2026-01-22T08:48:15.7664205-06:00"
+        },
+        "Destroy Something Big": {
+          "Name": "Destroy Something Big",
+          "PediaID": "",
+          "Group": "",
+          "Description": "It must go down, and it must go down hard!",
+          "Type": "Objects_Destroyed",
+          "Rank": "Secondary",
+          "TriggerEvent": "",
+          "Tags": [
+            "somethingbig"
+          ],
+          "Required": false,
+          "Visible": false,
+          "Value": "",
+          "Count": 0,
+          "CurrentCount": 0,
+          "Complete": false,
+          "Started": "2026-01-22T08:48:15.7664216-06:00"
+        },
+        "Destroy The Imperial": {
+          "Name": "Destroy The Imperial",
+          "PediaID": "",
+          "Group": "",
+          "Description": "Defeat the Imperial Armada.",
+          "Type": "Objects_Destroyed",
+          "Rank": "Secondary",
+          "TriggerEvent": "",
+          "Tags": [
+            "imperial"
+          ],
+          "Required": false,
+          "Visible": false,
+          "Value": "",
+          "Count": 0,
+          "CurrentCount": 0,
+          "Complete": false,
+          "Started": "2026-01-22T08:48:15.7664229-06:00"
+        }
+      },
+      "Progress": 0,
+      "Readout": "2: Vareidan System",
+      "Victor": ""
+    },
+    "CONTACTS": [
+      {
+        "ID": 11920,
+        "Integrity": 100,
+        "Shields": 0,
+        "Planet": "Vareidan III",
+        "MapPosition": {
+          "X": -50,
+          "Y": 10,
+          "Z": -40
+        },
+        "StarPosition": {
+          "X": 2.57,
+          "Y": 0,
+          "Z": -3.06
+        },
+        "Position": {
+          "X": 20000,
+          "Y": 120000,
+          "Z": 1000
+        },
+        "SeekPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Orientation": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0,
+          "W": 1
+        },
+        "Altitude": 0,
+        "Relative": {
+          "X": 0.25,
+          "Y": -0.05,
+          "Z": -0.97
+        }
+      },
+      {
+        "ID": 11925,
+        "Integrity": 1500,
+        "Shields": 1,
+        "Planet": "Vareidan III",
+        "MapPosition": {
+          "X": -50,
+          "Y": 10,
+          "Z": -40
+        },
+        "StarPosition": {
+          "X": 2.57,
+          "Y": 0,
+          "Z": -3.06
+        },
+        "Position": {
+          "X": 0,
+          "Y": 120000,
+          "Z": 500
+        },
+        "SeekPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Orientation": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0,
+          "W": 1
+        },
+        "Altitude": 0,
+        "Relative": {
+          "X": 0.13,
+          "Y": 0,
+          "Z": -0.99
+        }
+      },
+      {
+        "ID": 24,
+        "Planet": "Vareidan III",
+        "MapPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "StarPosition": {
+          "X": 2.57,
+          "Y": 0,
+          "Z": -3.06
+        },
+        "Position": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Orientation": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0,
+          "W": 1
+        },
+        "Relative": {
+          "X": -0.89,
+          "Y": -0.07,
+          "Z": -0.45
+        }
+      }
+    ],
+    "ALERT": 2,
+    "DAMAGE": null,
+    "PLAYER-OBJECTIVES": [
+      {
+        "Name": "Hail All Comm Stations",
+        "PediaID": "long-patrol-hail",
+        "Group": "",
+        "Description": "Operations should hail and check the status on each Comm Station encountered.",
+        "Type": "Objects_Hailed",
+        "Rank": "Primary",
+        "TriggerEvent": "",
+        "Tags": [
+          "commstation"
+        ],
+        "Required": false,
+        "Visible": true,
+        "Value": "",
+        "Count": 3,
+        "CurrentCount": 1,
+        "Complete": false,
+        "Started": "2026-01-22T08:48:15.7663819-06:00"
+      },
+      {
+        "Name": "Scan All Comm Stations",
+        "PediaID": "long-patrol-scan",
+        "Group": "",
+        "Description": "Sciences should scan each comm station they come in contact with.",
+        "Type": "Objects_Scanned",
+        "Rank": "Primary",
+        "TriggerEvent": "",
+        "Tags": [
+          "commstation"
+        ],
+        "Required": false,
+        "Visible": true,
+        "Value": "",
+        "Count": 3,
+        "CurrentCount": 0,
+        "Complete": false,
+        "Started": "2026-01-22T08:48:15.7664143-06:00"
+      },
+      {
+        "Name": "All Stations Must Survive",
+        "PediaID": "",
+        "Group": "",
+        "Description": "Prevent any of the comm stations from being destroyed.",
+        "Type": "Objects_Survived",
+        "Rank": "Primary",
+        "TriggerEvent": "",
+        "Tags": [
+          "commstation"
+        ],
+        "Required": false,
+        "Visible": true,
+        "Value": "",
+        "Count": 3,
+        "CurrentCount": 2,
+        "Complete": false,
+        "Started": "2026-01-22T08:48:15.7664161-06:00"
+      },
+      {
+        "Name": "Destroy All Enemy Vessels",
+        "PediaID": "",
+        "Group": "",
+        "Description": "All discovered enemy vessels have been destroyed.",
+        "Type": "Objects_Destroyed",
+        "Rank": "Secondary",
+        "TriggerEvent": "",
+        "Tags": [
+          "enemy"
+        ],
+        "Required": false,
+        "Visible": true,
+        "Value": "",
+        "Count": 9,
+        "CurrentCount": 63,
+        "Complete": false,
+        "Started": "2026-01-22T08:48:15.7664205-06:00"
+      }
+    ]
+  }
+}

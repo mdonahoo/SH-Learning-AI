@@ -42,6 +42,11 @@ class BrowserMimicWebSocket:
         self.last_packets = {}
         self.packet_counts = {}
 
+        # Event tracking for role correlation
+        self.recording_start_time = None
+        self.tracked_events = []  # Timestamped events for correlation
+        self._previous_state = {}  # Track state changes
+
         # Ship data - ENHANCED for comprehensive telemetry
         self.vessel_data = {
             # Core ship status
@@ -281,6 +286,55 @@ class BrowserMimicWebSocket:
         except Exception as e:
             logger.error(f"Connection failed: {e}")
             return False
+
+    def start_event_tracking(self):
+        """Start tracking timestamped events for role correlation."""
+        import time
+        self.recording_start_time = time.time()
+        self.tracked_events = []
+        self._previous_state = {
+            'throttle': None,
+            'heading': None,
+            'alert_level': None,
+            'shields_percent': None,
+            'weapons_armed': None,
+            'target': None,
+        }
+        logger.info("Event tracking started")
+
+    def stop_event_tracking(self):
+        """Stop tracking events and return the collected events."""
+        events = self.tracked_events.copy()
+        logger.info(f"Event tracking stopped: {len(events)} events captured")
+        return events
+
+    def _track_event(self, event_type: str, category: str, data: dict = None):
+        """
+        Track a timestamped event for role correlation.
+
+        Args:
+            event_type: Type of event (e.g., 'throttle_change', 'weapons_fire')
+            category: Role category (e.g., 'helm', 'tactical', 'science')
+            data: Additional event data
+        """
+        if self.recording_start_time is None:
+            return  # Not tracking
+
+        import time
+        timestamp = time.time() - self.recording_start_time
+
+        event = {
+            'event_type': event_type,
+            'category': category,
+            'timestamp': timestamp,
+            'data': data or {}
+        }
+        self.tracked_events.append(event)
+        logger.debug(f"Tracked event: {event_type} ({category}) at {timestamp:.2f}s")
+
+    def get_tracked_events(self) -> list:
+        """Get all tracked events."""
+        return self.tracked_events.copy()
 
     def _send_identification(self, screen_name: str, is_main_viewer: bool):
         """Send identification exactly like browser."""
@@ -588,27 +642,51 @@ class BrowserMimicWebSocket:
                 if event:
                     self._emit_event(event)
                     self.crew_tracker.track_action("operations", "hail", time.time())
+                    # Track for role correlation (communications/operations)
+                    self._track_event('hail_initiated', 'communications', {
+                        'target': value.get('Target', value) if isinstance(value, dict) else value
+                    })
             elif cmd == "HAIL-RESPONSE":
                 event = self.station_handlers.handle_hail_response(value)
                 if event:
                     self._emit_event(event)
+                    # Track for role correlation (communications)
+                    self._track_event('hail_response', 'communications', {
+                        'response': value
+                    })
             elif cmd in ["COMM", "COMM-MESSAGE"]:
                 event = self.station_handlers.handle_communications(cmd, value)
                 if event:
                     self._emit_event(event)
+                    # Track for role correlation (communications)
+                    self._track_event('comm_message', 'communications', {
+                        'message_type': cmd
+                    })
             elif cmd == "TRANSPORTER":
                 event = self.station_handlers.handle_transporter(value)
                 if event:
                     self._emit_event(event)
                     self.crew_tracker.track_action("operations", "transporter", time.time())
+                    # Track for role correlation (operations)
+                    self._track_event('transporter_operation', 'operations', {
+                        'action': value
+                    })
             elif cmd == "DOCKING":
                 event = self.station_handlers.handle_docking(value)
                 if event:
                     self._emit_event(event)
+                    # Track for role correlation (operations)
+                    self._track_event('docking_operation', 'operations', {
+                        'action': value
+                    })
             elif cmd in ["CARGO", "CARGO-BAY", "CARGO-TRANSFER"]:
                 event = self.station_handlers.handle_cargo(cmd, value)
                 if event:
                     self._emit_event(event)
+                    # Track for role correlation (operations)
+                    self._track_event('cargo_operation', 'operations', {
+                        'operation_type': cmd
+                    })
                     if cmd == "CARGO-TRANSFER":
                         self.crew_tracker.track_action("operations", "cargo_transfer", time.time())
             elif cmd in ["SHUTTLES", "SHUTTLE-LAUNCH", "SHUTTLE-DOCK"]:
@@ -1001,10 +1079,33 @@ class BrowserMimicWebSocket:
                         # Update specific subsystems
                         if name == 'weapons_armed':
                             self.vessel_data['combat']['weapons_armed'] = new_value
+                            # Track for role correlation (tactical)
+                            self._track_event('weapons_armed_change', 'tactical', {
+                                'armed': new_value,
+                                'old_value': old_value
+                            })
                         elif name == 'target_lock':
                             self.vessel_data['combat']['current_target'] = new_value
-                        elif name in ['speed', 'warp_speed', 'impulse_speed', 'heading']:
+                            # Track for role correlation (tactical)
+                            self._track_event('target_lock_change', 'tactical', {
+                                'target': new_value,
+                                'old_value': old_value
+                            })
+                        elif name in ['speed', 'warp_speed', 'impulse_speed']:
                             self.vessel_data['navigation'][name] = new_value
+                            # Track for role correlation (helm)
+                            self._track_event('throttle_change', 'helm', {
+                                'speed_type': name,
+                                'new_speed': new_value,
+                                'old_speed': old_value
+                            })
+                        elif name == 'heading':
+                            self.vessel_data['navigation'][name] = new_value
+                            # Track for role correlation (helm)
+                            self._track_event('course_change', 'helm', {
+                                'new_heading': new_value,
+                                'old_heading': old_value
+                            })
 
                         # Emit change event for significant changes
                         if self._is_significant_vessel_change(name, old_value, new_value):
@@ -1045,6 +1146,13 @@ class BrowserMimicWebSocket:
                 damage_amount = value.get('Amount', value.get('Damage', 0))
                 damage_type = value.get('Type', 'kinetic')
                 affected_system = value.get('System', value.get('Location', 'hull'))
+
+                # Track for role correlation (engineering handles damage control)
+                self._track_event('damage_report', 'engineering', {
+                    'amount': damage_amount,
+                    'type': damage_type,
+                    'system': affected_system
+                })
 
                 # Update hull/shield percentages if provided
                 if 'HullPercent' in value:
@@ -1237,6 +1345,16 @@ class BrowserMimicWebSocket:
             alert_level_names = {1: "Docked", 2: "Green", 3: "Yellow", 4: "Red", 5: "Red Alert"}
             if value in [3, 4, 5]:  # Yellow or Red alert
                 self.crew_tracker.last_alert_time = time.time()
+
+            # Track event for role correlation (alert changes are command decisions)
+            prev_alert = self._previous_state.get('alert_level')
+            if prev_alert != value:
+                self._track_event('alert_change', 'tactical', {
+                    'old_level': prev_alert,
+                    'new_level': value,
+                    'level_name': alert_level_names.get(value, 'Unknown')
+                })
+                self._previous_state['alert_level'] = value
 
             self._emit_event({
                 "type": "alert_change",
@@ -1657,6 +1775,12 @@ class BrowserMimicWebSocket:
         if value:
             logger.info(f"🔬 Science targeting: {value}")
             self.vessel_data['science_target'] = value
+
+            # Track for role correlation (science)
+            self._track_event('science_scan', 'science', {
+                'target_id': value
+            })
+
             self._emit_event({
                 "type": "science_target_selected",
                 "category": "science",

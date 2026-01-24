@@ -161,6 +161,18 @@ STARSHIP_HORIZONS_PROMPT = (
     # Objects and entities
     "Objects: drones, interact with drones, probes, asteroids, debris, "
     "planets, moons, stations, ships, contacts. "
+
+    # Commonly fragmented phrases (keep these together)
+    "Common phrases: standby, stand by, deploy the shuttle, good idea, "
+    "get back, containment field, we're gonna need, ready to go, "
+    "retrieve them, over there, out there, what do you see, "
+    "shuttle bay, shuttle is ready, shuttle deployed, shuttle returning. "
+
+    # Captain phrases (often spoken by person without console)
+    "Captain speech: Science what do you see, Helm set a course, "
+    "Tactical fire when ready, Engineering boost shields, "
+    "what's the status, give me a report, all stations report, "
+    "good work, well done, proceed, carry on, make it so. "
 )
 
 # Alternative shorter prompt if the full one causes issues

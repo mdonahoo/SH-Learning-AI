@@ -196,13 +196,15 @@ class BatchSpeakerDiarizer:
         logger.info("Voice encoder loaded")
 
         # Configuration
+        # Lower threshold = voices grouped together more aggressively = fewer speakers
+        # 0.72 works well for bridge crews with similar voices or TTS demos
         self.similarity_threshold = similarity_threshold or float(
-            os.getenv('SPEAKER_EMBEDDING_THRESHOLD', '0.85')
+            os.getenv('SPEAKER_EMBEDDING_THRESHOLD', '0.72')
         )
-        self.min_speakers = min_speakers or int(os.getenv('MIN_EXPECTED_SPEAKERS', '1'))
-        # For chunked diarization, allow MORE speakers per chunk
+        self.min_speakers = min_speakers or int(os.getenv('MIN_EXPECTED_SPEAKERS', '4'))
+        # For chunked diarization, allow reasonable number of speakers per chunk
         # Cross-chunk merging will consolidate similar voices
-        self.max_speakers = max_speakers or int(os.getenv('MAX_EXPECTED_SPEAKERS', '12'))
+        self.max_speakers = max_speakers or int(os.getenv('MAX_EXPECTED_SPEAKERS', '10'))
         self.expected_speakers = int(os.getenv('EXPECTED_BRIDGE_CREW', '6'))
         self.min_embedding_duration = min_embedding_duration
 
@@ -246,6 +248,10 @@ class BatchSpeakerDiarizer:
         # Minimum segment duration after splitting (prevents micro-segments)
         self.min_split_segment_duration = float(
             os.getenv('MIN_SPLIT_SEGMENT_DURATION', '1.0')  # At least 1 second per speaker
+        )
+        # Minimum segments for a speaker to be considered "major" (others get merged)
+        self.min_speaker_segments = int(
+            os.getenv('MIN_SPEAKER_SEGMENTS', '5')  # Speakers with < this get consolidated
         )
 
         logger.info(
@@ -358,6 +364,14 @@ class BatchSpeakerDiarizer:
 
         # Interpolate gaps (short segments without embeddings)
         segments = self._interpolate_gaps(segments, speaker_clusters)
+
+        # Merge sentence fragments from orphan speakers
+        # This catches cases where a sentence is split mid-utterance
+        segments = self._merge_sentence_fragments(
+            segments,
+            max_orphan_segments=2,  # Speakers with ≤2 segments are orphans
+            max_time_gap=3.0  # Merge if within 3 seconds of major speaker
+        )
 
         logger.info(f"Batch diarization complete: {result.total_speakers} speakers")
         return segments, result
@@ -521,7 +535,15 @@ class BatchSpeakerDiarizer:
         # Consolidate tiny speakers to reduce over-segmentation
         segments = self._consolidate_tiny_speakers(
             segments, chunk_results, global_speaker_map,
-            min_segments=5  # Speakers with <5 segments get merged
+            min_segments=self.min_speaker_segments  # Configurable via MIN_SPEAKER_SEGMENTS
+        )
+
+        # Merge sentence fragments from orphan speakers
+        # This catches cases where a sentence is split mid-utterance
+        segments = self._merge_sentence_fragments(
+            segments,
+            max_orphan_segments=2,  # Speakers with ≤2 segments are orphans
+            max_time_gap=3.0  # Merge if within 3 seconds of major speaker
         )
 
         # Build speaker clusters with voice confidence from merged centroids
@@ -787,6 +809,173 @@ class BatchSpeakerDiarizer:
             logger.info(f"Consolidated to {new_count} speakers ({merged_count} segments reassigned)")
 
         return segments
+
+    def _merge_sentence_fragments(
+        self,
+        segments: List[Dict[str, Any]],
+        max_orphan_segments: int = 2,
+        max_time_gap: float = 3.0
+    ) -> List[Dict[str, Any]]:
+        """
+        Merge orphan speakers whose segments appear to be sentence fragments.
+
+        This handles cases where a sentence gets split mid-utterance and the
+        first part is assigned to a different speaker than the rest.
+
+        Detection criteria:
+        1. Speaker has very few segments (≤ max_orphan_segments)
+        2. Segment ends without terminal punctuation (sentence fragment)
+        3. Next segment from different speaker continues within time gap
+        4. OR segment is temporally isolated and surrounded by one major speaker
+
+        Args:
+            segments: List of segments with speaker_id assigned
+            max_orphan_segments: Max segments for a speaker to be considered orphan
+            max_time_gap: Max seconds between segments to consider continuation
+
+        Returns:
+            Updated segments with sentence fragments merged
+        """
+        from collections import Counter
+        import re
+
+        if not segments:
+            return segments
+
+        # Sort by start time
+        sorted_segments = sorted(segments, key=lambda s: s.get('start_time', 0))
+
+        # Count segments per speaker
+        speaker_counts = Counter(s.get('speaker_id') for s in sorted_segments if s.get('speaker_id'))
+
+        # Identify orphan vs major speakers
+        orphan_speakers = {spk for spk, count in speaker_counts.items() if count <= max_orphan_segments}
+        major_speakers = {spk for spk, count in speaker_counts.items() if count > max_orphan_segments}
+
+        if not orphan_speakers or not major_speakers:
+            return segments
+
+        logger.info(
+            f"Checking {len(orphan_speakers)} orphan speakers for sentence fragment merging"
+        )
+
+        # Patterns that indicate a complete sentence ending
+        sentence_end_pattern = re.compile(r'[.!?][\s]*$')
+        # Patterns that indicate a fragment (ends mid-thought)
+        fragment_indicators = re.compile(r'\b(and|or|but|the|a|an|to|at|in|on|for|with|is|are|was|were|that|this|what|how|who|where|when|why)\s*$', re.I)
+
+        def is_sentence_fragment(text: str) -> bool:
+            """Check if text appears to be an incomplete sentence."""
+            if not text or not text.strip():
+                return False
+            text = text.strip()
+            # Ends with terminal punctuation = complete
+            if sentence_end_pattern.search(text):
+                return False
+            # Ends with common continuation words = fragment
+            if fragment_indicators.search(text):
+                return True
+            # Short text without punctuation = likely fragment
+            if len(text.split()) <= 5 and not sentence_end_pattern.search(text):
+                return True
+            return False
+
+        def get_nearby_major_speaker(idx: int, segments: List[Dict], major_speakers: set) -> Optional[str]:
+            """Find the nearest major speaker to this segment."""
+            current_time = segments[idx].get('start_time', 0)
+
+            # Look at previous and next segments
+            prev_speaker = None
+            next_speaker = None
+            prev_time_gap = float('inf')
+            next_time_gap = float('inf')
+
+            # Check previous segments
+            for i in range(idx - 1, max(0, idx - 5) - 1, -1):
+                spk = segments[i].get('speaker_id')
+                if spk in major_speakers:
+                    prev_speaker = spk
+                    prev_time_gap = current_time - segments[i].get('end_time', segments[i].get('start_time', 0))
+                    break
+
+            # Check next segments
+            for i in range(idx + 1, min(len(segments), idx + 5)):
+                spk = segments[i].get('speaker_id')
+                if spk in major_speakers:
+                    next_speaker = spk
+                    next_time_gap = segments[i].get('start_time', 0) - current_time
+                    break
+
+            # Return the closer one if within time gap
+            if prev_time_gap <= max_time_gap and prev_time_gap <= next_time_gap:
+                return prev_speaker
+            elif next_time_gap <= max_time_gap:
+                return next_speaker
+            elif prev_speaker and prev_time_gap <= max_time_gap * 2:
+                return prev_speaker
+            elif next_speaker and next_time_gap <= max_time_gap * 2:
+                return next_speaker
+
+            return None
+
+        # Find segments to merge
+        merge_count = 0
+        for idx, seg in enumerate(sorted_segments):
+            speaker = seg.get('speaker_id')
+            if speaker not in orphan_speakers:
+                continue
+
+            text = seg.get('text', '')
+
+            # Check if this is a sentence fragment
+            is_fragment = is_sentence_fragment(text)
+
+            # Check temporal context
+            nearby_major = get_nearby_major_speaker(idx, sorted_segments, major_speakers)
+
+            # Merge conditions:
+            # 1. It's a fragment and there's a nearby major speaker
+            # 2. OR it's temporally very close to a major speaker (< 1.5s)
+            should_merge = False
+            merge_reason = ""
+
+            if is_fragment and nearby_major:
+                should_merge = True
+                merge_reason = "sentence fragment"
+            elif nearby_major:
+                # Check if very close temporally
+                current_time = seg.get('start_time', 0)
+                for i in range(max(0, idx - 1), min(len(sorted_segments), idx + 2)):
+                    if i == idx:
+                        continue
+                    other = sorted_segments[i]
+                    if other.get('speaker_id') == nearby_major:
+                        time_gap = abs(other.get('start_time', 0) - current_time)
+                        if time_gap < 1.5:
+                            should_merge = True
+                            merge_reason = f"temporal proximity ({time_gap:.1f}s)"
+                            break
+
+            if should_merge and nearby_major:
+                old_speaker = seg['speaker_id']
+                seg['speaker_id'] = nearby_major
+                seg['speaker_confidence'] = seg.get('speaker_confidence', 0.7) * 0.85
+                seg['merge_reason'] = merge_reason
+                merge_count += 1
+                logger.debug(
+                    f"Merged orphan segment '{text[:40]}...' from {old_speaker} -> {nearby_major} ({merge_reason})"
+                )
+
+        if merge_count > 0:
+            # Renumber speakers to be consecutive
+            sorted_segments = self._renumber_speakers(sorted_segments)
+            new_count = len(set(s.get('speaker_id') for s in sorted_segments if s.get('speaker_id')))
+            logger.info(
+                f"Sentence fragment merging: {merge_count} segments reassigned, "
+                f"now {new_count} speakers"
+            )
+
+        return sorted_segments
 
     def _build_speaker_clusters_from_chunks(
         self,

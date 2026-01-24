@@ -72,7 +72,7 @@
 
   "postCreateCommand": "sudo apt-get update && sudo apt-get install -y alsa-utils pulseaudio-utils libusb-1.0-0 && sudo usermod -a -G dialout vscode && pip install --upgrade pip && curl -fsSL https://ollama.com/install.sh | sh && curl -fsSL https://claude.ai/install.sh | bash",
 
-  "postStartCommand": "sudo chown -R vscode:vscode /workspaces/SH-Learning-AI && sudo find /workspaces/SH-Learning-AI -type d -exec chmod 755 {} \\; && sudo find /workspaces/SH-Learning-AI -type f ! -name '*.sh' -exec chmod 644 {} \\; && sudo find /workspaces/SH-Learning-AI -type f -name '*.sh' -exec chmod +x {} \\;",
+  "postStartCommand": "sudo chown -R vscode:vscode /workspaces/SH-Learning-AI && sudo find /workspaces/SH-Learning-AI -type d -exec chmod 755 {} \\; && sudo find /workspaces/SH-Learning-AI -type f ! -name '*.sh' -exec chmod 644 {} \\; && sudo find /workspaces/SH-Learning-AI -type f -name '*.sh' -exec chmod +x {} \\; && (pgrep ollama || ollama serve > /tmp/ollama.log 2>&1 &) && sleep 2 && echo 'Ollama server started'",
 
   "forwardPorts": [
     8888,     // Jupyter

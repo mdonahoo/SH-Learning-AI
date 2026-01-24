@@ -69,3 +69,17 @@ try:
 except ImportError:
     # CPU diarization not available
     pass
+
+# Import transcript post-processor
+try:
+    from .transcript_postprocessor import (
+        TranscriptPostProcessor,
+        merge_adjacent_fragments
+    )
+    __all__.extend([
+        'TranscriptPostProcessor',
+        'merge_adjacent_fragments'
+    ])
+except ImportError:
+    # Post-processor not available
+    pass

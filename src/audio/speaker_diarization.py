@@ -212,8 +212,10 @@ class SpeakerDiarizer:
             similarity_threshold: Minimum similarity (0-1) to match speakers
             bridge_roles: List of bridge crew roles
         """
+        # Lower threshold = voices grouped together more aggressively = fewer speakers
+        # 0.72 works well for bridge crews with similar voices
         self.similarity_threshold = similarity_threshold or float(
-            os.getenv('SPEAKER_SIMILARITY_THRESHOLD', '0.80')
+            os.getenv('SPEAKER_SIMILARITY_THRESHOLD', '0.72')
         )
 
         # Bridge crew roles from environment or defaults

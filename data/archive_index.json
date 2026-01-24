@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-01-21T02:29:38.092760",
+  "updated_at": "2026-01-24T23:33:00.671169",
   "analyses": {
     "analysis_20260120_170457": {
       "filename": "analysis_20260120_170457.json",
@@ -62,7 +62,7 @@
       "filename": "analysis_20260121_012209.json",
       "recording_filename": "recording_20260121_011635.wav",
       "auto_title": "Pirate encounter simulation and combat strategy session",
-      "user_title": "Endeavor_01",
+      "user_title": "Endeavor_01 (no game)",
       "created_at": "2026-01-21T01:22:11.327042",
       "duration_seconds": 4008.96,
       "speaker_count": 1,
@@ -70,13 +70,13 @@
       "tags": [],
       "notes": "",
       "starred": false,
-      "display_title": "Endeavor_01"
+      "display_title": "Endeavor_01 (no game)"
     },
     "analysis_20260121_013124": {
       "filename": "analysis_20260121_013124.json",
       "recording_filename": "recording_20260121_012645.wav",
       "auto_title": "Crew coordination during evasion maneuver",
-      "user_title": "Endeavor_02",
+      "user_title": "Endeavor_02 (no game)",
       "created_at": "2026-01-21T01:31:29.387429",
       "duration_seconds": 3603.461,
       "speaker_count": 3,
@@ -84,35 +84,35 @@
       "tags": [],
       "notes": "",
       "starred": false,
-      "display_title": "Endeavor_02"
+      "display_title": "Endeavor_02 (no game)"
     },
-    "analysis_20260121_022113": {
-      "filename": "analysis_20260121_022113.json",
-      "recording_filename": "recording_20260121_021704.wav",
-      "auto_title": "Shuttle retrieval and combat patrol simulation",
-      "user_title": null,
-      "created_at": "2026-01-21T02:21:16.046141",
-      "duration_seconds": 900.54,
-      "speaker_count": 7,
-      "segment_count": 259,
+    "analysis_20260122_151112": {
+      "filename": "analysis_20260122_151112.json",
+      "recording_filename": "recording_20260122_151113.wav",
+      "auto_title": "Patrol Mission and Combat Simulation",
+      "user_title": "Perfect AI Crew (no game)",
+      "created_at": "2026-01-22T15:15:28.648755",
+      "duration_seconds": 665.431,
+      "speaker_count": 10,
+      "segment_count": 244,
       "tags": [],
       "notes": "",
       "starred": false,
-      "display_title": "Shuttle retrieval and combat patrol simulation"
+      "display_title": "Perfect AI Crew (no game)"
     },
-    "analysis_20260121_022750": {
-      "filename": "analysis_20260121_022750.json",
-      "recording_filename": "recording_20260121_022300.wav",
-      "auto_title": "Undocking and planetary scan mission in Caravera system",
-      "user_title": null,
-      "created_at": "2026-01-21T02:27:52.851930",
-      "duration_seconds": 901.215,
-      "speaker_count": 7,
-      "segment_count": 276,
+    "analysis_20260124_170731_pre_llm": {
+      "filename": "analysis_20260124_170731_pre_llm.json",
+      "recording_filename": "recording_20260124_170731.wav",
+      "auto_title": "Container retrieval simulation exercise",
+      "user_title": "Discord with Game",
+      "created_at": "2026-01-24T18:11:25.609821",
+      "duration_seconds": 164.34,
+      "speaker_count": 2,
+      "segment_count": 19,
       "tags": [],
       "notes": "",
       "starred": false,
-      "display_title": "Undocking and planetary scan mission in Caravera system"
+      "display_title": "Discord with Game"
     }
   }
 }

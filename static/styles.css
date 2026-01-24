@@ -638,6 +638,27 @@ header {
     border: 1px solid rgba(139, 92, 246, 0.3);
 }
 
+.option-badge.game {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.telemetry-option {
+    margin-left: 12px;
+}
+
+.telemetry-option.unavailable {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.telemetry-option.unavailable .option-badge {
+    background: rgba(107, 114, 128, 0.2);
+    color: #9ca3af;
+    border: 1px solid rgba(107, 114, 128, 0.3);
+}
+
 @media (max-width: 480px) {
     .analysis-options {
         flex-direction: column;

@@ -397,6 +397,192 @@ async def get_services_status():
     )
 
 
+# ============================================================================
+# Telemetry Recording Endpoints
+# ============================================================================
+
+# Global telemetry sessions storage
+_telemetry_sessions: dict = {}
+
+
+class TelemetryStartResponse(BaseModel):
+    """Response for starting telemetry recording."""
+    session_id: str
+    status: str
+    message: str
+
+
+class TelemetryStopRequest(BaseModel):
+    """Request to stop telemetry recording."""
+    session_id: str
+
+
+class TelemetryStopResponse(BaseModel):
+    """Response for stopping telemetry recording."""
+    session_id: str
+    status: str
+    events_captured: int
+    duration_seconds: float
+    telemetry_file: Optional[str] = None
+
+
+@app.post("/api/telemetry/start", response_model=TelemetryStartResponse)
+async def start_telemetry_recording():
+    """
+    Start recording game telemetry from Starship Horizons.
+
+    Returns a session_id that should be passed to the analyze endpoint.
+    """
+    import uuid
+    from datetime import datetime
+
+    # Check if Horizons is available
+    game_host = os.getenv('GAME_HOST', '')
+    if not game_host:
+        raise HTTPException(status_code=503, detail="Game server not configured (GAME_HOST not set)")
+
+    try:
+        # Import telemetry client
+        from src.integration.browser_mimic_websocket import BrowserMimicWebSocket
+
+        session_id = str(uuid.uuid4())[:8]
+        game_port = int(os.getenv('GAME_PORT_WS', '1865'))
+
+        # Create telemetry client
+        client = BrowserMimicWebSocket(host=game_host, port=game_port)
+
+        # Connect to game server
+        if not client.connect(screen_name='captain', is_main_viewer=True):
+            raise HTTPException(status_code=503, detail="Failed to connect to game server")
+
+        # Start event tracking for role correlation
+        client.start_event_tracking()
+
+        # Store session
+        _telemetry_sessions[session_id] = {
+            'client': client,
+            'start_time': datetime.now(),
+            'events': [],
+            'status': 'recording'
+        }
+
+        logger.info(f"Started telemetry recording session: {session_id}")
+
+        return TelemetryStartResponse(
+            session_id=session_id,
+            status="recording",
+            message=f"Telemetry recording started. Connected to {game_host}:{game_port}"
+        )
+
+    except ImportError as e:
+        raise HTTPException(status_code=503, detail=f"Telemetry module not available: {e}")
+    except Exception as e:
+        logger.error(f"Failed to start telemetry: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to start telemetry: {e}")
+
+
+@app.post("/api/telemetry/stop", response_model=TelemetryStopResponse)
+async def stop_telemetry_recording(request: TelemetryStopRequest):
+    """
+    Stop recording game telemetry and save the data.
+
+    Returns information about the captured telemetry.
+    """
+    from datetime import datetime
+
+    session_id = request.session_id
+
+    if session_id not in _telemetry_sessions:
+        raise HTTPException(status_code=404, detail=f"Telemetry session not found: {session_id}")
+
+    session = _telemetry_sessions[session_id]
+
+    try:
+        client = session['client']
+        start_time = session['start_time']
+        end_time = datetime.now()
+        duration = (end_time - start_time).total_seconds()
+
+        # Get captured data from client
+        events_captured = sum(client.packet_counts.values())
+
+        # Get tracked events for role correlation
+        tracked_events = client.get_tracked_events()
+
+        # Save telemetry data to file
+        telemetry_dir = Path("data/telemetry")
+        telemetry_dir.mkdir(parents=True, exist_ok=True)
+
+        telemetry_file = telemetry_dir / f"telemetry_{session_id}.json"
+
+        telemetry_data = {
+            'session_id': session_id,
+            'start_time': start_time.isoformat(),
+            'end_time': end_time.isoformat(),
+            'duration_seconds': duration,
+            'packet_counts': dict(client.packet_counts),
+            'tracked_events': tracked_events,  # Timestamped events for role correlation
+            'tracked_events_count': len(tracked_events),
+            'vessel_data': client.vessel_data,
+            'mission_data': client.mission_data,
+            'combat_data': client.combat_enhanced,
+            'last_packets': {k: v for k, v in client.last_packets.items()
+                           if k in ['CONTACTS', 'MISSION', 'ALERT', 'DAMAGE', 'PLAYER-OBJECTIVES']}
+        }
+
+        logger.info(f"Telemetry session {session_id}: {len(tracked_events)} tracked events for role correlation")
+
+        with open(telemetry_file, 'w') as f:
+            json.dump(telemetry_data, f, indent=2, default=str)
+
+        # Disconnect client
+        client.disconnect()
+
+        # Update session status
+        session['status'] = 'stopped'
+        session['telemetry_file'] = str(telemetry_file)
+        session['events_captured'] = events_captured
+        session['duration'] = duration
+
+        logger.info(f"Stopped telemetry session {session_id}: {events_captured} events in {duration:.1f}s")
+
+        return TelemetryStopResponse(
+            session_id=session_id,
+            status="stopped",
+            events_captured=events_captured,
+            duration_seconds=duration,
+            telemetry_file=str(telemetry_file)
+        )
+
+    except Exception as e:
+        logger.error(f"Failed to stop telemetry: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to stop telemetry: {e}")
+    finally:
+        # Clean up session after a delay (keep for potential analysis)
+        # In production, you might want to clean up old sessions periodically
+        pass
+
+
+@app.get("/api/telemetry/status/{session_id}")
+async def get_telemetry_status(session_id: str):
+    """
+    Get the status of a telemetry recording session.
+    """
+    if session_id not in _telemetry_sessions:
+        raise HTTPException(status_code=404, detail=f"Telemetry session not found: {session_id}")
+
+    session = _telemetry_sessions[session_id]
+    client = session.get('client')
+
+    return {
+        'session_id': session_id,
+        'status': session['status'],
+        'start_time': session['start_time'].isoformat(),
+        'events_captured': sum(client.packet_counts.values()) if client else 0,
+        'packet_types': len(client.packet_counts) if client else 0
+    }
+
+
 @app.post("/api/analyze", response_model=AnalysisResult)
 async def analyze_audio(
     file: UploadFile = File(..., description="Audio file to analyze"),
@@ -499,7 +685,8 @@ async def analyze_audio(
 async def analyze_audio_stream(
     file: UploadFile = File(..., description="Audio file to analyze"),
     include_narrative: bool = Query(True, description="Include LLM team analysis"),
-    include_story: bool = Query(True, description="Include LLM mission story")
+    include_story: bool = Query(True, description="Include LLM mission story"),
+    telemetry_session_id: Optional[str] = Query(None, description="Telemetry recording session ID")
 ):
     """
     Analyze audio file with streaming progress updates.
@@ -512,6 +699,7 @@ async def analyze_audio_stream(
     Query Parameters:
     - include_narrative: Include LLM team analysis (default: True)
     - include_story: Include LLM mission story generation (default: True)
+    - telemetry_session_id: If provided, include game telemetry from this session
     """
     # Check if audio uploads are disabled
     if DISABLE_AUDIO_FILES:
@@ -547,8 +735,9 @@ async def analyze_audio_stream(
     # Capture options for closure
     _include_narrative = include_narrative
     _include_story = include_story
+    _telemetry_session_id = telemetry_session_id
 
-    logger.info(f"Analysis options: include_narrative={_include_narrative}, include_story={_include_story}")
+    logger.info(f"Analysis options: include_narrative={_include_narrative}, include_story={_include_story}, telemetry_session_id={_telemetry_session_id}")
 
     def run_analysis():
         """Run analysis in background thread."""
@@ -561,7 +750,8 @@ async def analyze_audio_stream(
                 include_detailed=True,
                 include_narrative=_include_narrative,
                 include_story=_include_story,
-                progress_callback=progress_callback
+                progress_callback=progress_callback,
+                telemetry_session_id=_telemetry_session_id
             )
             progress_queue.put({'type': 'result', 'data': results})
         except Exception as e:

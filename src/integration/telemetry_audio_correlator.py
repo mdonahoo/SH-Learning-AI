@@ -1,19 +1,29 @@
 """
 Telemetry-Audio Correlator Module.
 
-Correlates game telemetry events with audio segments to anchor speaker
-identification to console positions, boosting role confidence from
-keyword-only analysis.
+Correlates game telemetry events with audio segments to enhance speaker
+role identification using multiple strategies:
 
-The correlator matches telemetry events (e.g., throttle changes, weapons fire)
-with nearby audio segments to validate voice patterns against console actions.
+1. EVENT DENSITY CORRELATION: Matches high activity in a category (e.g., many
+   science scans) with speakers who frequently discuss that topic.
+
+2. COMMAND vs REPORT DETECTION: Distinguishes between commanders (speech BEFORE
+   action: "scan that") and operators (speech AFTER action: "scan complete").
+
+3. NEGATIVE CORRELATION: Rules out roles when a speaker never mentions topics
+   despite high activity (e.g., many helm events but speaker never says "heading").
+
+This approach handles the reality that multiple consoles operate simultaneously
+and the person pressing buttons may not be the one currently speaking.
 """
 
 import logging
+import math
 import os
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional, Tuple, Set
 from collections import defaultdict
 from enum import Enum
 
@@ -25,9 +35,12 @@ logger = logging.getLogger(__name__)
 
 
 # Configuration from environment
-CORRELATION_WINDOW_MS = int(os.getenv('CORRELATION_WINDOW_MS', '500'))
-MIN_CONFIDENCE_BOOST = float(os.getenv('MIN_CONFIDENCE_BOOST', '0.1'))
-MAX_CONFIDENCE_BOOST = float(os.getenv('MAX_CONFIDENCE_BOOST', '0.3'))
+CORRELATION_WINDOW_MS = int(os.getenv('CORRELATION_WINDOW_MS', '5000'))  # Wider window for density
+MIN_CONFIDENCE_BOOST = float(os.getenv('MIN_CONFIDENCE_BOOST', '0.05'))
+MAX_CONFIDENCE_BOOST = float(os.getenv('MAX_CONFIDENCE_BOOST', '0.25'))
+DENSITY_CORRELATION_WEIGHT = float(os.getenv('DENSITY_CORRELATION_WEIGHT', '0.4'))
+COMMAND_REPORT_WEIGHT = float(os.getenv('COMMAND_REPORT_WEIGHT', '0.4'))
+NEGATIVE_CORRELATION_WEIGHT = float(os.getenv('NEGATIVE_CORRELATION_WEIGHT', '0.2'))
 
 
 class BridgeRole(Enum):
@@ -95,6 +108,95 @@ CATEGORY_ROLE_MAP: Dict[str, BridgeRole] = {
 }
 
 
+# Keywords for detecting speech TOPICS per role
+# These are weighted towards Starship Horizons specific terminology
+ROLE_TOPIC_KEYWORDS: Dict[BridgeRole, List[str]] = {
+    BridgeRole.HELM: [
+        "heading", "course", "speed", "throttle", "impulse", "warp",
+        "bearing", "degrees", "port", "starboard", "come about", "full stop",
+        "ahead", "reverse", "orbit", "intercept", "evasive", "maneuver",
+        "navigation", "set course", "change heading", "slow", "faster"
+    ],
+    BridgeRole.TACTICAL: [
+        "weapons", "fire", "target", "shields", "torpedo", "phaser",
+        "lock", "arm", "disarm", "alert", "red alert", "yellow alert",
+        "defensive", "attack", "engage", "disengage", "enemy", "hostile",
+        "threat", "battle stations"
+    ],
+    BridgeRole.SCIENCE: [
+        "scan", "sensor", "reading", "analysis", "detect", "anomaly",
+        "signal", "frequency", "spectrum", "probe", "data", "contact",
+        "life signs", "composition", "radiation", "scanning", "scanned",
+        "object", "vessel", "ship", "container", "silkworm", "retrieve"
+    ],
+    BridgeRole.ENGINEERING: [
+        "power", "reactor", "engine", "repair", "damage", "systems",
+        "hull", "breach", "coolant", "warp core", "energy", "offline",
+        "online", "reroute", "bypass", "overload", "operational", "status"
+    ],
+    BridgeRole.OPERATIONS: [
+        "cargo", "transporter", "beam", "shuttle", "docking", "bay",
+        "inventory", "supplies", "personnel", "away team", "transfer",
+        "deploy", "retrieve", "aboard", "launched", "returned"
+    ],
+    BridgeRole.COMMUNICATIONS: [
+        "hail", "channel", "frequency", "message", "transmission",
+        "signal", "respond", "contact", "communication", "audio", "video",
+        "incoming", "outgoing", "captain", "admiral", "starbase"
+    ],
+    BridgeRole.CAPTAIN: [
+        "report", "status", "engage", "make it so", "on screen",
+        "all hands", "battle stations", "stand down", "proceed",
+        "acknowledged", "understood", "execute", "what do you see",
+        "set a course", "fire", "evasive", "full speed"
+    ],
+}
+
+
+# Command patterns - speech that indicates ORDERING an action (typically Captain)
+COMMAND_PATTERNS: List[re.Pattern] = [
+    re.compile(r'\b(scan|fire|engage|set|come to|bring us|take us|hail|open|raise|lower)\b', re.I),
+    re.compile(r'\b(give me|show me|get me|find|locate|target|arm|disarm)\b', re.I),
+    re.compile(r'\b(full|ahead|stop|reverse|evasive|intercept)\b', re.I),
+    re.compile(r'\bwhat (do|is|are|can)\b', re.I),  # Questions often from command
+]
+
+
+# Report patterns - speech that indicates REPORTING a result (typically operator)
+REPORT_PATTERNS: List[re.Pattern] = [
+    re.compile(r'\b(complete|ready|done|finished|confirmed|standing by)\b', re.I),
+    re.compile(r'\b(reading|showing|detecting|seeing|getting)\b', re.I),
+    re.compile(r'\b(online|offline|operational|functional|damaged)\b', re.I),
+    re.compile(r'\b(contact|signal|anomaly|vessel|ship) (detected|identified|on)\b', re.I),
+    re.compile(r'\b(aye|copy|roger|understood|acknowledged)\b', re.I),
+    re.compile(r'\b(captain|sir|commander)\b.*\b(we have|i have|there\'?s)\b', re.I),
+]
+
+
+# Station names that a Captain might address
+STATION_NAMES: List[str] = [
+    'science', 'helm', 'tactical', 'engineering', 'communications',
+    'ops', 'operations', 'weapons', 'navigation', 'sensors'
+]
+
+
+# Captain-specific patterns - speech that indicates command authority
+CAPTAIN_PATTERNS: List[re.Pattern] = [
+    # Addressing stations directly (with optional words in between)
+    re.compile(r'\b(science|helm|tactical|engineering|communications|ops)\b.{0,20}(what|scan|set|fire|hail|raise|lower|report)', re.I),
+    # Asking for status/information
+    re.compile(r'\bwhat.{0,10}(do you|can you|is|are|have|see)\b', re.I),
+    re.compile(r'\b(give me|show me|get me|report|status)\b', re.I),
+    # Giving direct orders (more flexible spacing)
+    re.compile(r'\b(set\s+a?\s*course|full\s+speed|all\s+stop|engage|make\s+it\s+so|on\s+screen)\b', re.I),
+    re.compile(r'\b(red\s+alert|yellow\s+alert|battle\s+stations|stand\s+down|all\s+hands)\b', re.I),
+    # Directives to retrieve/deploy/need
+    re.compile(r'\b(we.{0,10}(need|going)\s+to|retrieve|deploy|let.{0,5}s)\b', re.I),
+    # Acknowledgment of reports (Captain receives reports)
+    re.compile(r'\b(very\s+well|good|excellent|understood|proceed|carry\s+on|copy\s+that)\b', re.I),
+]
+
+
 @dataclass
 class CorrelationEvidence:
     """Evidence of correlation between a telemetry event and an audio segment."""
@@ -111,6 +213,68 @@ class CorrelationEvidence:
 
 
 @dataclass
+class DensityCorrelation:
+    """Correlation between event density and speaker topic density."""
+    role: BridgeRole
+    event_count: int
+    event_density: float  # events per minute
+    speaker_topic_counts: Dict[str, int] = field(default_factory=dict)
+    speaker_topic_density: Dict[str, float] = field(default_factory=dict)
+    speaker_correlations: Dict[str, float] = field(default_factory=dict)
+
+
+@dataclass
+class CommandReportEvidence:
+    """Evidence of command vs report speech pattern."""
+    speaker_id: str
+    speech_type: str  # "command" or "report"
+    text: str
+    timestamp: float
+    nearby_event_type: str
+    nearby_event_time: float
+    time_delta: float  # negative = speech before event (command), positive = after (report)
+    inferred_role: str  # "Commander" for commands, actual role for reports
+
+
+@dataclass
+class NegativeEvidence:
+    """Evidence that a speaker is NOT a particular role."""
+    speaker_id: str
+    ruled_out_role: BridgeRole
+    reason: str
+    event_count: int
+    topic_mentions: int
+
+
+@dataclass
+class CaptainEvidence:
+    """Evidence that a speaker is the Captain (no console, gives orders)."""
+    speaker_id: str
+    station_addresses: int  # Times they addressed other stations by name
+    command_patterns: int   # Times they used command language
+    questions_asked: int    # Times they asked for status/info
+    utterance_count: int    # Total utterances (Captains talk a lot)
+    has_console_correlation: bool  # False = likely Captain
+    captain_score: float    # Composite likelihood score
+
+
+@dataclass
+class SmartCorrelationResult:
+    """Combined result from all correlation strategies."""
+    speaker_id: str
+    density_boost: float
+    density_evidence: List[str]
+    command_report_boost: float
+    command_report_evidence: List[CommandReportEvidence]
+    negative_adjustments: Dict[str, float]
+    negative_evidence: List[NegativeEvidence]
+    captain_evidence: Optional[CaptainEvidence]
+    captain_boost: float
+    total_boost: float
+    methodology_note: str
+
+
+@dataclass
 class RoleConfidenceUpdate:
     """Updated role confidence with telemetry-based boost."""
     speaker_id: str
@@ -121,6 +285,12 @@ class RoleConfidenceUpdate:
     evidence_trail: List[CorrelationEvidence] = field(default_factory=list)
     telemetry_boost: float = 0.0
     methodology_note: str = ""
+    # New fields for smart correlation
+    density_boost: float = 0.0
+    command_report_boost: float = 0.0
+    negative_adjustment: float = 0.0
+    captain_boost: float = 0.0
+    smart_evidence: Optional[SmartCorrelationResult] = None
 
 
 class TelemetryAudioCorrelator:
@@ -598,3 +768,651 @@ class TelemetryAudioCorrelator:
         self.mission_start = None
         self._correlations = []
         self._speaker_evidence = defaultdict(list)
+
+    # =========================================================================
+    # SMART CORRELATION METHODS
+    # =========================================================================
+
+    def correlate_smart(self) -> Dict[str, SmartCorrelationResult]:
+        """
+        Run all smart correlation strategies and combine results.
+
+        This method uses three complementary approaches:
+        1. Event density correlation - matches event frequency with speech topics
+        2. Command vs report detection - identifies commanders vs operators
+        3. Negative correlation - rules out roles based on absent topics
+
+        Returns:
+            Dict mapping speaker_id to SmartCorrelationResult
+        """
+        if not self.transcripts:
+            logger.warning("No transcripts loaded for smart correlation")
+            return {}
+
+        # Note: events may be empty (e.g., when recording without telemetry)
+        # Captain detection still works with just transcripts
+
+        # Calculate recording duration
+        duration_seconds = self._get_recording_duration()
+        if duration_seconds <= 0:
+            duration_seconds = 120  # Default 2 minutes
+
+        logger.info(
+            f"Running smart correlation on {len(self.events)} events and "
+            f"{len(self.transcripts)} transcripts ({duration_seconds:.0f}s duration)"
+        )
+
+        # Run each correlation strategy
+        density_results = self._correlate_by_density(duration_seconds)
+        command_report_results = self._detect_command_vs_report()
+        negative_results = self._correlate_negative(duration_seconds)
+        captain_results = self._detect_captain(density_results)
+
+        # Combine results per speaker
+        all_speakers = set()
+        for t in self.transcripts:
+            speaker = t.get('speaker_id') or t.get('speaker')
+            if speaker:
+                all_speakers.add(speaker)
+
+        smart_results: Dict[str, SmartCorrelationResult] = {}
+
+        for speaker_id in all_speakers:
+            # Density boost
+            density_boost = 0.0
+            density_evidence = []
+            if speaker_id in density_results:
+                for role, correlation in density_results[speaker_id].items():
+                    if correlation > 0.1:  # Lower threshold to capture partial correlations
+                        boost = correlation * DENSITY_CORRELATION_WEIGHT * self.max_confidence_boost
+                        density_boost = max(density_boost, boost)
+                        density_evidence.append(
+                            f"{role.value}: {correlation:.0%} topic-event correlation"
+                        )
+
+            # Command/report boost
+            cr_boost = 0.0
+            cr_evidence = []
+            if speaker_id in command_report_results:
+                cr_data = command_report_results[speaker_id]
+                # More reports = likely operator, more commands = likely commander
+                report_count = cr_data.get('reports', 0)
+                command_count = cr_data.get('commands', 0)
+                cr_evidence = cr_data.get('evidence', [])
+
+                if report_count > command_count and report_count >= 2:
+                    # Likely an operator - boost their detected role
+                    cr_boost = min(report_count * 0.03, COMMAND_REPORT_WEIGHT * self.max_confidence_boost)
+                elif command_count > report_count and command_count >= 2:
+                    # Likely a commander - will be handled in role assignment
+                    cr_boost = min(command_count * 0.02, COMMAND_REPORT_WEIGHT * self.max_confidence_boost)
+
+            # Negative adjustments
+            negative_adj = {}
+            negative_ev = []
+            if speaker_id in negative_results:
+                for neg in negative_results[speaker_id]:
+                    penalty = -0.1 * NEGATIVE_CORRELATION_WEIGHT
+                    negative_adj[neg.ruled_out_role.value] = penalty
+                    negative_ev.append(neg)
+
+            # Captain detection
+            captain_boost = 0.0
+            captain_ev = None
+            if speaker_id in captain_results:
+                captain_ev = captain_results[speaker_id]
+                # Captain boost based on score (max 15% boost)
+                if captain_ev.captain_score >= 1.0:
+                    captain_boost = 0.15
+                elif captain_ev.captain_score >= 0.5:
+                    captain_boost = captain_ev.captain_score * 0.10
+                else:
+                    captain_boost = captain_ev.captain_score * 0.05
+
+            total_boost = density_boost + cr_boost + captain_boost
+            # Apply negative adjustments later per-role
+
+            methodology = self._build_smart_methodology(
+                density_boost, density_evidence,
+                cr_boost, cr_evidence,
+                negative_adj, negative_ev,
+                captain_boost, captain_ev
+            )
+
+            smart_results[speaker_id] = SmartCorrelationResult(
+                speaker_id=speaker_id,
+                density_boost=density_boost,
+                density_evidence=density_evidence,
+                command_report_boost=cr_boost,
+                command_report_evidence=cr_evidence,
+                negative_adjustments=negative_adj,
+                negative_evidence=negative_ev,
+                captain_evidence=captain_ev,
+                captain_boost=captain_boost,
+                total_boost=total_boost,
+                methodology_note=methodology
+            )
+
+        logger.info(f"Smart correlation complete: {len(smart_results)} speakers analyzed")
+        return smart_results
+
+    def _get_recording_duration(self) -> float:
+        """Calculate recording duration from transcripts."""
+        if not self.transcripts:
+            return 0.0
+
+        max_time = 0.0
+        for t in self.transcripts:
+            end_time = t.get('end_time', t.get('start_time', 0))
+            max_time = max(max_time, end_time)
+        return max_time
+
+    def _correlate_by_density(
+        self,
+        duration_seconds: float
+    ) -> Dict[str, Dict[BridgeRole, float]]:
+        """
+        Correlate event density per category with speaker topic density.
+
+        If there are many science scans and a speaker frequently uses science
+        keywords, there's a correlation suggesting they're at the science console.
+
+        Args:
+            duration_seconds: Recording duration for density calculation
+
+        Returns:
+            Dict mapping speaker_id to {role: correlation_score}
+        """
+        # Count events per role category
+        role_event_counts: Dict[BridgeRole, int] = defaultdict(int)
+        for event in self.events:
+            category = event.get('category', '').lower()
+            role = self._category_to_role(category)
+            if role:
+                role_event_counts[role] += 1
+
+        # Calculate event density (events per minute)
+        duration_minutes = max(duration_seconds / 60, 0.5)
+        role_event_density: Dict[BridgeRole, float] = {
+            role: count / duration_minutes
+            for role, count in role_event_counts.items()
+        }
+
+        # Count topic keywords per speaker
+        speaker_topic_counts: Dict[str, Dict[BridgeRole, int]] = defaultdict(lambda: defaultdict(int))
+        speaker_total_words: Dict[str, int] = defaultdict(int)
+
+        for t in self.transcripts:
+            speaker = t.get('speaker_id') or t.get('speaker')
+            text = t.get('text', '').lower()
+            if not speaker or not text:
+                continue
+
+            words = text.split()
+            speaker_total_words[speaker] += len(words)
+
+            for role, keywords in ROLE_TOPIC_KEYWORDS.items():
+                for keyword in keywords:
+                    if keyword.lower() in text:
+                        speaker_topic_counts[speaker][role] += 1
+
+        # Calculate correlation: speakers with high topic density for high-activity roles
+        speaker_correlations: Dict[str, Dict[BridgeRole, float]] = defaultdict(dict)
+
+        for speaker, topic_counts in speaker_topic_counts.items():
+            total_words = max(speaker_total_words[speaker], 1)
+
+            for role, topic_count in topic_counts.items():
+                event_density = role_event_density.get(role, 0)
+                if event_density < 0.3:  # Ignore very low-activity roles
+                    continue
+
+                # Topic density: mentions per 100 words
+                topic_density = (topic_count / total_words) * 100
+
+                # Correlation: high topic density + high event density = strong match
+                # Normalize event density (cap at 10 events/min)
+                normalized_event_density = min(event_density / 10, 1.0)
+                # Normalize topic density (cap at 20%)
+                normalized_topic_density = min(topic_density / 20, 1.0)
+
+                # Correlation score: geometric mean
+                correlation = math.sqrt(normalized_event_density * normalized_topic_density)
+                speaker_correlations[speaker][role] = correlation
+
+        logger.debug(f"Density correlation: {dict(speaker_correlations)}")
+        return dict(speaker_correlations)
+
+    def _detect_command_vs_report(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Detect command patterns (before events) vs report patterns (after events).
+
+        Commands like "scan that target" followed by a scan event suggest the
+        speaker is a commander. Reports like "scan complete" after a scan event
+        suggest the speaker is the operator.
+
+        Returns:
+            Dict mapping speaker_id to {commands: count, reports: count, evidence: [...]}
+        """
+        results: Dict[str, Dict[str, Any]] = defaultdict(
+            lambda: {'commands': 0, 'reports': 0, 'evidence': []}
+        )
+
+        # Use a wider window for command/report detection (5 seconds)
+        window_seconds = 5.0
+
+        for event in self.events:
+            event_time = event.get('relative_time', event.get('timestamp', 0))
+            if isinstance(event_time, datetime):
+                continue  # Skip non-numeric timestamps
+
+            event_type = event.get('event_type', 'unknown')
+            category = event.get('category', '').lower()
+            role = self._category_to_role(category)
+            if not role:
+                continue
+
+            # Find nearby speech
+            for t in self.transcripts:
+                speaker = t.get('speaker_id') or t.get('speaker')
+                text = t.get('text', '')
+                segment_time = t.get('relative_time', t.get('start_time', 0))
+
+                if not speaker or not text:
+                    continue
+
+                time_delta = segment_time - event_time  # negative = speech before event
+
+                if abs(time_delta) > window_seconds:
+                    continue
+
+                # Check for command patterns (speech BEFORE event)
+                if -window_seconds <= time_delta <= 0.5:  # Speech before or just after
+                    for pattern in COMMAND_PATTERNS:
+                        if pattern.search(text):
+                            results[speaker]['commands'] += 1
+                            evidence = CommandReportEvidence(
+                                speaker_id=speaker,
+                                speech_type="command",
+                                text=text[:80],
+                                timestamp=segment_time,
+                                nearby_event_type=event_type,
+                                nearby_event_time=event_time,
+                                time_delta=time_delta,
+                                inferred_role="Commander"
+                            )
+                            results[speaker]['evidence'].append(evidence)
+                            break
+
+                # Check for report patterns (speech AFTER event)
+                if -0.5 <= time_delta <= window_seconds:  # Speech after or just before
+                    for pattern in REPORT_PATTERNS:
+                        if pattern.search(text):
+                            results[speaker]['reports'] += 1
+                            evidence = CommandReportEvidence(
+                                speaker_id=speaker,
+                                speech_type="report",
+                                text=text[:80],
+                                timestamp=segment_time,
+                                nearby_event_type=event_type,
+                                nearby_event_time=event_time,
+                                time_delta=time_delta,
+                                inferred_role=role.value
+                            )
+                            results[speaker]['evidence'].append(evidence)
+                            break
+
+        logger.debug(f"Command/report detection: {len(results)} speakers analyzed")
+        return dict(results)
+
+    def _correlate_negative(
+        self,
+        duration_seconds: float
+    ) -> Dict[str, List[NegativeEvidence]]:
+        """
+        Find negative correlations - roles that speakers are unlikely to have.
+
+        If there are many helm events (heading changes, speed changes) but a
+        speaker NEVER mentions helm-related topics, they're probably not the
+        helm officer.
+
+        Args:
+            duration_seconds: Recording duration
+
+        Returns:
+            Dict mapping speaker_id to list of NegativeEvidence
+        """
+        results: Dict[str, List[NegativeEvidence]] = defaultdict(list)
+
+        # Count events per role
+        role_event_counts: Dict[BridgeRole, int] = defaultdict(int)
+        for event in self.events:
+            category = event.get('category', '').lower()
+            role = self._category_to_role(category)
+            if role:
+                role_event_counts[role] += 1
+
+        # Find high-activity roles (at least 3 events)
+        active_roles = {role for role, count in role_event_counts.items() if count >= 3}
+
+        if not active_roles:
+            return dict(results)
+
+        # Count topic mentions per speaker
+        speaker_topic_counts: Dict[str, Dict[BridgeRole, int]] = defaultdict(lambda: defaultdict(int))
+        speaker_utterances: Dict[str, int] = defaultdict(int)
+
+        for t in self.transcripts:
+            speaker = t.get('speaker_id') or t.get('speaker')
+            text = t.get('text', '').lower()
+            if not speaker or not text:
+                continue
+
+            speaker_utterances[speaker] += 1
+
+            for role, keywords in ROLE_TOPIC_KEYWORDS.items():
+                for keyword in keywords:
+                    if keyword.lower() in text:
+                        speaker_topic_counts[speaker][role] += 1
+                        break  # Count once per utterance per role
+
+        # Find speakers with significant speech but zero mentions of active roles
+        for speaker, utterance_count in speaker_utterances.items():
+            if utterance_count < 3:  # Need minimum speech sample
+                continue
+
+            for role in active_roles:
+                if role == BridgeRole.CAPTAIN:
+                    continue  # Captain doesn't have specific console events
+
+                topic_mentions = speaker_topic_counts[speaker].get(role, 0)
+                event_count = role_event_counts[role]
+
+                # If high activity but zero mentions, negative correlation
+                if topic_mentions == 0 and event_count >= 5:
+                    evidence = NegativeEvidence(
+                        speaker_id=speaker,
+                        ruled_out_role=role,
+                        reason=f"{event_count} {role.value} events but 0 topic mentions in {utterance_count} utterances",
+                        event_count=event_count,
+                        topic_mentions=0
+                    )
+                    results[speaker].append(evidence)
+
+        logger.debug(f"Negative correlation: {sum(len(v) for v in results.values())} exclusions found")
+        return dict(results)
+
+    def _detect_captain(
+        self,
+        density_results: Dict[str, Dict[BridgeRole, float]]
+    ) -> Dict[str, CaptainEvidence]:
+        """
+        Detect speakers who are likely the Captain.
+
+        The Captain is unique: they give orders but don't press buttons.
+        Indicators:
+        1. Addresses other stations by name ("Science, scan that")
+        2. Uses command/imperative language
+        3. Asks questions for status ("What do you see?")
+        4. High speech volume
+        5. No console telemetry correlation (or very low)
+
+        Args:
+            density_results: Results from density correlation (to check console correlation)
+
+        Returns:
+            Dict mapping speaker_id to CaptainEvidence
+        """
+        results: Dict[str, CaptainEvidence] = {}
+
+        # Gather speech data per speaker
+        speaker_data: Dict[str, Dict[str, Any]] = defaultdict(
+            lambda: {'texts': [], 'station_addresses': 0, 'command_patterns': 0, 'questions': 0}
+        )
+
+        for t in self.transcripts:
+            speaker = t.get('speaker_id') or t.get('speaker')
+            text = t.get('text', '').lower()
+            if not speaker or not text:
+                continue
+
+            speaker_data[speaker]['texts'].append(text)
+
+            # Check for station addressing ("Science, scan that")
+            for station in STATION_NAMES:
+                if station in text:
+                    # Check if followed by command-like text
+                    station_idx = text.find(station)
+                    after_station = text[station_idx + len(station):]
+                    if any(cmd in after_station for cmd in ['scan', 'set', 'fire', 'hail', 'what', 'report', 'status']):
+                        speaker_data[speaker]['station_addresses'] += 1
+                        break
+
+            # Check for Captain-specific patterns
+            for pattern in CAPTAIN_PATTERNS:
+                if pattern.search(text):
+                    speaker_data[speaker]['command_patterns'] += 1
+                    break
+
+            # Check for questions (Captains ask for status)
+            if '?' in text or any(text.startswith(q) for q in ['what ', 'where ', 'how ', 'is ', 'are ', 'do ', 'can ']):
+                speaker_data[speaker]['questions'] += 1
+
+        # Calculate Captain likelihood for each speaker
+        for speaker, data in speaker_data.items():
+            utterance_count = len(data['texts'])
+            if utterance_count < 2:
+                continue
+
+            # Check if speaker has console correlation
+            has_console_correlation = False
+            max_correlation = 0.0
+            if speaker in density_results:
+                for role, corr in density_results[speaker].items():
+                    if role != BridgeRole.CAPTAIN and corr > 0.15:
+                        has_console_correlation = True
+                        max_correlation = max(max_correlation, corr)
+
+            # Captain score calculation
+            # - Station addresses are very captain-like (weight: 3)
+            # - Command patterns suggest leadership (weight: 2)
+            # - Questions suggest information gathering (weight: 1)
+            # - Penalty if they have strong console correlation
+            raw_score = (
+                data['station_addresses'] * 3.0 +
+                data['command_patterns'] * 2.0 +
+                data['questions'] * 1.0
+            )
+
+            # Normalize by utterance count
+            normalized_score = raw_score / utterance_count
+
+            # Apply penalty for console correlation (operators don't usually give orders)
+            if has_console_correlation:
+                normalized_score *= (1.0 - max_correlation * 0.5)
+
+            # Boost for high speech volume (Captains talk a lot)
+            if utterance_count >= 5:
+                normalized_score *= 1.2
+            elif utterance_count >= 8:
+                normalized_score *= 1.4
+
+            # Create evidence if score is meaningful
+            if normalized_score > 0.3 or data['station_addresses'] >= 2:
+                results[speaker] = CaptainEvidence(
+                    speaker_id=speaker,
+                    station_addresses=data['station_addresses'],
+                    command_patterns=data['command_patterns'],
+                    questions_asked=data['questions'],
+                    utterance_count=utterance_count,
+                    has_console_correlation=has_console_correlation,
+                    captain_score=normalized_score
+                )
+
+        logger.debug(f"Captain detection: {len(results)} potential captains found")
+        return results
+
+    def _build_smart_methodology(
+        self,
+        density_boost: float,
+        density_evidence: List[str],
+        cr_boost: float,
+        cr_evidence: List[CommandReportEvidence],
+        negative_adj: Dict[str, float],
+        negative_ev: List[NegativeEvidence],
+        captain_boost: float = 0.0,
+        captain_ev: Optional[CaptainEvidence] = None
+    ) -> str:
+        """Build a human-readable methodology note."""
+        parts = []
+
+        if captain_boost > 0 and captain_ev:
+            parts.append(
+                f"Captain indicators: +{captain_boost:.1%} "
+                f"({captain_ev.station_addresses} station addresses, "
+                f"{captain_ev.command_patterns} commands, "
+                f"{captain_ev.questions_asked} questions)"
+            )
+
+        if density_boost > 0:
+            parts.append(f"Density correlation: +{density_boost:.1%} ({', '.join(density_evidence[:2])})")
+
+        if cr_boost > 0:
+            report_count = len([e for e in cr_evidence if e.speech_type == 'report'])
+            command_count = len([e for e in cr_evidence if e.speech_type == 'command'])
+            parts.append(f"Speech patterns: +{cr_boost:.1%} ({command_count} commands, {report_count} reports)")
+
+        if negative_ev:
+            excluded = [e.ruled_out_role.value for e in negative_ev]
+            parts.append(f"Ruled out: {', '.join(excluded)}")
+
+        return " | ".join(parts) if parts else "No telemetry correlation evidence"
+
+    def update_role_confidences_smart(
+        self,
+        existing_roles: Dict[str, Dict[str, Any]]
+    ) -> Dict[str, RoleConfidenceUpdate]:
+        """
+        Update role confidences using smart correlation strategies.
+
+        This is the main entry point for the improved correlation approach.
+
+        Args:
+            existing_roles: Dict mapping speaker_id to role info
+
+        Returns:
+            Dict mapping speaker_id to RoleConfidenceUpdate
+        """
+        smart_results = self.correlate_smart()
+        updates: Dict[str, RoleConfidenceUpdate] = {}
+
+        for speaker_id, role_info in existing_roles.items():
+            base_confidence = role_info.get('confidence', 0.5)
+            assigned_role = role_info.get('role', 'Crew Member')
+
+            smart = smart_results.get(speaker_id)
+            if not smart:
+                # No smart correlation data - use original confidence
+                updates[speaker_id] = RoleConfidenceUpdate(
+                    speaker_id=speaker_id,
+                    role=assigned_role,
+                    base_confidence=base_confidence,
+                    boosted_confidence=base_confidence,
+                    evidence_count=0,
+                    telemetry_boost=0.0,
+                    methodology_note="No telemetry correlation data"
+                )
+                continue
+
+            # Calculate total boost
+            total_boost = smart.total_boost
+
+            # Apply negative adjustment if this role was ruled out
+            if assigned_role in smart.negative_adjustments:
+                total_boost += smart.negative_adjustments[assigned_role]
+
+            # Check if this speaker should be promoted to Captain
+            # Captain override: if captain score is high AND they don't have strong console correlation
+            final_role = assigned_role
+            captain_boost_applied = 0.0
+            if smart.captain_evidence and smart.captain_boost > 0:
+                captain_ev = smart.captain_evidence
+                # Strong captain evidence: promote to Captain role
+                if (captain_ev.captain_score >= 1.0 or
+                    (captain_ev.station_addresses >= 2 and captain_ev.command_patterns >= 1)):
+                    # Only promote if not already a strong operator match
+                    if smart.density_boost < 0.05 or not captain_ev.has_console_correlation:
+                        final_role = BridgeRole.CAPTAIN.value
+                        captain_boost_applied = smart.captain_boost
+                        # Recalculate confidence for Captain role
+                        total_boost = smart.captain_boost + smart.command_report_boost
+                        logger.info(
+                            f"Promoting {speaker_id} to Captain (score={captain_ev.captain_score:.2f}, "
+                            f"addresses={captain_ev.station_addresses}, commands={captain_ev.command_patterns})"
+                        )
+
+            # Cap the boost
+            total_boost = max(-0.2, min(total_boost, self.max_confidence_boost + 0.1))  # Allow slightly higher for Captain
+
+            boosted_confidence = min(1.0, max(0.1, base_confidence + total_boost))
+
+            updates[speaker_id] = RoleConfidenceUpdate(
+                speaker_id=speaker_id,
+                role=final_role,
+                base_confidence=base_confidence,
+                boosted_confidence=boosted_confidence,
+                evidence_count=len(smart.density_evidence) + len(smart.command_report_evidence),
+                telemetry_boost=total_boost,
+                methodology_note=smart.methodology_note,
+                density_boost=smart.density_boost,
+                command_report_boost=smart.command_report_boost,
+                negative_adjustment=smart.negative_adjustments.get(assigned_role, 0.0),
+                captain_boost=captain_boost_applied,
+                smart_evidence=smart
+            )
+
+        return updates
+
+    def get_smart_correlation_summary(self) -> Dict[str, Any]:
+        """
+        Get a summary of smart correlation analysis.
+
+        Returns:
+            Dictionary with correlation statistics
+        """
+        smart_results = self.correlate_smart()
+
+        if not smart_results:
+            return {
+                'strategy': 'smart',
+                'speakers_analyzed': 0,
+                'density_correlations': 0,
+                'command_patterns': 0,
+                'report_patterns': 0,
+                'negative_exclusions': 0,
+                'captain_detections': 0,
+            }
+
+        total_commands = sum(
+            len([e for e in r.command_report_evidence if e.speech_type == 'command'])
+            for r in smart_results.values()
+        )
+        total_reports = sum(
+            len([e for e in r.command_report_evidence if e.speech_type == 'report'])
+            for r in smart_results.values()
+        )
+        total_negative = sum(len(r.negative_evidence) for r in smart_results.values())
+        total_density = sum(1 for r in smart_results.values() if r.density_boost > 0)
+        total_captains = sum(1 for r in smart_results.values() if r.captain_evidence and r.captain_boost > 0)
+
+        return {
+            'strategy': 'smart',
+            'speakers_analyzed': len(smart_results),
+            'density_correlations': total_density,
+            'command_patterns': total_commands,
+            'report_patterns': total_reports,
+            'negative_exclusions': total_negative,
+            'captain_detections': total_captains,
+            'event_count': len(self.events),
+            'transcript_count': len(self.transcripts),
+        }

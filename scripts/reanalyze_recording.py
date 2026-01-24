@@ -12,6 +12,7 @@ import logging
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -30,6 +31,60 @@ logger = logging.getLogger(__name__)
 def progress_callback(step_id: str, step_label: str, progress: int):
     """Print progress updates."""
     logger.info(f"[{progress:3d}%] {step_label}")
+
+
+def find_matching_telemetry(recording_path: Path) -> Optional[str]:
+    """
+    Find telemetry session that matches the recording timestamp.
+
+    Args:
+        recording_path: Path to the recording file
+
+    Returns:
+        Telemetry session ID if found, None otherwise
+    """
+    import os
+    import glob
+
+    # Extract timestamp from recording filename
+    # Format: recording_YYYYMMDD_HHMMSS.wav
+    recording_name = recording_path.stem
+    if not recording_name.startswith('recording_'):
+        return None
+
+    try:
+        # Parse recording timestamp
+        timestamp_str = recording_name.replace('recording_', '')
+        recording_time = datetime.strptime(timestamp_str, '%Y%m%d_%H%M%S')
+    except ValueError:
+        logger.warning(f"Could not parse timestamp from {recording_name}")
+        return None
+
+    # Find telemetry files and check their timestamps
+    telemetry_files = glob.glob('data/telemetry/telemetry_*.json')
+
+    best_match = None
+    best_diff = float('inf')
+
+    for telem_file in telemetry_files:
+        telem_path = Path(telem_file)
+        # Get file modification time
+        telem_mtime = datetime.fromtimestamp(os.path.getmtime(telem_path))
+
+        # Calculate time difference
+        diff = abs((telem_mtime - recording_time).total_seconds())
+
+        # Accept if within 5 minutes
+        if diff < 300 and diff < best_diff:
+            best_diff = diff
+            # Extract session ID from filename
+            session_id = telem_path.stem.replace('telemetry_', '')
+            best_match = session_id
+
+    if best_match:
+        logger.info(f"Found telemetry session {best_match} ({best_diff:.0f}s difference)")
+
+    return best_match
 
 
 def main():
@@ -57,6 +112,15 @@ def main():
         action='store_true',
         help='Skip LLM story generation'
     )
+    parser.add_argument(
+        '--telemetry', '-t',
+        help='Telemetry session ID to link (e.g., fa4ab76e)'
+    )
+    parser.add_argument(
+        '--auto-telemetry',
+        action='store_true',
+        help='Auto-detect telemetry session based on timestamp matching'
+    )
     args = parser.parse_args()
 
     recording_path = Path(args.recording)
@@ -65,6 +129,25 @@ def main():
         return 1
 
     logger.info(f"Re-analyzing recording: {recording_path}")
+
+    # Determine telemetry session ID
+    telemetry_session_id = args.telemetry
+
+    if args.auto_telemetry and not telemetry_session_id:
+        # Auto-detect telemetry based on timestamp matching
+        telemetry_session_id = find_matching_telemetry(recording_path)
+        if telemetry_session_id:
+            logger.info(f"Auto-detected telemetry session: {telemetry_session_id}")
+        else:
+            logger.warning("No matching telemetry session found")
+
+    if telemetry_session_id:
+        telemetry_file = Path(f"data/telemetry/telemetry_{telemetry_session_id}.json")
+        if telemetry_file.exists():
+            logger.info(f"Using telemetry: {telemetry_file}")
+        else:
+            logger.warning(f"Telemetry file not found: {telemetry_file}")
+            telemetry_session_id = None
 
     # Import audio processor
     try:
@@ -87,7 +170,8 @@ def main():
             include_detailed=True,
             include_narrative=not args.no_narrative,
             include_story=not args.no_story,
-            progress_callback=progress_callback
+            progress_callback=progress_callback,
+            telemetry_session_id=telemetry_session_id
         )
     except Exception as e:
         logger.error(f"Analysis failed: {e}", exc_info=True)

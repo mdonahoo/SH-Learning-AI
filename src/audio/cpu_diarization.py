@@ -175,12 +175,12 @@ class CPUSpeakerDiarizer:
         # Note: similarity_threshold = minimum similarity to be considered SAME speaker
         # HIGHER threshold = stricter matching = MORE speakers detected
         # LOWER threshold = looser matching = FEWER speakers detected
-        # Resemblyzer needs higher thresholds (0.80-0.88) to match pyannote speaker counts
+        # 0.72 balances between over-segmentation and under-segmentation
         self.similarity_threshold = similarity_threshold or float(
-            os.getenv('CPU_SPEAKER_THRESHOLD', os.getenv('SPEAKER_EMBEDDING_THRESHOLD', '0.85'))
+            os.getenv('CPU_SPEAKER_THRESHOLD', os.getenv('SPEAKER_EMBEDDING_THRESHOLD', '0.72'))
         )
-        self.min_speakers = min_speakers or int(os.getenv('MIN_EXPECTED_SPEAKERS', '1'))
-        self.max_speakers = max_speakers or int(os.getenv('MAX_EXPECTED_SPEAKERS', '8'))
+        self.min_speakers = min_speakers or int(os.getenv('MIN_EXPECTED_SPEAKERS', '4'))
+        self.max_speakers = max_speakers or int(os.getenv('MAX_EXPECTED_SPEAKERS', '10'))
         # Use expected bridge crew as a hint for clustering
         self.expected_speakers = int(os.getenv('EXPECTED_BRIDGE_CREW', '6'))
 
