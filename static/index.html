@@ -1,141 +1,219 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="space">
+<html lang="en" data-theme="lcars">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#0a0e17">
+    <meta name="theme-color" content="#0a0a1e">
     <title>Mission Analysis System</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-    <div class="container">
-        <!-- Header -->
-        <header>
-            <div class="logo-section">
-                <div class="logo-icon">🚀</div>
+
+<!-- SVG Icon Sprite (hidden) -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+    <symbol id="icon-delta" viewBox="0 0 24 24">
+        <path d="M12 2L3 20h18L12 2zm0 4l6.5 12h-13L12 6z" fill="currentColor"/>
+    </symbol>
+    <symbol id="icon-shield" viewBox="0 0 24 24">
+        <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z" fill="none" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <symbol id="icon-waveform" viewBox="0 0 24 24">
+        <path d="M4 12h2v4H4zm4-6h2v16H8zm4-4h2v24h-2zm4 4h2v16h-2zm4 6h2v4h-2z" fill="currentColor"/>
+    </symbol>
+    <symbol id="icon-crosshair" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+        <path d="M12 2v4m0 12v4M2 12h4m12 0h4" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <symbol id="icon-star" viewBox="0 0 24 24">
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.27 5.82 22 7 14.14l-5-4.87 6.91-1.01L12 2z" fill="none" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <symbol id="icon-star-filled" viewBox="0 0 24 24">
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.27 5.82 22 7 14.14l-5-4.87 6.91-1.01L12 2z" fill="currentColor"/>
+    </symbol>
+    <symbol id="icon-download" viewBox="0 0 24 24">
+        <path d="M12 4v12m0 0l-4-4m4 4l4-4M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+    </symbol>
+    <symbol id="icon-trash" viewBox="0 0 24 24">
+        <path d="M3 6h18M8 6V4h8v2m-7 3v8m4-8v8M5 6l1 14h12l1-14" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+    </symbol>
+    <symbol id="icon-refresh" viewBox="0 0 24 24">
+        <path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+        <path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+    </symbol>
+    <symbol id="icon-record" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="8" fill="currentColor"/>
+    </symbol>
+    <symbol id="icon-stop" viewBox="0 0 24 24">
+        <rect x="6" y="6" width="12" height="12" rx="1" fill="currentColor"/>
+    </symbol>
+    <symbol id="icon-folder" viewBox="0 0 24 24">
+        <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2v11z" fill="none" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <symbol id="icon-captain" viewBox="0 0 24 24">
+        <circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+        <path d="M4 20c0-4 4-7 8-7s8 3 8 7" fill="none" stroke="currentColor" stroke-width="2"/>
+        <path d="M8 3l4-1 4 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+    </symbol>
+    <symbol id="icon-helm" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+        <circle cx="12" cy="12" r="2" fill="currentColor"/>
+        <path d="M12 3v4m0 10v4M3 12h4m10 0h4" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <symbol id="icon-tactical" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+        <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/>
+        <path d="M12 2v4m0 12v4M2 12h4m12 0h4" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <symbol id="icon-science" viewBox="0 0 24 24">
+        <path d="M9 3h6v7l4 8H5l4-8V3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M10 3h4" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <symbol id="icon-engineering" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" fill="none" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <symbol id="icon-comms" viewBox="0 0 24 24">
+        <path d="M2 12a10 10 0 0018 6l2 2V12A10 10 0 002 12z" fill="none" stroke="currentColor" stroke-width="2"/>
+        <path d="M8 12h.01M12 12h.01M16 12h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+</svg>
+
+<div class="container">
+    <!-- LCARS Header -->
+    <header class="lcars-header">
+        <div class="lcars-elbow">
+            <div class="lcars-elbow-vertical"></div>
+            <div class="lcars-elbow-curve"></div>
+        </div>
+        <div class="lcars-header-bar">
+            <div class="lcars-header-content">
+                <svg class="icon icon-lg"><use href="#icon-delta"></use></svg>
                 <div class="logo-text">
                     <h1>Mission Analysis System</h1>
                     <p class="subtitle">Leadership Assessment Platform</p>
                 </div>
             </div>
-            <div id="service-status" class="service-indicator" onclick="app.toggleServiceStatus()">
+            <div id="service-status" class="lcars-pill service-indicator" onclick="app.toggleServiceStatus()">
                 <span class="status-dot"></span>
                 <span id="service-status-summary">Checking...</span>
             </div>
-        </header>
-
-        <!-- Service Status Dropdown (hidden by default) -->
-        <div id="service-status-details" class="service-dropdown hidden">
-            <div class="service-item" id="whisper-status">
-                <span class="service-name">Whisper</span>
-                <span class="service-state" data-state="checking">Checking...</span>
-            </div>
-            <div class="service-item" id="ollama-status">
-                <span class="service-name">Ollama</span>
-                <span class="service-state" data-state="checking">Checking...</span>
-            </div>
-            <div class="service-item" id="diarization-status">
-                <span class="service-name">Diarization</span>
-                <span class="service-state" data-state="checking">Checking...</span>
-            </div>
-            <div class="service-item" id="horizons-status">
-                <span class="service-name">Horizons</span>
-                <span class="service-state" data-state="checking">Checking...</span>
-            </div>
-            <button class="btn-text" onclick="app.checkServicesStatus()">Refresh Status</button>
         </div>
+    </header>
 
-        <!-- Status Banner -->
-        <div id="status-banner" class="status-banner hidden">
-            <span id="status-text"></span>
+    <!-- Service Status Dropdown (hidden by default) -->
+    <div id="service-status-details" class="service-dropdown hidden">
+        <div class="service-item" id="whisper-status">
+            <span class="service-name">Whisper</span>
+            <span class="service-state" data-state="checking">Checking...</span>
         </div>
+        <div class="service-item" id="ollama-status">
+            <span class="service-name">Ollama</span>
+            <span class="service-state" data-state="checking">Checking...</span>
+        </div>
+        <div class="service-item" id="diarization-status">
+            <span class="service-name">Diarization</span>
+            <span class="service-state" data-state="checking">Checking...</span>
+        </div>
+        <div class="service-item" id="horizons-status">
+            <span class="service-name">Horizons</span>
+            <span class="service-state" data-state="checking">Checking...</span>
+        </div>
+        <button class="btn-text" onclick="app.checkServicesStatus()">Refresh Status</button>
+    </div>
 
-        <!-- Workflow Banner -->
-        <div class="workflow-banner">
-            <div class="workflow-steps">
-                <div class="workflow-step">
-                    <div class="step-icon record">
-                        <span class="record-dot"></span>
-                    </div>
-                    <div class="step-text">
-                        <span class="step-label">Press Record</span>
-                        <span class="step-hint">Before mission starts</span>
-                    </div>
+    <!-- Status Banner -->
+    <div id="status-banner" class="status-banner hidden">
+        <span id="status-text"></span>
+    </div>
+
+    <!-- Workflow Banner -->
+    <div class="workflow-banner">
+        <div class="workflow-steps">
+            <div class="workflow-step">
+                <div class="step-icon record">
+                    <span class="record-dot"></span>
                 </div>
-                
-                <div class="workflow-arrow">→</div>
-                
-                <div class="workflow-step">
-                    <div class="step-icon mission">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="2" y="3" width="20" height="14" rx="2"/>
-                            <path d="M8 21h8M12 17v4"/>
-                        </svg>
-                    </div>
-                    <div class="step-text">
-                        <span class="step-label">Run Mission</span>
-                        <span class="step-hint">Audio captures privately</span>
-                    </div>
+                <div class="step-text">
+                    <span class="step-label">Press Record</span>
+                    <span class="step-hint">Before mission starts</span>
                 </div>
-                
-                <div class="workflow-arrow">→</div>
-                
-                <div class="workflow-step">
-                    <div class="step-icon stop">
-                        <span class="stop-square"></span>
-                    </div>
-                    <div class="step-text">
-                        <span class="step-label">Stop Recording</span>
-                        <span class="step-hint">When mission ends</span>
-                    </div>
+            </div>
+            <div class="workflow-arrow">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-4-4l4 4-4 4"/></svg>
+            </div>
+            <div class="workflow-step">
+                <div class="step-icon mission">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="3" width="20" height="14" rx="2"/>
+                        <path d="M8 21h8M12 17v4"/>
+                    </svg>
                 </div>
-                
-                <div class="workflow-arrow">→</div>
-                
-                <div class="workflow-step">
-                    <div class="step-icon analyze">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-                        </svg>
-                    </div>
-                    <div class="step-text">
-                        <span class="step-label">AI Analysis</span>
-                        <span class="step-hint">Processing locally</span>
-                    </div>
+                <div class="step-text">
+                    <span class="step-label">Run Mission</span>
+                    <span class="step-hint">Audio captures privately</span>
                 </div>
-                
-                <div class="workflow-arrow">→</div>
-                
-                <div class="workflow-step">
-                    <div class="step-icon report">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-                            <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
-                        </svg>
-                    </div>
-                    <div class="step-text">
-                        <span class="step-label">Get Report</span>
-                        <span class="step-hint">Leadership insights</span>
-                    </div>
+            </div>
+            <div class="workflow-arrow">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-4-4l4 4-4 4"/></svg>
+            </div>
+            <div class="workflow-step">
+                <div class="step-icon stop">
+                    <span class="stop-square"></span>
+                </div>
+                <div class="step-text">
+                    <span class="step-label">Stop Recording</span>
+                    <span class="step-hint">When mission ends</span>
+                </div>
+            </div>
+            <div class="workflow-arrow">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-4-4l4 4-4 4"/></svg>
+            </div>
+            <div class="workflow-step">
+                <div class="step-icon analyze">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                    </svg>
+                </div>
+                <div class="step-text">
+                    <span class="step-label">AI Analysis</span>
+                    <span class="step-hint">Processing locally</span>
+                </div>
+            </div>
+            <div class="workflow-arrow">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-4-4l4 4-4 4"/></svg>
+            </div>
+            <div class="workflow-step">
+                <div class="step-icon report">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                        <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
+                    </svg>
+                </div>
+                <div class="step-text">
+                    <span class="step-label">Get Report</span>
+                    <span class="step-hint">Leadership insights</span>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Input Section -->
-        <section class="card" id="input-section">
+    <!-- Input Section -->
+    <section class="lcars-panel" id="input-section">
+        <div class="lcars-panel-bar gold"></div>
+        <div class="lcars-panel-body">
             <div class="card-header" onclick="app.toggleSection('input-section')">
                 <div class="card-title">
-                    <span class="collapse-icon">▼</span>
+                    <span class="collapse-icon">&#9660;</span>
                     <h2>Record or Upload</h2>
                 </div>
             </div>
             <div class="card-content">
                 <div class="input-row">
                     <button id="record-btn" class="btn btn-record">
-                        <span class="btn-icon">●</span>
+                        <svg class="icon"><use href="#icon-record"></use></svg>
                         <span>Record</span>
                     </button>
                     <span id="record-time" class="record-timer">00:00</span>
@@ -147,7 +225,7 @@
                     <span class="divider-text">or</span>
                     <input type="file" id="file-input" accept="audio/*,.webm,.wav,.mp3,.m4a,.ogg,.flac" hidden>
                     <button id="upload-btn" class="btn btn-secondary">
-                        <span class="btn-icon">📁</span>
+                        <svg class="icon"><use href="#icon-folder"></use></svg>
                         <span>Upload File</span>
                     </button>
                     <span id="file-name" class="file-label"></span>
@@ -177,12 +255,16 @@
                     </div>
                 </div>
             </div>
-        </section>
+        </div>
+    </section>
 
-        <!-- Processing Section -->
-        <section id="processing" class="card processing-card hidden">
+    <!-- Processing Section -->
+    <section id="processing" class="lcars-panel processing-card hidden">
+        <div class="lcars-panel-bar blue"></div>
+        <div class="lcars-panel-body">
             <div class="progress-header">
                 <h2>Analyzing Mission</h2>
+                <div class="scan-line"></div>
             </div>
             <div class="progress-summary">
                 <div class="current-step">
@@ -198,37 +280,40 @@
                 </div>
                 <div class="time-info">
                     <span id="elapsed-time">0s elapsed</span>
-                    <span class="time-separator">•</span>
+                    <span class="time-separator">&bull;</span>
                     <span id="remaining-time">estimating...</span>
                 </div>
             </div>
             <details class="progress-details">
                 <summary>Show details</summary>
                 <div id="progress-steps" class="steps-list">
-                    <div class="step" data-step="convert"><span class="step-icon">○</span><span class="step-label">Converting audio</span></div>
-                    <div class="step" data-step="transcribe"><span class="step-icon">○</span><span class="step-label">Transcribing</span></div>
-                    <div class="step" data-step="diarize"><span class="step-icon">○</span><span class="step-label">Identifying crew</span></div>
-                    <div class="step" data-step="roles"><span class="step-icon">○</span><span class="step-label">Inferring roles</span></div>
-                    <div class="step" data-step="quality"><span class="step-icon">○</span><span class="step-label">Communication quality</span></div>
-                    <div class="step" data-step="scorecards"><span class="step-icon">○</span><span class="step-label">Generating scorecards</span></div>
-                    <div class="step" data-step="confidence"><span class="step-icon">○</span><span class="step-label">Analyzing confidence</span></div>
-                    <div class="step" data-step="learning"><span class="step-icon">○</span><span class="step-label">Learning metrics</span></div>
-                    <div class="step" data-step="habits"><span class="step-icon">○</span><span class="step-label">7 Habits analysis</span></div>
-                    <div class="step" data-step="training"><span class="step-icon">○</span><span class="step-label">Recommendations</span></div>
+                    <div class="step" data-step="convert"><span class="step-icon">&cir;</span><span class="step-label">Converting audio</span></div>
+                    <div class="step" data-step="transcribe"><span class="step-icon">&cir;</span><span class="step-label">Transcribing</span></div>
+                    <div class="step" data-step="diarize"><span class="step-icon">&cir;</span><span class="step-label">Identifying crew</span></div>
+                    <div class="step" data-step="roles"><span class="step-icon">&cir;</span><span class="step-label">Inferring roles</span></div>
+                    <div class="step" data-step="quality"><span class="step-icon">&cir;</span><span class="step-label">Communication quality</span></div>
+                    <div class="step" data-step="scorecards"><span class="step-icon">&cir;</span><span class="step-label">Generating scorecards</span></div>
+                    <div class="step" data-step="confidence"><span class="step-icon">&cir;</span><span class="step-label">Analyzing confidence</span></div>
+                    <div class="step" data-step="learning"><span class="step-icon">&cir;</span><span class="step-label">Learning metrics</span></div>
+                    <div class="step" data-step="habits"><span class="step-icon">&cir;</span><span class="step-label">7 Habits analysis</span></div>
+                    <div class="step" data-step="training"><span class="step-icon">&cir;</span><span class="step-label">Recommendations</span></div>
                 </div>
             </details>
-        </section>
+        </div>
+    </section>
 
-        <!-- Archive Section -->
-        <section class="card collapsed" id="archive-section">
+    <!-- Archive Section -->
+    <section class="lcars-panel collapsed" id="archive-section">
+        <div class="lcars-panel-bar periwinkle"></div>
+        <div class="lcars-panel-body">
             <div class="card-header" onclick="app.toggleSection('archive-section')">
                 <div class="card-title">
-                    <span class="collapse-icon">▼</span>
+                    <span class="collapse-icon">&#9660;</span>
                     <h2>Mission Archive</h2>
                     <span id="archive-count" class="badge">0</span>
                 </div>
                 <button id="refresh-archive-btn" class="btn-icon-only" onclick="event.stopPropagation(); app.loadArchive();" title="Refresh">
-                    ↻
+                    <svg class="icon"><use href="#icon-refresh"></use></svg>
                 </button>
             </div>
             <div class="card-content">
@@ -243,21 +328,24 @@
                     <p class="empty-state">Loading...</p>
                 </div>
             </div>
-        </section>
+        </div>
+    </section>
 
-        <!-- Results Section -->
-        <section class="card" id="results-section">
+    <!-- Results Section -->
+    <section class="lcars-panel" id="results-section">
+        <div class="lcars-panel-bar gold"></div>
+        <div class="lcars-panel-body">
             <div class="card-header" onclick="app.toggleSection('results-section')">
                 <div class="card-title">
-                    <span class="collapse-icon">▼</span>
+                    <span class="collapse-icon">&#9660;</span>
                     <h2>Analysis Results</h2>
                 </div>
                 <div class="header-actions" onclick="event.stopPropagation()">
                     <button id="download-audio-btn" class="btn btn-secondary btn-sm hidden">
-                        🎧 Audio
+                        <svg class="icon"><use href="#icon-waveform"></use></svg> Audio
                     </button>
                     <button id="download-btn" class="btn btn-primary btn-sm">
-                        ⬇ Download Report
+                        <svg class="icon"><use href="#icon-download"></use></svg> Download Report
                     </button>
                 </div>
             </div>
@@ -265,64 +353,111 @@
                 <!-- Analysis Title Bar -->
                 <div id="current-analysis-info" class="analysis-header hidden">
                     <input type="text" id="analysis-title-input" class="title-input" placeholder="Enter mission title...">
-                    <button id="star-btn" class="btn-star" onclick="app.toggleStar()" title="Star mission">☆</button>
+                    <button id="star-btn" class="btn-star" onclick="app.toggleStar()" title="Star mission">
+                        <svg class="icon"><use href="#icon-star"></use></svg>
+                    </button>
                 </div>
 
-                <!-- Tab Navigation -->
-                <div class="tabs">
-                    <button class="tab active" data-tab="summary">Summary</button>
-                    <button class="tab" data-tab="narrative">Debrief</button>
-                    <button class="tab" data-tab="story">Story</button>
-                    <button class="tab" data-tab="transcript">Transcript</button>
-                    <button class="tab" data-tab="speakers">Crew</button>
-                    <button class="tab" data-tab="scorecards">Scorecards</button>
-                    <button class="tab" data-tab="quality">Quality</button>
-                    <button class="tab" data-tab="learning">Learning</button>
-                    <button class="tab" data-tab="habits">7 Habits</button>
-                    <button class="tab" data-tab="training">Training</button>
+                <!-- LCARS Tab Navigation (5 tabs) -->
+                <div class="tabs lcars-tabs">
+                    <button class="tab active" data-tab="bridge-overview">[ Bridge Overview ]</button>
+                    <button class="tab" data-tab="crew-stations">[ Crew Stations ]</button>
+                    <button class="tab" data-tab="mission-log">[ Mission Log ]</button>
+                    <button class="tab" data-tab="debrief">[ Captain's Debrief ]</button>
+                    <button class="tab" data-tab="academy">[ Academy Assessment ]</button>
                 </div>
 
                 <!-- Tab Panels -->
                 <div class="tab-panels">
-                    <!-- Summary Tab -->
-                    <div id="tab-summary" class="tab-panel active">
-                        <div class="metrics-grid">
-                            <div class="metric-card">
-                                <div class="metric-value" id="summary-duration">--</div>
-                                <div class="metric-label">Duration</div>
-                            </div>
-                            <div class="metric-card">
-                                <div class="metric-value" id="summary-speakers">--</div>
-                                <div class="metric-label">Crew Members</div>
-                            </div>
-                            <div class="metric-card">
-                                <div class="metric-value" id="summary-segments">--</div>
-                                <div class="metric-label">Segments</div>
-                            </div>
-                            <div class="metric-card highlight">
-                                <div class="metric-value" id="summary-effective">--</div>
-                                <div class="metric-label">Effective Comm</div>
+
+                    <!-- Bridge Overview Tab (merged: Summary) -->
+                    <div id="tab-bridge-overview" class="tab-panel active">
+                        <!-- Bridge Station Map -->
+                        <div id="bridge-map" class="bridge-map">
+                            <div class="bridge-map-label">Bridge Stations</div>
+                            <div class="bridge-map-area">
+                                <div class="bridge-station" data-station="captain" data-role="Captain/Command">
+                                    <svg class="icon station-icon"><use href="#icon-captain"></use></svg>
+                                    <span class="station-label">Captain</span>
+                                    <span class="station-crew">--</span>
+                                    <span class="station-conf"></span>
+                                </div>
+                                <div class="bridge-station" data-station="helm" data-role="Helm/Navigation">
+                                    <svg class="icon station-icon"><use href="#icon-helm"></use></svg>
+                                    <span class="station-label">Helm</span>
+                                    <span class="station-crew">--</span>
+                                    <span class="station-conf"></span>
+                                </div>
+                                <div class="bridge-station" data-station="tactical" data-role="Tactical/Weapons">
+                                    <svg class="icon station-icon"><use href="#icon-tactical"></use></svg>
+                                    <span class="station-label">Tactical</span>
+                                    <span class="station-crew">--</span>
+                                    <span class="station-conf"></span>
+                                </div>
+                                <div class="bridge-station" data-station="science" data-role="Science/Sensors">
+                                    <svg class="icon station-icon"><use href="#icon-science"></use></svg>
+                                    <span class="station-label">Science</span>
+                                    <span class="station-crew">--</span>
+                                    <span class="station-conf"></span>
+                                </div>
+                                <div class="bridge-station" data-station="engineering" data-role="Engineering/Systems">
+                                    <svg class="icon station-icon"><use href="#icon-engineering"></use></svg>
+                                    <span class="station-label">Engineering</span>
+                                    <span class="station-crew">--</span>
+                                    <span class="station-conf"></span>
+                                </div>
+                                <div class="bridge-station" data-station="comms" data-role="Communications">
+                                    <svg class="icon station-icon"><use href="#icon-comms"></use></svg>
+                                    <span class="station-label">Comms</span>
+                                    <span class="station-crew">--</span>
+                                    <span class="station-conf"></span>
+                                </div>
                             </div>
                         </div>
 
+                        <!-- Metrics Grid -->
+                        <div class="metrics-grid">
+                            <div class="metric-card" data-tooltip="Total length of analyzed audio recording" data-tooltip-pos="bottom">
+                                <div class="metric-value" id="summary-duration">--</div>
+                                <div class="metric-label">Duration</div>
+                            </div>
+                            <div class="metric-card" data-tooltip="Number of unique speakers detected by voice analysis. Names are inferred from role-specific communication patterns." data-tooltip-pos="bottom">
+                                <div class="metric-value" id="summary-speakers">--</div>
+                                <div class="metric-label">Crew Members</div>
+                            </div>
+                            <div class="metric-card" data-tooltip="Individual speech segments identified in the audio. Each segment is a continuous utterance from one speaker." data-tooltip-pos="bottom">
+                                <div class="metric-value" id="summary-segments">--</div>
+                                <div class="metric-label">Segments</div>
+                            </div>
+                            <div class="metric-card highlight" data-tooltip="Percentage of communications that were clear, acknowledged, and actionable. Higher scores indicate better team coordination." data-tooltip-pos="bottom">
+                                <div class="metric-value" id="summary-effective">--</div>
+                                <div class="metric-label">Effective Comm</div>
+                            </div>
+                            <div class="metric-card stress-card hidden" id="stress-metric-card" data-tooltip="Average vocal stress level across all speakers, derived from voice pitch, tempo, and amplitude variations." data-tooltip-pos="bottom">
+                                <div class="metric-value" id="summary-stress">--</div>
+                                <div class="metric-label">Avg Stress</div>
+                            </div>
+                        </div>
+
+                        <!-- Score Bars -->
                         <div class="scores-section">
                             <h3>Leadership Scores</h3>
                             <div class="score-row">
-                                <span class="score-label">7 Habits Score</span>
+                                <span class="score-label" data-tooltip="Based on Stephen Covey's 7 Habits of Highly Effective People. Measures proactivity, goal focus, prioritization, collaboration, listening, teamwork, and continuous improvement.">7 Habits Score</span>
                                 <div class="score-bar-track">
                                     <div id="metric-habits-bar" class="score-bar-fill"></div>
                                 </div>
                                 <span id="metric-habits-value" class="score-value">--</span>
                             </div>
                             <div class="score-row">
-                                <span class="score-label">Communication Quality</span>
+                                <span class="score-label" data-tooltip="Measures clarity, protocol adherence, acknowledgment rates, and effective information exchange between crew members.">Communication Quality</span>
                                 <div class="score-bar-track">
                                     <div id="metric-quality-bar" class="score-bar-fill"></div>
                                 </div>
                                 <span id="metric-quality-value" class="score-value">--</span>
                             </div>
                             <div class="score-row">
-                                <span class="score-label">Transcription Confidence</span>
+                                <span class="score-label" data-tooltip="Audio transcription confidence. Low signal quality (below 50%) means scores are provisional due to unclear audio or speaker overlap.">Signal Quality</span>
                                 <div class="score-bar-track">
                                     <div id="metric-confidence-bar" class="score-bar-fill"></div>
                                 </div>
@@ -330,19 +465,62 @@
                             </div>
                         </div>
 
+                        <!-- Stress Timeline Chart -->
+                        <div id="stress-timeline-chart" class="stress-timeline-section hidden">
+                            <h3>Crew Stress Over Time</h3>
+                            <div class="stress-chart-wrapper">
+                                <canvas id="stress-timeline-canvas"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Priority Recommendations -->
                         <div id="top-recommendations" class="recommendations-preview hidden">
                             <h3>Priority Recommendations</h3>
                             <div id="recommendations-preview"></div>
                         </div>
                     </div>
 
-                    <!-- AI Team Analysis Tab -->
-                    <div id="tab-narrative" class="tab-panel hidden">
+                    <!-- Crew Stations Tab (merged: Speakers + Scorecards) -->
+                    <div id="tab-crew-stations" class="tab-panel hidden">
+                        <div id="speakers-content" class="speakers-grid"></div>
+                        <div class="lcars-bar purple" style="margin: 24px 0;"></div>
+                        <div id="scorecards-content" class="scorecards-list"></div>
+                    </div>
+
+                    <!-- Mission Log Tab (merged: Transcript + Quality) -->
+                    <div id="tab-mission-log" class="tab-panel hidden">
+                        <!-- Mission Timeline -->
+                        <div id="mission-timeline" class="mission-timeline"></div>
+
+                        <!-- Transcript -->
+                        <div class="stats-row">
+                            <span>Duration: <strong id="duration">--</strong></span>
+                            <span>Segments: <strong id="segment-count">--</strong></span>
+                            <span>Processing: <strong id="proc-time">--</strong></span>
+                        </div>
+                        <div id="transcript-content" class="transcript-list"></div>
+                        <details class="full-text-toggle">
+                            <summary>Show Full Text</summary>
+                            <div id="full-text" class="full-text-content"></div>
+                        </details>
+
+                        <div class="lcars-bar blue" style="margin: 24px 0;"></div>
+
+                        <!-- Communication Quality -->
+                        <div id="quality-content" class="quality-content"></div>
+                    </div>
+
+                    <!-- Captain's Debrief Tab (merged: Narrative + Story) -->
+                    <div id="tab-debrief" class="tab-panel hidden">
+                        <!-- AI Team Analysis -->
                         <div class="narrative-header">
-                            <h2>🎯 Team Dynamics Analysis</h2>
+                            <h2>
+                                <svg class="icon"><use href="#icon-crosshair"></use></svg>
+                                Team Dynamics Analysis
+                            </h2>
                             <div class="narrative-actions">
                                 <button id="regenerate-narrative-btn" class="btn btn-regenerate" onclick="app.regenerateNarrative()">
-                                    <span class="btn-icon">🔄</span>
+                                    <svg class="icon"><use href="#icon-refresh"></use></svg>
                                     <span>Regenerate</span>
                                 </button>
                                 <div id="narrative-badge" class="narrative-badge hidden">
@@ -362,20 +540,25 @@
                             <div id="narrative-content" class="narrative-content"></div>
                         </div>
                         <div id="narrative-unavailable" class="narrative-unavailable hidden">
-                            <div class="unavailable-icon">🔌</div>
+                            <div class="unavailable-icon">
+                                <svg class="icon icon-xl"><use href="#icon-shield"></use></svg>
+                            </div>
                             <h3>Team Analysis Unavailable</h3>
                             <p>The Ollama LLM server is not available. Make sure Ollama is running with a model loaded.</p>
                             <code>ollama serve</code>
                         </div>
-                    </div>
 
-                    <!-- AI Story Narrative Tab -->
-                    <div id="tab-story" class="tab-panel hidden">
+                        <div class="lcars-bar gold" style="margin: 32px 0;"></div>
+
+                        <!-- AI Story Narrative -->
                         <div class="narrative-header">
-                            <h2>📖 Mission Story</h2>
+                            <h2>
+                                <svg class="icon"><use href="#icon-delta"></use></svg>
+                                Mission Story
+                            </h2>
                             <div class="narrative-actions">
                                 <button id="regenerate-story-btn" class="btn btn-regenerate" onclick="app.regenerateStory()">
-                                    <span class="btn-icon">🔄</span>
+                                    <svg class="icon"><use href="#icon-refresh"></use></svg>
                                     <span>Regenerate</span>
                                 </button>
                                 <div id="story-badge" class="narrative-badge hidden">
@@ -395,67 +578,41 @@
                             <div id="story-content" class="narrative-content story-content"></div>
                         </div>
                         <div id="story-unavailable" class="narrative-unavailable hidden">
-                            <div class="unavailable-icon">🔌</div>
+                            <div class="unavailable-icon">
+                                <svg class="icon icon-xl"><use href="#icon-shield"></use></svg>
+                            </div>
                             <h3>Mission Story Unavailable</h3>
                             <p>The Ollama LLM server is not available. Make sure Ollama is running with a model loaded.</p>
                             <code>ollama serve</code>
                         </div>
                     </div>
 
-                    <!-- Transcript Tab -->
-                    <div id="tab-transcript" class="tab-panel hidden">
-                        <div class="stats-row">
-                            <span>Duration: <strong id="duration">--</strong></span>
-                            <span>Segments: <strong id="segment-count">--</strong></span>
-                            <span>Processing: <strong id="proc-time">--</strong></span>
-                        </div>
-                        <div id="transcript-content" class="transcript-list"></div>
-                        <details class="full-text-toggle">
-                            <summary>Show Full Text</summary>
-                            <div id="full-text" class="full-text-content"></div>
-                        </details>
-                    </div>
-
-                    <!-- Speakers Tab -->
-                    <div id="tab-speakers" class="tab-panel hidden">
-                        <div id="speakers-content" class="speakers-grid"></div>
-                    </div>
-
-                    <!-- Scorecards Tab -->
-                    <div id="tab-scorecards" class="tab-panel hidden">
-                        <div id="scorecards-content" class="scorecards-list"></div>
-                    </div>
-
-                    <!-- Quality Tab -->
-                    <div id="tab-quality" class="tab-panel hidden">
-                        <div id="quality-content" class="quality-content"></div>
-                    </div>
-
-                    <!-- Learning Tab -->
-                    <div id="tab-learning" class="tab-panel hidden">
+                    <!-- Academy Assessment Tab (merged: Learning + 7 Habits + Training) -->
+                    <div id="tab-academy" class="tab-panel hidden">
                         <div id="learning-content" class="learning-content"></div>
-                    </div>
-
-                    <!-- 7 Habits Tab -->
-                    <div id="tab-habits" class="tab-panel hidden">
+                        <div class="lcars-bar lilac" style="margin: 24px 0;"></div>
                         <div id="habits-content" class="habits-content"></div>
-                    </div>
-
-                    <!-- Training Tab -->
-                    <div id="tab-training" class="tab-panel hidden">
+                        <div class="lcars-bar orange" style="margin: 24px 0;"></div>
                         <div id="training-content" class="training-content"></div>
                     </div>
+
                 </div>
             </div>
-        </section>
+        </div>
+    </section>
 
-        <footer>
+    <footer class="lcars-footer">
+        <div class="lcars-footer-bar"></div>
+        <div class="lcars-footer-content">
             <span>Mission Analysis System</span>
-            <span class="footer-divider">•</span>
+            <span class="footer-divider">&bull;</span>
             <span>Mobile Space Adventures</span>
-        </footer>
-    </div>
+        </div>
+        <div class="lcars-footer-end"></div>
+    </footer>
+</div>
 
-    <script src="/static/app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="/static/app.js"></script>
 </body>
 </html>

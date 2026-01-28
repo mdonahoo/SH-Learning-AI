@@ -1,0 +1,581 @@
+{
+  "metadata": {
+    "created_at": "2026-01-28T21:14:39.622530",
+    "recording_file": "recording_20260128_211425.wav",
+    "duration_seconds": 10.68,
+    "speaker_count": 1,
+    "segment_count": 1,
+    "auto_title": "Signal Quality Testing Session"
+  },
+  "results": {
+    "transcription": [
+      {
+        "start_time": 0.46,
+        "end_time": 6.12,
+        "text": "Testing the best signal quality, testing the BEST SIGNAL QUALITY.",
+        "confidence": 0.26445313170552254,
+        "speaker_id": "speaker_1",
+        "speaker_role": null,
+        "sentiment": {
+          "stress_level": 0.065,
+          "stress_label": "low",
+          "emotion": "calm",
+          "sentiment": "positive",
+          "sentiment_score": 0.87,
+          "signals": {
+            "speech_rate_wps": 1.77,
+            "lexicon_score": 0.0,
+            "confidence_signal": 0.0,
+            "prosodic_score": 0.3,
+            "dynamics_score": 0.0
+          }
+        }
+      }
+    ],
+    "full_text": "Testing the best signal quality, testing the BEST SIGNAL QUALITY.",
+    "duration_seconds": 10.68,
+    "speakers": [
+      {
+        "speaker_id": "speaker_1",
+        "total_speaking_time": 5.66,
+        "utterance_count": 1,
+        "avg_utterance_duration": 5.66,
+        "role": null,
+        "engagement_score": null
+      }
+    ],
+    "communication_quality": {
+      "effective_count": 0,
+      "improvement_count": 0,
+      "effective_percentage": 0,
+      "patterns": [],
+      "total_utterances_assessed": 1,
+      "calculation_summary": "Assessed 1 utterances. Matched 0 to patterns (0 effective, 0 needs improvement). Effective % = 0/1 = 0.0%",
+      "evidence_details": []
+    },
+    "speaker_scorecards": [
+      {
+        "speaker_id": "speaker_1",
+        "role": "Science/Sensors",
+        "utterance_count": 1,
+        "overall_score": 1.8,
+        "metrics": [
+          {
+            "name": "Protocol Adherence",
+            "score": 1,
+            "evidence": "No protocol language detected (0/1 utterances, 0.0%)",
+            "supporting_quotes": [],
+            "threshold_info": "Score 5: \u226530% | Score 4: \u226520% | Score 3: \u226510% | Score 2: \u22655% | Score 1: <5%",
+            "pattern_breakdown": {
+              "acknowledgments": 0,
+              "titles": 0,
+              "status": 0,
+              "confirmations": 0
+            },
+            "calculation_details": "Counted utterances containing protocol keywords. Rate = 0/1 = 0.0%. Threshold for score 1: <0%"
+          },
+          {
+            "name": "Communication Clarity",
+            "score": 2,
+            "evidence": "Clarity needs work (confidence: 0.26, 0 fillers)",
+            "supporting_quotes": [
+              "[0:00] \"Testing the best signal quality, testing the BEST SIGNAL QUALITY.\""
+            ],
+            "threshold_info": "Score 5: \u226580% | Score 4: \u226570% | Score 3: \u226560% | Score 2: \u226550% | Score 1: <50%",
+            "pattern_breakdown": {
+              "incomplete_sentences": 0,
+              "filler_words": 0,
+              "clear_utterances": 0,
+              "unclear_utterances": 1
+            },
+            "calculation_details": "Clarity = (confidence \u00d7 0.6) + (completeness \u00d7 0.2) + (no-fillers \u00d7 0.2). Confidence: 0.26, Incomplete: 0.0%, Fillers: 0.0%. Final clarity: 55.9%"
+          },
+          {
+            "name": "Response Time",
+            "score": 4,
+            "evidence": "High engagement (1 utterances, no command-response pairs detected)",
+            "supporting_quotes": [
+              "[0:00] \"Testing the best signal quality, testing the BEST SIGNAL QUA...\""
+            ],
+            "threshold_info": "Engagement-based: Score 4: \u226520% | Score 3: \u226510% | Score 2: <10%",
+            "pattern_breakdown": {
+              "utterance_count": 1,
+              "total_utterances": 1
+            },
+            "calculation_details": "No command-response pairs detected. Using engagement rate: 1/1 = 100.0%"
+          },
+          {
+            "name": "Technical Accuracy",
+            "score": 1,
+            "evidence": "Minimal technical terminology",
+            "supporting_quotes": [],
+            "threshold_info": "Score 5: \u226540% | Score 4: \u226525% | Score 3: \u226515% | Score 2: \u22655% | Score 1: <5%",
+            "pattern_breakdown": {
+              "navigation": 0,
+              "systems": 0,
+              "weapons": 0,
+              "sensors": 0,
+              "spatial": 0,
+              "timing": 0
+            },
+            "calculation_details": "Counted utterances with technical terminology. Rate = 0/1 = 0.0%. Categories: "
+          },
+          {
+            "name": "Team Coordination",
+            "score": 1,
+            "evidence": "Little coordination observed",
+            "supporting_quotes": [],
+            "threshold_info": "Score 5: \u226535% | Score 4: \u226525% | Score 3: \u226515% | Score 2: \u22655% | Score 1: <5%",
+            "pattern_breakdown": {
+              "assistance": 0,
+              "readiness": 0,
+              "acknowledgment": 0,
+              "team_language": 0,
+              "status_sharing": 0
+            },
+            "calculation_details": "Counted utterances with coordination language. Rate = 0/1 = 0.0%. Types: "
+          }
+        ],
+        "strengths": [
+          "Response Time: High engagement (1 utterances, no command-response pairs detected)",
+          "High engagement with 1 utterances"
+        ],
+        "areas_for_improvement": [
+          "Protocol Adherence: No protocol language detected (0/1 utterances, 0.0%)",
+          "Communication Clarity: Clarity needs work (confidence: 0.26, 0 fillers)",
+          "Technical Accuracy: Minimal technical terminology"
+        ]
+      }
+    ],
+    "role_assignments": [
+      {
+        "speaker_id": "speaker_1",
+        "role": "Science/Sensors",
+        "confidence": 0.634,
+        "voice_confidence": 0.634,
+        "role_confidence": 0.56,
+        "evidence_factor": 0.05,
+        "keyword_matches": 4,
+        "key_indicators": [
+          "\"signal\" (4)",
+          "1 types, 100% density, 100% of convo"
+        ],
+        "example_utterances": [
+          {
+            "timestamp": 0.46,
+            "text": "Testing the best signal quality, testing the BEST SIGNAL QUALITY.",
+            "confidence": 0.26445313170552254
+          }
+        ],
+        "methodology": "No telemetry correlation evidence",
+        "telemetry_confidence": 0.0,
+        "evidence_count": 0,
+        "density_boost": 0.0,
+        "command_report_boost": 0.0,
+        "negative_adjustment": 0.0,
+        "captain_boost": 0.0
+      }
+    ],
+    "confidence_distribution": {
+      "total_utterances": 1,
+      "average_confidence": 0.264,
+      "median_confidence": 0.26445313170552254,
+      "buckets": [
+        {
+          "label": "90% and above",
+          "count": 0,
+          "percentage": 0.0
+        },
+        {
+          "label": "80% to 89%",
+          "count": 0,
+          "percentage": 0.0
+        },
+        {
+          "label": "70% to 79%",
+          "count": 0,
+          "percentage": 0.0
+        },
+        {
+          "label": "60% to 69%",
+          "count": 0,
+          "percentage": 0.0
+        },
+        {
+          "label": "Below 60%",
+          "count": 1,
+          "percentage": 100.0
+        }
+      ],
+      "speaker_averages": {
+        "speaker_1": 0.264
+      },
+      "quality_assessment": "Poor - Major audio quality or speech clarity problems"
+    },
+    "learning_evaluation": {
+      "kirkpatrick_levels": [
+        {
+          "level": 1,
+          "name": "Reaction",
+          "score": 1.0,
+          "interpretation": "High participation equity across 1 speakers"
+        },
+        {
+          "level": 2,
+          "name": "Learning",
+          "score": 0.5,
+          "interpretation": "Completed 0/0 objectives with 0% protocol adherence"
+        },
+        {
+          "level": 3,
+          "name": "Behavior",
+          "score": 0.5,
+          "interpretation": "Team responded in avg 0.0s with 0 decision-making communications"
+        },
+        {
+          "level": 4,
+          "name": "Results",
+          "score": 0.5,
+          "interpretation": "Partial completion: 0% objectives completed"
+        }
+      ],
+      "blooms_level": "Remember",
+      "blooms_score": 0.5,
+      "nasa_tlx_score": 0.5,
+      "engagement_score": 0.5,
+      "overall_learning_score": 0.00625,
+      "top_communications": [
+        {
+          "speaker": "speaker_1",
+          "text": "Testing the best signal quality, testing the BEST SIGNAL QUALITY.",
+          "timestamp": 0.46,
+          "confidence": 0.26445313170552254
+        }
+      ],
+      "speaker_statistics": [
+        {
+          "speaker": "speaker_1",
+          "utterances": 1,
+          "percentage": 100.0
+        }
+      ]
+    },
+    "seven_habits": {
+      "overall_score": 1.0,
+      "habits": [
+        {
+          "habit_number": 1,
+          "habit_name": "Be Proactive",
+          "youth_friendly_name": "Take Initiative",
+          "score": 1,
+          "observation_count": 0,
+          "interpretation": "'Take Initiative' needs attention (0 examples) - priority development area",
+          "development_tip": "Practice saying 'I will' instead of 'Someone should.' Look for opportunities to help before being asked.",
+          "examples": [],
+          "pattern_breakdown": {},
+          "speaker_contributions": {},
+          "gap_to_next_score": "Need 1 more observations to reach score 2 (target: 5% frequency)"
+        },
+        {
+          "habit_number": 2,
+          "habit_name": "Begin With End In Mind",
+          "youth_friendly_name": "Know Your Goals",
+          "score": 1,
+          "observation_count": 0,
+          "interpretation": "'Know Your Goals' needs attention (0 examples) - priority development area",
+          "development_tip": "Before starting any task, ask yourself: 'What does success look like?' State the goal clearly before taking action.",
+          "examples": [],
+          "pattern_breakdown": {},
+          "speaker_contributions": {},
+          "gap_to_next_score": "Need 1 more observations to reach score 2 (target: 5% frequency)"
+        },
+        {
+          "habit_number": 3,
+          "habit_name": "Put First Things First",
+          "youth_friendly_name": "Prioritize What Matters",
+          "score": 1,
+          "observation_count": 0,
+          "interpretation": "'Prioritize What Matters' needs attention (0 examples) - priority development area",
+          "development_tip": "When multiple things need attention, identify what's most important. Do the hard or urgent things first, not just the easy ones.",
+          "examples": [],
+          "pattern_breakdown": {},
+          "speaker_contributions": {},
+          "gap_to_next_score": "Need 1 more observations to reach score 2 (target: 5% frequency)"
+        },
+        {
+          "habit_number": 4,
+          "habit_name": "Think Win Win",
+          "youth_friendly_name": "Work Together for Success",
+          "score": 1,
+          "observation_count": 0,
+          "interpretation": "'Work Together for Success' needs attention (0 examples) - priority development area",
+          "development_tip": "Ask 'How can we both succeed?' instead of 'How can I win?' Look for ways to help teammates while accomplishing your tasks.",
+          "examples": [],
+          "pattern_breakdown": {},
+          "speaker_contributions": {},
+          "gap_to_next_score": "Need 1 more observations to reach score 2 (target: 5% frequency)"
+        },
+        {
+          "habit_number": 5,
+          "habit_name": "Seek First To Understand",
+          "youth_friendly_name": "Listen Before Speaking",
+          "score": 1,
+          "observation_count": 0,
+          "interpretation": "'Listen Before Speaking' needs attention (0 examples) - priority development area",
+          "development_tip": "Practice repeating back what someone said before responding. Ask clarifying questions: 'Do you mean...?' or 'Can you explain...?'",
+          "examples": [],
+          "pattern_breakdown": {},
+          "speaker_contributions": {},
+          "gap_to_next_score": "Need 1 more observations to reach score 2 (target: 5% frequency)"
+        },
+        {
+          "habit_number": 6,
+          "habit_name": "Synergize",
+          "youth_friendly_name": "Create Better Solutions Together",
+          "score": 1,
+          "observation_count": 0,
+          "interpretation": "'Create Better Solutions Together' needs attention (0 examples) - priority development area",
+          "development_tip": "When facing a challenge, ask teammates for their ideas. Build on others' suggestions with 'Yes, and...' instead of 'No, but...'",
+          "examples": [],
+          "pattern_breakdown": {},
+          "speaker_contributions": {},
+          "gap_to_next_score": "Need 1 more observations to reach score 2 (target: 5% frequency)"
+        },
+        {
+          "habit_number": 7,
+          "habit_name": "Sharpen The Saw",
+          "youth_friendly_name": "Keep Learning and Growing",
+          "score": 1,
+          "observation_count": 0,
+          "interpretation": "'Keep Learning and Growing' needs attention (0 examples) - priority development area",
+          "development_tip": "After each mission, ask 'What did I learn?' and 'What would I do differently?' Practice weak areas during training, not just what you're already good at.",
+          "examples": [],
+          "pattern_breakdown": {},
+          "speaker_contributions": {},
+          "gap_to_next_score": "Need 1 more observations to reach score 2 (target: 5% frequency)"
+        }
+      ],
+      "strengths": [
+        {
+          "habit": "BE_PROACTIVE",
+          "name": "Take Initiative",
+          "score": 1,
+          "interpretation": "'Take Initiative' needs attention (0 examples) - priority development area",
+          "speaker_contributions": {}
+        },
+        {
+          "habit": "BEGIN_WITH_END_IN_MIND",
+          "name": "Know Your Goals",
+          "score": 1,
+          "interpretation": "'Know Your Goals' needs attention (0 examples) - priority development area",
+          "speaker_contributions": {}
+        },
+        {
+          "habit": "PUT_FIRST_THINGS_FIRST",
+          "name": "Prioritize What Matters",
+          "score": 1,
+          "interpretation": "'Prioritize What Matters' needs attention (0 examples) - priority development area",
+          "speaker_contributions": {}
+        }
+      ],
+      "growth_areas": [
+        {
+          "habit": "BE_PROACTIVE",
+          "name": "Take Initiative",
+          "score": 1,
+          "development_tip": "Practice saying 'I will' instead of 'Someone should.' Look for opportunities to help before being asked.",
+          "gap_to_next_score": "Need 1 more observations to reach score 2 (target: 5% frequency)"
+        },
+        {
+          "habit": "BEGIN_WITH_END_IN_MIND",
+          "name": "Know Your Goals",
+          "score": 1,
+          "development_tip": "Before starting any task, ask yourself: 'What does success look like?' State the goal clearly before taking action.",
+          "gap_to_next_score": "Need 1 more observations to reach score 2 (target: 5% frequency)"
+        },
+        {
+          "habit": "PUT_FIRST_THINGS_FIRST",
+          "name": "Prioritize What Matters",
+          "score": 1,
+          "development_tip": "When multiple things need attention, identify what's most important. Do the hard or urgent things first, not just the easy ones.",
+          "gap_to_next_score": "Need 1 more observations to reach score 2 (target: 5% frequency)"
+        }
+      ],
+      "score_thresholds": "Score 5: \u226530% | Score 4: \u226520% | Score 3: \u226510% | Score 2: \u22655% | Score 1: <5%"
+    },
+    "training_recommendations": {
+      "immediate_actions": [],
+      "communication_improvements": [],
+      "leadership_development": [],
+      "teamwork_enhancements": [],
+      "drills": [],
+      "discussion_topics": [],
+      "framework_alignment": {},
+      "total_recommendations": 0
+    },
+    "waveform_data": {
+      "sample_rate": 10,
+      "duration_seconds": 10.68,
+      "amplitude": [
+        0.010350494645535946,
+        0.011417104862630367,
+        0.009748642332851887,
+        0.00760278757661581,
+        0.004924243316054344,
+        0.0027731629088521004,
+        0.002692130161449313,
+        0.20420792698860168,
+        1.0,
+        0.748274028301239,
+        0.6073362231254578,
+        0.7437681555747986,
+        0.8866834044456482,
+        0.47514843940734863,
+        0.5686449408531189,
+        0.8291555643081665,
+        0.8784452080726624,
+        0.7884150147438049,
+        0.6478933095932007,
+        0.9201347827911377,
+        0.4877672493457794,
+        0.09404630213975906,
+        0.7800443768501282,
+        0.7305418848991394,
+        0.9221400022506714,
+        0.6496719121932983,
+        0.3068033456802368,
+        0.16048303246498108,
+        0.014222495257854462,
+        0.4516286551952362,
+        0.6531338095664978,
+        0.37970009446144104,
+        0.5779234766960144,
+        0.4794662892818451,
+        0.7576074600219727,
+        0.7363702654838562,
+        0.5143166184425354,
+        0.32486552000045776,
+        0.07383780926465988,
+        0.4689073860645294,
+        0.5230177640914917,
+        0.5240824222564697,
+        0.41376832127571106,
+        0.13583101332187653,
+        0.0004513951134867966,
+        0.00037400840665213764,
+        0.0003395560197532177,
+        0.0003642688679974526,
+        0.0003431578224990517,
+        0.0003699591034092009,
+        0.12550413608551025,
+        0.5691840052604675,
+        0.6481496691703796,
+        0.6542946696281433,
+        0.7083863019943237,
+        0.6176039576530457,
+        0.16947193443775177,
+        0.06126569211483002,
+        0.7267722487449646,
+        0.725566029548645,
+        0.43510499596595764,
+        0.36295607686042786,
+        0.3922949433326721,
+        0.30977699160575867,
+        0.3438211977481842,
+        0.6732302308082581,
+        0.4759334921836853,
+        0.47186270356178284,
+        0.48286697268486023,
+        0.5309406518936157,
+        0.4712289869785309,
+        0.7256854772567749,
+        0.3429718613624573,
+        0.29456111788749695,
+        0.14683422446250916,
+        0.0007347260252572596,
+        0.00040428526699543,
+        0.00035249729990027845,
+        0.0004705828905571252,
+        0.0004412311827763915,
+        0.0005648863734677434,
+        0.28246259689331055,
+        0.6092597842216492,
+        0.5857203602790833,
+        0.3956533968448639,
+        0.26202622056007385,
+        0.337637722492218,
+        0.1863880753517151,
+        0.23601646721363068,
+        0.12741529941558838,
+        0.005601187236607075,
+        0.0023679654113948345,
+        0.007296508643776178,
+        0.008286514319479465,
+        0.0020844785030931234,
+        0.021389110013842583,
+        0.6749724745750427,
+        0.5809237957000732,
+        0.46099838614463806,
+        0.2771492302417755,
+        0.1743011474609375,
+        0.06478235870599747,
+        0.028161387890577316,
+        0.014078072272241116,
+        0.01201015803962946,
+        0.011207581497728825
+      ],
+      "peak_amplitude": 0.316059,
+      "average_amplitude": 0.352335
+    },
+    "sentiment_summary": {
+      "average_stress": 0.065,
+      "peak_stress_time": 0.46,
+      "peak_stress_level": 0.065,
+      "stress_distribution": {
+        "low": 100,
+        "moderate": 0,
+        "high": 0
+      },
+      "speaker_stress": {
+        "speaker_1": {
+          "avg_stress": 0.065,
+          "peak": 0.065,
+          "dominant_emotion": "calm",
+          "segment_count": 1
+        }
+      },
+      "stress_timeline": [
+        {
+          "time": 0.46,
+          "stress": 0.065
+        }
+      ]
+    },
+    "narrative_summary": null,
+    "saved_recording_path": "data/recordings/recording_20260128_211425.wav",
+    "processing_time_seconds": 0,
+    "language": "en",
+    "diarization_methodology": "Single embedding found; single speaker assumed.",
+    "confidence_filter": {
+      "enabled": true,
+      "threshold": 0.1,
+      "total_segments": 1,
+      "included_segments": 1,
+      "excluded_segments": 0,
+      "excluded_percentage": 0.0,
+      "excluded_examples": []
+    },
+    "telemetry_correlation": {
+      "strategy": "smart",
+      "speakers_analyzed": 1,
+      "density_correlations": 0,
+      "command_patterns": 0,
+      "report_patterns": 0,
+      "negative_exclusions": 0,
+      "captain_detections": 0,
+      "event_count": 0,
+      "transcript_count": 1
+    },
+    "auto_title": "Signal Quality Testing Session"
+  }
+}

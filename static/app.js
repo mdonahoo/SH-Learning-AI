@@ -330,6 +330,8 @@ class ResultsRenderer {
         this.container = container;
         // Speaker-to-role mapping for displaying roles instead of speaker IDs
         this.speakerRoles = {};
+        // Chart.js instances for cleanup
+        this.chartInstances = [];
     }
 
     /**
@@ -400,17 +402,33 @@ class ResultsRenderer {
         document.getElementById('proc-time').textContent =
             `${results.processing_time_seconds.toFixed(1)}s`;
 
+        // Destroy old Chart.js instances
+        this.destroyCharts();
+
         // Render summary tab
         this.renderSummary(results);
+
+        // Render bridge station map
+        this.renderBridgeMap(results.role_assignments, results.speakers);
 
         // Render transcript
         this.renderTranscript(results.transcription, results.full_text);
 
-        // Render speakers
-        this.renderSpeakers(results.speakers, results.role_assignments);
+        // Render mission timeline (with sentiment if available)
+        this.renderTimeline(results.transcription, results.duration_seconds, results.sentiment_summary);
 
-        // Render scorecards
+        // Render waveform amplitude
+        this.renderWaveform(results.waveform_data, results.duration_seconds);
+
+        // Render speakers (with stress data if available)
+        this.renderSpeakers(results.speakers, results.role_assignments, results.sentiment_summary?.speaker_stress);
+
+        // Render scorecards + radar charts
         this.renderScorecards(results.speaker_scorecards);
+        this.renderRadarCharts(results.speaker_scorecards);
+
+        // Render stress timeline chart
+        this.renderStressTimeline(results.sentiment_summary);
 
         // Render quality
         this.renderQuality(results.communication_quality, results.confidence_distribution);
@@ -445,6 +463,26 @@ class ResultsRenderer {
         document.getElementById('summary-effective').textContent =
             `${effectivePct.toFixed(0)}%`;
 
+        // Stress metric card
+        const stressCard = document.getElementById('stress-metric-card');
+        const stressValueEl = document.getElementById('summary-stress');
+        const avgStress = results.sentiment_summary?.average_stress;
+        if (avgStress != null && stressCard && stressValueEl) {
+            // Backend uses 0-1 scale, convert to percentage
+            const stressPct = Math.round(avgStress * 100);
+            stressValueEl.textContent = `${stressPct}%`;
+            stressCard.classList.remove('hidden', 'stress-low', 'stress-moderate', 'stress-high');
+            if (stressPct < 40) {
+                stressCard.classList.add('stress-low');
+            } else if (stressPct < 70) {
+                stressCard.classList.add('stress-moderate');
+            } else {
+                stressCard.classList.add('stress-high');
+            }
+        } else if (stressCard) {
+            stressCard.classList.add('hidden');
+        }
+
         // Key metrics bars
         const habitsScore = results.seven_habits?.overall_score || 0;
         const habitsPercent = (habitsScore / 5) * 100;
@@ -455,9 +493,19 @@ class ResultsRenderer {
         document.getElementById('metric-quality-value').textContent = `${effectivePct.toFixed(0)}%`;
 
         const avgConfidence = results.confidence_distribution?.average_confidence || 0;
+        this.lastAvgConfidence = avgConfidence;
         const confidencePct = avgConfidence * 100;
         document.getElementById('metric-confidence-bar').style.width = `${confidencePct}%`;
-        document.getElementById('metric-confidence-value').textContent = `${confidencePct.toFixed(0)}%`;
+        const confValueEl = document.getElementById('metric-confidence-value');
+        confValueEl.textContent = `${confidencePct.toFixed(0)}%`;
+
+        // Remove any existing provisional badges before adding new one
+        const existingBadges = confValueEl.parentElement.querySelectorAll('.provisional-badge');
+        existingBadges.forEach(badge => badge.remove());
+
+        if (avgConfidence < 0.5) {
+            confValueEl.insertAdjacentHTML('afterend', '<span class="provisional-badge" data-tooltip="Scores are estimates due to low audio quality. Results may be less accurate than higher-confidence analyses.">Provisional</span>');
+        }
 
         // Top recommendations preview
         const topRecs = document.getElementById('top-recommendations');
@@ -467,17 +515,17 @@ class ResultsRenderer {
             const actions = results.training_recommendations.immediate_actions.slice(0, 3);
             const getPriorityIcon = (priority) => {
                 switch(priority.toUpperCase()) {
-                    case 'CRITICAL': return '🚨';
-                    case 'HIGH': return '⚠️';
-                    case 'MEDIUM': return '📋';
-                    default: return '💡';
+                    case 'CRITICAL': return '<svg class="icon icon-sm"><use href="#icon-shield"></use></svg>';
+                    case 'HIGH': return '<svg class="icon icon-sm"><use href="#icon-delta"></use></svg>';
+                    case 'MEDIUM': return '<svg class="icon icon-sm"><use href="#icon-crosshair"></use></svg>';
+                    default: return '<svg class="icon icon-sm"><use href="#icon-star"></use></svg>';
                 }
             };
             recsPreview.innerHTML = actions.map(action => `
                 <div class="rec-preview-item priority-${action.priority.toLowerCase()}">
                     <div class="rec-priority-indicator">
                         <span class="rec-priority-icon">${getPriorityIcon(action.priority)}</span>
-                        <span class="rec-priority-badge priority-${action.priority.toLowerCase()}">${action.priority}</span>
+                        <span class="rec-priority-badge priority-${action.priority.toLowerCase()}">${action.priority.toUpperCase() === 'CRITICAL' ? 'MISSION CRITICAL' : action.priority}</span>
                     </div>
                     <div class="rec-content">
                         <span class="rec-preview-title">${action.title}</span>
@@ -491,50 +539,58 @@ class ResultsRenderer {
         }
     }
 
+    highlightKeywords(text) {
+        const keywords = /\b(shields|fire|warp|red alert|enemy|damage|torpedo|phaser|evasive|hull|breach|sensors|cloak|engage|hail|alert|power|impulse|photon|deflector|tractor beam|weapons|helm|captain|commander)\b/gi;
+        return this.escapeHtml(text).replace(keywords, '<span class="keyword-highlight">$&</span>');
+    }
+
     renderTranscript(segments, fullText) {
         const container = document.getElementById('transcript-content');
 
         if (!segments || segments.length === 0) {
             container.innerHTML = '<p class="empty">No transcription available</p>';
         } else {
-            container.innerHTML = segments.map(seg => {
+            const isCaptain = (speakerId) => {
+                const roleInfo = this.speakerRoles[speakerId];
+                return roleInfo && (roleInfo.role === 'Captain/Command' || roleInfo.role === 'Captain');
+            };
+
+            container.innerHTML = `<div class="chat-transcript">${segments.map((seg, idx) => {
                 const displayName = this.getSpeakerDisplayName(seg.speaker_id, true);
-                const roleInfo = this.speakerRoles[seg.speaker_id];
-                const roleClass = roleInfo ? 'has-role' : '';
-                // Show transcription confidence with color coding
                 const conf = seg.confidence || 0;
                 const confPct = (conf * 100).toFixed(0);
                 const confClass = conf >= 0.7 ? 'conf-high' : conf >= 0.4 ? 'conf-medium' : 'conf-low';
-                const confTitle = 'Transcription accuracy confidence';
+                const bubbleAlign = isCaptain(seg.speaker_id) ? 'bubble-right' : 'bubble-left';
                 return `
-                <div class="segment ${roleClass}">
-                    <div class="segment-header">
-                        <span class="segment-speaker">${displayName}</span>
-                        <span class="segment-meta">
-                            <span class="segment-time">${this.formatTime(seg.start_time)} - ${this.formatTime(seg.end_time)}</span>
-                            <span class="segment-confidence ${confClass}" title="${confTitle}">${confPct}%</span>
-                        </span>
+                <div class="chat-bubble ${bubbleAlign}" data-index="${idx}">
+                    <span class="bubble-speaker">${displayName}</span>
+                    <div class="bubble-text">${this.highlightKeywords(seg.text)}</div>
+                    <div class="bubble-meta">
+                        <span class="bubble-time">${this.formatTime(seg.start_time)} - ${this.formatTime(seg.end_time)}</span>
+                        <div class="bubble-meta-badges">
+                            ${seg.sentiment?.emotion ? `<span class="emotion-badge emotion-${seg.sentiment.emotion}">${seg.sentiment.emotion}</span>` : ''}
+                            <span class="bubble-confidence ${confClass}" title="Signal quality">${confPct}%</span>
+                        </div>
                     </div>
-                    <div class="segment-text">${this.escapeHtml(seg.text)}</div>
                 </div>
-            `}).join('');
+            `}).join('')}</div>`;
         }
 
         document.getElementById('full-text').textContent = fullText || '';
     }
 
-    renderSpeakers(speakers, roleAssignments) {
+    renderSpeakers(speakers, roleAssignments, speakerStress) {
         const container = document.getElementById('speakers-content');
 
         // Define standard bridge roles with icons and descriptions
         const BRIDGE_ROLES = [
-            { id: 'Captain/Command', name: 'Captain', icon: '👨‍✈️', desc: 'Commands the bridge crew' },
-            { id: 'Helm/Navigation', name: 'Helm', icon: '🧭', desc: 'Pilots the ship' },
-            { id: 'Tactical/Weapons', name: 'Tactical', icon: '🎯', desc: 'Weapons and defense' },
-            { id: 'Science/Sensors', name: 'Science', icon: '🔬', desc: 'Sensors and analysis' },
-            { id: 'Engineering/Systems', name: 'Engineering', icon: '⚙️', desc: 'Ship systems and power' },
-            { id: 'Operations/Monitoring', name: 'Operations', icon: '📊', desc: 'Monitoring and logistics' },
-            { id: 'Communications', name: 'Comms', icon: '📡', desc: 'Hailing and signals' },
+            { id: 'Captain/Command', name: 'Captain', icon: '<svg class="icon"><use href="#icon-captain"></use></svg>', desc: 'Commands the bridge crew' },
+            { id: 'Helm/Navigation', name: 'Helm', icon: '<svg class="icon"><use href="#icon-helm"></use></svg>', desc: 'Pilots the ship' },
+            { id: 'Tactical/Weapons', name: 'Tactical', icon: '<svg class="icon"><use href="#icon-tactical"></use></svg>', desc: 'Weapons and defense' },
+            { id: 'Science/Sensors', name: 'Science', icon: '<svg class="icon"><use href="#icon-science"></use></svg>', desc: 'Sensors and analysis' },
+            { id: 'Engineering/Systems', name: 'Engineering', icon: '<svg class="icon"><use href="#icon-engineering"></use></svg>', desc: 'Ship systems and power' },
+            { id: 'Operations/Monitoring', name: 'Operations', icon: '<svg class="icon"><use href="#icon-crosshair"></use></svg>', desc: 'Monitoring and logistics' },
+            { id: 'Communications', name: 'Comms', icon: '<svg class="icon"><use href="#icon-comms"></use></svg>', desc: 'Hailing and signals' },
         ];
 
         // Build speaker data lookup
@@ -647,16 +703,35 @@ class ResultsRenderer {
                                         </div>
                                     </div>
 
+                                    ${(() => {
+                                        const stressInfo = speakerStress?.[sp.speaker_id];
+                                        if (!stressInfo) return '';
+                                        // Backend uses avg_stress (0-1 scale), convert to percentage
+                                        const avgStress = stressInfo.avg_stress != null ? Math.round(stressInfo.avg_stress * 100) : null;
+                                        const domEmotion = stressInfo.dominant_emotion || '';
+                                        if (avgStress == null) return '';
+                                        const stressClass = avgStress < 40 ? 'stress-low' : avgStress < 70 ? 'stress-moderate' : 'stress-high';
+                                        return `
+                                            <div class="speaker-stress-info">
+                                                <div class="speaker-stress-row">
+                                                    <span class="stress-indicator-label">Avg Stress</span>
+                                                    <span class="stress-indicator-value ${stressClass}">${avgStress}%</span>
+                                                    ${domEmotion ? `<span class="emotion-badge emotion-${domEmotion}">${domEmotion}</span>` : ''}
+                                                </div>
+                                            </div>
+                                        `;
+                                    })()}
+
                                     ${(voiceConf !== undefined || (telemetryConf !== undefined && telemetryConf > 0)) ? `
                                         <div class="confidence-sources">
                                             ${voiceConf !== undefined ? `
                                                 <span class="conf-source voice" title="Based on speech patterns and keywords">
-                                                    <span class="source-icon">🎤</span> Voice ${(voiceConf * 100).toFixed(0)}%
+                                                    <span class="source-icon"><svg class="icon icon-sm"><use href="#icon-waveform"></use></svg></span> Voice ${(voiceConf * 100).toFixed(0)}%
                                                 </span>
                                             ` : ''}
                                             ${telemetryConf !== undefined && telemetryConf > 0 ? `
                                                 <span class="conf-source telemetry" title="${evidenceCount} console actions matched">
-                                                    <span class="source-icon">🖥️</span> Telemetry +${(telemetryConf * 100).toFixed(0)}%
+                                                    <span class="source-icon"><svg class="icon icon-sm"><use href="#icon-crosshair"></use></svg></span> Telemetry +${(telemetryConf * 100).toFixed(0)}%
                                                 </span>
                                             ` : ''}
                                         </div>
@@ -670,9 +745,9 @@ class ResultsRenderer {
                                 </div>
                             `;
                         }).join('') : `
-                            <div class="role-empty">
-                                <span class="empty-icon">?</span>
-                                <span class="empty-text">Not detected</span>
+                            <div class="role-empty station-standby">
+                                <div class="standby-circle"></div>
+                                <span class="empty-text">Station Offline</span>
                             </div>
                         `}
                     </div>
@@ -687,7 +762,7 @@ class ResultsRenderer {
             html += `
                 <div class="role-card unassigned crew-members">
                     <div class="role-card-header">
-                        <span class="role-icon">👤</span>
+                        <span class="role-icon"><svg class="icon"><use href="#icon-crosshair"></use></svg></span>
                         <div class="role-info">
                             <span class="role-name">Other Crew</span>
                             <span class="role-desc">Role not yet determined</span>
@@ -773,7 +848,7 @@ class ResultsRenderer {
                     <div class="metric-sublabel">Opportunities for growth</div>
                 </div>
                 <div class="quality-metric-card total">
-                    <div class="metric-icon">📊</div>
+                    <div class="metric-icon"><svg class="icon"><use href="#icon-crosshair"></use></svg></div>
                     <div class="metric-value">${quality.total_utterances_assessed || (quality.effective_count + quality.improvement_count)}</div>
                     <div class="metric-label">Total Assessed</div>
                     <div class="metric-sublabel">Utterances analyzed</div>
@@ -796,8 +871,8 @@ class ResultsRenderer {
                 <div class="confidence-panel">
                     <div class="confidence-header">
                         <h3>
-                            <span class="section-icon">🎯</span>
-                            Transcription Confidence
+                            <span class="section-icon"><svg class="icon icon-sm"><use href="#icon-crosshair"></use></svg></span>
+                            Signal Quality
                         </h3>
                         <div class="confidence-summary">
                             <span class="conf-stat">
@@ -830,6 +905,9 @@ class ResultsRenderer {
                             ${confidenceDistribution.quality_assessment}
                         </div>
                     ` : ''}
+                    <div class="confidence-explanation">
+                        Signal quality reflects audio clarity in a live bridge environment. Scores below 50% are typical for multi-speaker, high-noise scenarios.
+                    </div>
                 </div>
             ` : ''}
 
@@ -923,22 +1001,53 @@ class ResultsRenderer {
             return;
         }
 
-        container.innerHTML = scorecards.map(card => `
+        const isProvisional = (this.lastAvgConfidence || 0) < 0.5;
+
+        // Badge map for high-scoring metrics
+        const badgeMap = {
+            'Communication Clarity': 'Ace Communicator',
+            'Protocol Adherence': 'Protocol Master',
+            'Team Coordination': 'Team Synergy',
+            'Situational Awareness': 'Tactical Eye',
+            'Leadership Initiative': 'Command Presence',
+            'Decision Quality': 'Sharp Thinker',
+            'Crisis Management': 'Cool Under Fire'
+        };
+
+        container.innerHTML = scorecards.map(card => {
+            // Determine earned badges
+            const earnedBadges = card.metrics
+                .filter(m => m.score >= 4 && badgeMap[m.name])
+                .map(m => badgeMap[m.name]);
+
+            return `
             <div class="scorecard">
                 <div class="scorecard-header">
                     <h3>
                         ${this.getSpeakerDisplayName(card.speaker_id)}
                         ${card.role && !this.speakerRoles[card.speaker_id] ? `<span class="speaker-role">${card.role}</span>` : ''}
+                        ${isProvisional ? '<span class="scorecard-provisional-label" data-tooltip="Low audio quality means these scores are estimates. Actual performance may differ.">Provisional</span>' : ''}
                     </h3>
                     <span class="overall-score">${card.overall_score.toFixed(1)}/5</span>
                 </div>
 
+                ${earnedBadges.length > 0 ? `
+                    <div class="crew-badges">
+                        ${earnedBadges.map(b => `<span class="crew-badge">${b}</span>`).join('')}
+                    </div>
+                ` : ''}
+
                 <div class="score-grid">
-                    ${card.metrics.map(m => `
+                    ${card.metrics.map(m => {
+                        const displayScore = isProvisional
+                            ? `${Math.max(1, m.score - 1)}-${Math.min(5, m.score + 1)}/5`
+                            : null;
+                        return `
                         <div class="score-item">
                             <div class="score-item-header">
                                 <span class="score-name">${m.name}</span>
                                 <div class="score-value">
+                                    ${displayScore ? `<span class="provisional-badge" style="font-size:0.6875rem" data-tooltip="Score range due to audio uncertainty">${displayScore}</span>` : ''}
                                     <div class="score-dots">
                                         ${[1,2,3,4,5].map(i => `
                                             <span class="score-dot ${i <= m.score ? 'filled score-' + m.score : ''}"></span>
@@ -962,7 +1071,7 @@ class ResultsRenderer {
                                 </div>
                             ` : ''}
                         </div>
-                    `).join('')}
+                    `}).join('')}
                 </div>
 
                 ${(card.strengths?.length > 0 || card.areas_for_improvement?.length > 0) ? `
@@ -982,7 +1091,7 @@ class ResultsRenderer {
                     </div>
                 ` : ''}
             </div>
-        `).join('');
+        `}).join('');
     }
 
     renderLearning(learning) {
@@ -1019,7 +1128,7 @@ class ResultsRenderer {
                 <div class="frameworks-grid">
                     ${learning.blooms_level ? `
                         <div class="framework-card blooms">
-                            <div class="framework-icon">🧠</div>
+                            <div class="framework-icon"><svg class="icon"><use href="#icon-science"></use></svg></div>
                             <div class="framework-label">Bloom's Taxonomy</div>
                             <div class="framework-value">${learning.blooms_level}</div>
                             <div class="framework-sublabel">Cognitive Level</div>
@@ -1027,7 +1136,7 @@ class ResultsRenderer {
                     ` : ''}
                     ${learning.nasa_tlx_score !== undefined ? `
                         <div class="framework-card nasa">
-                            <div class="framework-icon">🚀</div>
+                            <div class="framework-icon"><svg class="icon"><use href="#icon-delta"></use></svg></div>
                             <div class="framework-label">NASA TLX</div>
                             <div class="framework-value">${(learning.nasa_tlx_score * 100).toFixed(0)}%</div>
                             <div class="framework-sublabel">Workload Index</div>
@@ -1035,7 +1144,7 @@ class ResultsRenderer {
                     ` : ''}
                     ${learning.engagement_score !== undefined ? `
                         <div class="framework-card engagement">
-                            <div class="framework-icon">📊</div>
+                            <div class="framework-icon"><svg class="icon"><use href="#icon-crosshair"></use></svg></div>
                             <div class="framework-label">Engagement</div>
                             <div class="framework-value">${(learning.engagement_score * 100).toFixed(0)}%</div>
                             <div class="framework-sublabel">Overall Score</div>
@@ -1127,13 +1236,13 @@ class ResultsRenderer {
 
         // Icons and brief descriptions for each habit
         const habitInfo = {
-            1: { icon: '🎯', brief: 'Taking responsibility and initiative' },
-            2: { icon: '🧭', brief: 'Having clear goals and vision' },
-            3: { icon: '📋', brief: 'Prioritizing important tasks first' },
-            4: { icon: '🤝', brief: 'Finding solutions that benefit everyone' },
-            5: { icon: '👂', brief: 'Understanding others before being understood' },
-            6: { icon: '⚡', brief: 'Creative collaboration for better results' },
-            7: { icon: '🔄', brief: 'Continuous improvement and learning' }
+            1: { icon: '<svg class="icon"><use href="#icon-crosshair"></use></svg>', brief: 'Taking responsibility and initiative' },
+            2: { icon: '<svg class="icon"><use href="#icon-helm"></use></svg>', brief: 'Having clear goals and vision' },
+            3: { icon: '<svg class="icon"><use href="#icon-tactical"></use></svg>', brief: 'Prioritizing important tasks first' },
+            4: { icon: '<svg class="icon"><use href="#icon-comms"></use></svg>', brief: 'Finding solutions that benefit everyone' },
+            5: { icon: '<svg class="icon"><use href="#icon-waveform"></use></svg>', brief: 'Understanding others before being understood' },
+            6: { icon: '<svg class="icon"><use href="#icon-engineering"></use></svg>', brief: 'Creative collaboration for better results' },
+            7: { icon: '<svg class="icon"><use href="#icon-refresh"></use></svg>', brief: 'Continuous improvement and learning' }
         };
 
         container.innerHTML = `
@@ -1159,10 +1268,18 @@ class ResultsRenderer {
                 </div>
             </div>
 
+            <div class="power-level-bar">
+                <div class="power-level-label">System Power Level</div>
+                <div class="power-bar-track">
+                    <div class="power-bar-fill" style="width: ${(habits.overall_score / 5) * 100}%"></div>
+                </div>
+                <div class="power-value">${((habits.overall_score / 5) * 100).toFixed(0)}%</div>
+            </div>
+
             <div class="habits-grid">
                 ${habits.habits.map(h => {
                     const scoreClass = getScoreClass(h.score);
-                    const info = habitInfo[h.habit_number] || { icon: '📌', brief: '' };
+                    const info = habitInfo[h.habit_number] || { icon: '<svg class="icon"><use href="#icon-delta"></use></svg>', brief: '' };
                     const scorePercent = (h.score / 5) * 100;
                     return `
                     <div class="habit-card ${scoreClass}">
@@ -1199,7 +1316,7 @@ class ResultsRenderer {
 
                         ${h.development_tip ? `
                             <div class="habit-tip-box">
-                                <span class="tip-icon">💡</span>
+                                <span class="tip-icon"><svg class="icon icon-sm"><use href="#icon-delta"></use></svg></span>
                                 <div class="tip-content">
                                     <span class="tip-label">Growth Tip</span>
                                     <span class="tip-text">${h.development_tip}</span>
@@ -1216,13 +1333,13 @@ class ResultsRenderer {
                                 <div class="habit-evidence-content">
                                     ${h.gap_to_next_score ? `
                                         <div class="gap-info">
-                                            <span class="evidence-label">📈 How to Improve</span>
+                                            <span class="evidence-label">How to Improve</span>
                                             <p>${h.gap_to_next_score}</p>
                                         </div>
                                     ` : ''}
                                     ${h.examples?.length > 0 ? `
                                         <div class="examples-list">
-                                            <span class="evidence-label">💬 Examples from Session</span>
+                                            <span class="evidence-label">Examples from Session</span>
                                             ${h.examples.slice(0, 3).map(ex => `
                                                 <div class="example-item">
                                                     <span class="ex-speaker">${this.getSpeakerDisplayName(ex.speaker) || 'Speaker'}</span>
@@ -1275,7 +1392,7 @@ class ResultsRenderer {
                                     </div>
                                     ${g.development_tip ? `
                                         <p class="summary-tip">
-                                            <span class="tip-bullet">💡</span> ${g.development_tip}
+                                            <span class="tip-bullet"><svg class="icon icon-sm"><use href="#icon-delta"></use></svg></span> ${g.development_tip}
                                         </p>
                                     ` : ''}
                                 </div>
@@ -1285,6 +1402,17 @@ class ResultsRenderer {
                 ` : ''}
             </div>
         `;
+    }
+
+    tactifyDrillName(name) {
+        if (!name) return name;
+        if (name.toLowerCase().endsWith(' drill')) {
+            return 'Protocol Override: ' + name.slice(0, -6).trim();
+        }
+        if (name.toLowerCase().endsWith(' exercise')) {
+            return 'Tactical Exercise: ' + name.slice(0, -9).trim();
+        }
+        return name;
     }
 
     renderTraining(training) {
@@ -1310,7 +1438,7 @@ class ResultsRenderer {
                                 <div class="action-priority-bar"></div>
                                 <div class="action-content">
                                     <div class="action-header">
-                                        <span class="priority-tag ${action.priority.toLowerCase()}">${action.priority}</span>
+                                        <span class="priority-tag ${action.priority.toLowerCase()}">${action.priority.toUpperCase() === 'CRITICAL' ? 'MISSION CRITICAL' : action.priority}</span>
                                         <span class="action-category">${action.category}</span>
                                     </div>
                                     <h4 class="action-title">${action.title}</h4>
@@ -1346,23 +1474,29 @@ class ResultsRenderer {
                 <div class="training-section">
                     <h3>Training Drills</h3>
                     <div class="drills-list">
-                        ${training.drills.map(drill => `
-                            <div class="drill-card">
+                        ${training.drills.map((drill, drillIdx) => `
+                            <div class="drill-card" id="drill-card-${drillIdx}">
                                 <div class="drill-card-header">
-                                    <span class="drill-title">${drill.name}</span>
+                                    <span class="drill-title">${this.tactifyDrillName(drill.name)}</span>
                                     <span class="drill-time">
-                                        <span class="time-icon">⏱</span>
+                                        <span class="time-icon"><svg class="icon icon-sm"><use href="#icon-crosshair"></use></svg></span>
                                         ${drill.duration}
                                     </span>
                                 </div>
                                 <div class="drill-body">
                                     <p class="drill-purpose">${drill.purpose}</p>
+                                    <button class="btn-drill-initiate" onclick="app.initiateDrill(this, ${drillIdx})">[ INITIATE DRILL ]</button>
+                                </div>
+                                <div class="drill-expanded hidden" id="drill-expanded-${drillIdx}">
                                     ${drill.steps && drill.steps.length > 0 ? `
                                         <div class="drill-steps">
                                             <span class="steps-label">Steps</span>
-                                            <ol class="steps-list">
-                                                ${drill.steps.map(s => `<li>${s}</li>`).join('')}
-                                            </ol>
+                                            ${drill.steps.map((s, sIdx) => `
+                                                <label class="drill-step-check" id="drill-step-${drillIdx}-${sIdx}">
+                                                    <input type="checkbox" onchange="this.parentElement.classList.toggle('checked', this.checked)">
+                                                    <span>${s}</span>
+                                                </label>
+                                            `).join('')}
                                         </div>
                                     ` : ''}
                                     ${drill.debrief_questions && drill.debrief_questions.length > 0 ? `
@@ -1373,6 +1507,7 @@ class ResultsRenderer {
                                             </ul>
                                         </div>
                                     ` : ''}
+                                    <button class="btn-drill-complete" onclick="app.completeDrill(this, ${drillIdx})">[ COMPLETE DRILL ]</button>
                                 </div>
                             </div>
                         `).join('')}
@@ -1595,7 +1730,7 @@ class ResultsRenderer {
                 if (llmSkippedReason) {
                     unavailableEl.innerHTML = `
                         <div class="llm-skipped-notice">
-                            <span class="notice-icon">⏱️</span>
+                            <span class="notice-icon"><svg class="icon"><use href="#icon-shield"></use></svg></span>
                             <strong>AI Debrief Skipped</strong>
                             <p>${llmSkippedReason}</p>
                             <p class="notice-tip">Click "Regenerate" above to generate it now, or check other tabs for analysis metrics.</p>
@@ -1657,7 +1792,7 @@ class ResultsRenderer {
                 if (llmSkippedReason) {
                     unavailableEl.innerHTML = `
                         <div class="llm-skipped-notice">
-                            <span class="notice-icon">⏱️</span>
+                            <span class="notice-icon"><svg class="icon"><use href="#icon-shield"></use></svg></span>
                             <strong>Mission Story Skipped</strong>
                             <p>${llmSkippedReason}</p>
                             <p class="notice-tip">Click "Regenerate" above to generate it now, or check other tabs for analysis metrics.</p>
@@ -2109,6 +2244,546 @@ class ResultsRenderer {
 
         return md;
     }
+
+    // =========================================================================
+    // LCARS Visualizations
+    // =========================================================================
+
+    destroyCharts() {
+        for (const chart of this.chartInstances) {
+            try { chart.destroy(); } catch (e) {}
+        }
+        this.chartInstances = [];
+    }
+
+    renderBridgeMap(roleAssignments, speakers) {
+        const stations = document.querySelectorAll('.bridge-station');
+        if (!stations.length) return;
+
+        // Build role-to-speaker map
+        const roleMap = {};
+        if (roleAssignments) {
+            for (const ra of roleAssignments) {
+                roleMap[ra.role] = ra;
+            }
+        }
+
+        // Calculate total speaking time for all speakers
+        const speakerDataMap = {};
+        if (speakers) {
+            for (const s of speakers) {
+                speakerDataMap[s.speaker_id] = s;
+            }
+        }
+
+        stations.forEach(station => {
+            const role = station.dataset.role;
+            const crewEl = station.querySelector('.station-crew');
+            const confEl = station.querySelector('.station-conf');
+            const ra = roleMap[role];
+
+            if (ra) {
+                station.classList.add('station-glow', 'assigned');
+                station.classList.remove('unassigned');
+                const displayName = this.getSpeakerDisplayName(ra.speaker_id);
+                if (crewEl) crewEl.textContent = displayName;
+                if (confEl) {
+                    const pct = (ra.confidence * 100).toFixed(0);
+                    confEl.textContent = `${pct}%`;
+                    confEl.className = 'station-conf ' + (ra.confidence >= 0.7 ? 'high' : ra.confidence >= 0.4 ? 'medium' : 'low');
+                }
+
+                // Click to switch to Crew Stations tab
+                station.style.cursor = 'pointer';
+                station.onclick = () => {
+                    if (window.app) {
+                        window.app.switchTab('crew-stations');
+                    }
+                };
+            } else {
+                station.classList.remove('station-glow', 'assigned');
+                station.classList.add('unassigned');
+                if (crewEl) crewEl.innerHTML = '<span class="station-offline">Station Offline</span>';
+                if (confEl) {
+                    confEl.textContent = '';
+                    confEl.className = 'station-conf';
+                }
+                station.style.cursor = 'default';
+                station.onclick = null;
+            }
+        });
+    }
+
+    renderTimeline(segments, durationSeconds, sentimentSummary) {
+        const container = document.getElementById('mission-timeline');
+        if (!container || !segments || segments.length === 0 || !durationSeconds) {
+            if (container) container.innerHTML = '';
+            return;
+        }
+
+        // Assign colors to speakers
+        const speakerColors = [
+            'var(--lcars-gold)', 'var(--lcars-blue)', 'var(--lcars-purple)',
+            'var(--lcars-lilac)', 'var(--lcars-orange)', 'var(--lcars-tan)'
+        ];
+        const speakerIds = [...new Set(segments.map(s => s.speaker_id))];
+        const colorMap = {};
+        speakerIds.forEach((id, i) => {
+            colorMap[id] = speakerColors[i % speakerColors.length];
+        });
+
+        // Build timeline blocks with confidence-based opacity
+        const blocks = segments.map((seg, idx) => {
+            const left = (seg.start_time / durationSeconds) * 100;
+            const width = Math.max(0.5, ((seg.end_time - seg.start_time) / durationSeconds) * 100);
+            const color = colorMap[seg.speaker_id] || 'var(--lcars-gold)';
+            const conf = seg.confidence || 0.5;
+            const opacity = 0.3 + (conf * 0.7);
+            // Backend uses 0-1 scale, convert to percentage for display
+            const stressVal = seg.sentiment?.stress_level != null ? Math.round(seg.sentiment.stress_level * 100) : '';
+            const emotionVal = seg.sentiment?.emotion || '';
+            const stressLabel = stressVal !== '' ? (stressVal < 40 ? 'low' : stressVal < 70 ? 'moderate' : 'high') : '';
+            return `<div class="timeline-block" data-index="${idx}"
+                data-speaker="${this.escapeHtml(this.getSpeakerDisplayName(seg.speaker_id, true))}"
+                data-text="${this.escapeHtml(seg.text.substring(0, 120))}"
+                data-start="${seg.start_time}"
+                data-end="${seg.end_time}"
+                data-confidence="${conf}"
+                data-stress="${stressVal}"
+                data-emotion="${emotionVal}"
+                data-stress-label="${stressLabel}"
+                style="left:${left}%;width:${width}%;background:${color};opacity:${opacity.toFixed(2)}"></div>`;
+        }).join('');
+
+        // Build stress track blocks (if sentiment data exists)
+        const hasSentiment = segments.some(s => s.sentiment?.stress_level != null);
+        const stressBlocks = hasSentiment ? segments.map(seg => {
+            if (seg.sentiment?.stress_level == null) return '';
+            const left = (seg.start_time / durationSeconds) * 100;
+            const width = Math.max(0.5, ((seg.end_time - seg.start_time) / durationSeconds) * 100);
+            const stress = seg.sentiment.stress_level * 100; // Convert 0-1 to percentage
+            const stressColor = stress < 40 ? 'var(--stress-low)' : stress < 70 ? 'var(--stress-moderate)' : 'var(--stress-high)';
+            return `<div class="timeline-stress-block" style="left:${left}%;width:${width}%;background:${stressColor}"></div>`;
+        }).join('') : '';
+
+        // Time markers
+        const markers = [0, 25, 50, 75, 100].map(pct => {
+            const time = this.formatTime((pct / 100) * durationSeconds);
+            return `<span class="timeline-marker" style="left:${pct}%">${time}</span>`;
+        }).join('');
+
+        // Speaker legend
+        const legend = speakerIds.map(id => {
+            const color = colorMap[id];
+            const name = this.getSpeakerDisplayName(id);
+            return `<span class="timeline-legend-item">
+                <span class="timeline-legend-swatch" style="background:${color}"></span>
+                ${name}
+            </span>`;
+        }).join('');
+
+        container.innerHTML = `
+            <div class="timeline-label">Mission Timeline</div>
+            <div class="timeline-bar">
+                <div class="timeline-bar-inner">
+                    ${blocks}
+                </div>
+                <div class="timeline-tooltip" id="timeline-tooltip"></div>
+            </div>
+            ${hasSentiment ? `
+                <div class="timeline-stress-label">Stress Level</div>
+                <div class="timeline-stress-bar">
+                    <div class="timeline-stress-bar-inner">
+                        ${stressBlocks}
+                    </div>
+                </div>
+            ` : ''}
+            <div class="timeline-markers">${markers}</div>
+            <div class="timeline-legend">${legend}</div>
+        `;
+
+        // Tooltip handler
+        const tooltip = container.querySelector('#timeline-tooltip');
+        container.querySelectorAll('.timeline-block').forEach(block => {
+            block.addEventListener('mouseenter', (e) => {
+                const speaker = block.dataset.speaker;
+                const text = block.dataset.text;
+                const startTime = parseFloat(block.dataset.start);
+                const endTime = parseFloat(block.dataset.end);
+                const conf = parseFloat(block.dataset.confidence);
+                const confPct = (conf * 100).toFixed(0);
+                const confClass = conf >= 0.7 ? 'conf-high' : conf >= 0.4 ? 'conf-medium' : 'conf-low';
+
+                const stress = block.dataset.stress;
+                const emotion = block.dataset.emotion;
+                const stressLabel = block.dataset.stressLabel;
+
+                tooltip.innerHTML = `
+                    <div class="tooltip-speaker">${speaker}</div>
+                    <div class="tooltip-text">${text}</div>
+                    <div class="tooltip-meta">
+                        <span class="tooltip-time">${this.formatTime(startTime)} - ${this.formatTime(endTime)}</span>
+                        <span class="tooltip-confidence ${confClass}">${confPct}%</span>
+                    </div>
+                    ${stress ? `
+                        <div class="tooltip-sentiment">
+                            <span class="tooltip-stress stress-${stressLabel}">Stress: ${Math.round(stress)}%</span>
+                            ${emotion ? `<span class="tooltip-emotion">${emotion}</span>` : ''}
+                        </div>
+                    ` : ''}
+                `;
+
+                // Position tooltip centered on block
+                const barRect = block.parentElement.getBoundingClientRect();
+                const blockRect = block.getBoundingClientRect();
+                const blockCenter = blockRect.left - barRect.left + blockRect.width / 2;
+                tooltip.style.left = blockCenter + 'px';
+                tooltip.classList.add('visible');
+            });
+
+            block.addEventListener('mouseleave', () => {
+                tooltip.classList.remove('visible');
+            });
+
+            // Click handler: highlight transcript chat bubble + click-to-play audio
+            block.addEventListener('click', () => {
+                const idx = parseInt(block.dataset.index);
+                const startTime = parseFloat(block.dataset.start);
+
+                // Highlight chat bubble in transcript
+                const transcriptList = document.getElementById('transcript-content');
+                if (transcriptList) {
+                    const bubbles = transcriptList.querySelectorAll('.chat-bubble');
+                    bubbles.forEach(s => s.classList.remove('highlighted'));
+                    if (bubbles[idx]) {
+                        bubbles[idx].classList.add('highlighted');
+                        if (window.app) {
+                            window.app.switchTab('mission-log');
+                        }
+                        bubbles[idx].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+
+                // Click-to-play audio
+                const audioPlayer = document.getElementById('audio-player');
+                if (audioPlayer && audioPlayer.src) {
+                    audioPlayer.currentTime = startTime;
+                    audioPlayer.play();
+                    const audioPreview = document.getElementById('audio-preview');
+                    if (audioPreview) audioPreview.classList.remove('hidden');
+                }
+            });
+        });
+    }
+
+    renderWaveform(waveformData, durationSeconds) {
+        // Remove any existing waveform
+        const existing = document.querySelector('.waveform-canvas-wrapper');
+        if (existing) existing.remove();
+
+        if (!waveformData?.amplitude || waveformData.amplitude.length === 0) return;
+
+        const container = document.getElementById('mission-timeline');
+        if (!container) return;
+
+        // Insert waveform after the stress bar (or timeline bar) and before time markers
+        const markersEl = container.querySelector('.timeline-markers');
+        if (!markersEl) return;
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'waveform-canvas-wrapper';
+        wrapper.innerHTML = `
+            <div class="waveform-label">Audio Amplitude</div>
+            <canvas class="waveform-canvas"></canvas>
+        `;
+        container.insertBefore(wrapper, markersEl);
+
+        const canvas = wrapper.querySelector('.waveform-canvas');
+        this.drawWaveformCanvas(canvas, waveformData.amplitude);
+
+        // Keep canvas width aligned with timeline bar via ResizeObserver
+        const timelineBar = container.querySelector('.timeline-bar');
+        if (timelineBar && typeof ResizeObserver !== 'undefined') {
+            const ro = new ResizeObserver(() => {
+                const barWidth = timelineBar.clientWidth;
+                if (canvas.width !== barWidth) {
+                    canvas.width = barWidth;
+                    this.drawWaveformCanvas(canvas, waveformData.amplitude);
+                }
+            });
+            ro.observe(timelineBar);
+        }
+    }
+
+    drawWaveformCanvas(canvas, amplitudeData) {
+        if (!canvas || !amplitudeData || amplitudeData.length === 0) return;
+
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width || canvas.clientWidth;
+        const h = canvas.height || canvas.clientHeight;
+        canvas.width = w;
+        canvas.height = h;
+
+        ctx.clearRect(0, 0, w, h);
+
+        // Draw filled area chart
+        const len = amplitudeData.length;
+        const step = w / (len - 1 || 1);
+
+        ctx.beginPath();
+        ctx.moveTo(0, h);
+        for (let i = 0; i < len; i++) {
+            const x = i * step;
+            const val = Math.min(1, Math.max(0, amplitudeData[i]));
+            const y = h - val * h;
+            if (i === 0) {
+                ctx.lineTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        }
+        ctx.lineTo(w, h);
+        ctx.closePath();
+
+        // Fill with LCARS blue gradient
+        const gradient = ctx.createLinearGradient(0, 0, 0, h);
+        gradient.addColorStop(0, 'rgba(153, 204, 255, 0.6)');
+        gradient.addColorStop(1, 'rgba(153, 204, 255, 0.05)');
+        ctx.fillStyle = gradient;
+        ctx.fill();
+
+        // Stroke the top edge
+        ctx.beginPath();
+        ctx.moveTo(0, h);
+        for (let i = 0; i < len; i++) {
+            const x = i * step;
+            const val = Math.min(1, Math.max(0, amplitudeData[i]));
+            const y = h - val * h;
+            ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = 'rgba(153, 204, 255, 0.8)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
+
+    renderRadarCharts(scorecards) {
+        if (!scorecards || scorecards.length === 0) return;
+        if (typeof Chart === 'undefined') return;
+
+        scorecards.forEach((card, idx) => {
+            // Find or create canvas in the scorecard
+            const scorecardEls = document.querySelectorAll('#scorecards-content .scorecard');
+            if (!scorecardEls[idx]) return;
+
+            // Check if canvas already exists
+            let canvas = scorecardEls[idx].querySelector('.radar-canvas');
+            if (!canvas) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'radar-chart-wrapper';
+                canvas = document.createElement('canvas');
+                canvas.className = 'radar-canvas';
+                canvas.width = 280;
+                canvas.height = 280;
+                wrapper.appendChild(canvas);
+                // Insert after scorecard-header
+                const header = scorecardEls[idx].querySelector('.scorecard-header');
+                if (header && header.nextSibling) {
+                    scorecardEls[idx].insertBefore(wrapper, header.nextSibling);
+                } else {
+                    scorecardEls[idx].appendChild(wrapper);
+                }
+            }
+
+            const labels = card.metrics.map(m => m.name.length > 15 ? m.name.substring(0, 14) + '...' : m.name);
+            const data = card.metrics.map(m => m.score);
+
+            const chart = new Chart(canvas, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: this.getSpeakerDisplayName(card.speaker_id),
+                        data: data,
+                        backgroundColor: 'rgba(153, 204, 255, 0.2)',
+                        borderColor: 'rgba(153, 204, 255, 0.8)',
+                        pointBackgroundColor: '#FFCC99',
+                        pointBorderColor: '#FFCC99',
+                        pointRadius: 4,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        r: {
+                            min: 0,
+                            max: 5,
+                            ticks: {
+                                stepSize: 1,
+                                color: 'rgba(240, 232, 216, 0.5)',
+                                backdropColor: 'transparent',
+                                font: { size: 10 }
+                            },
+                            grid: {
+                                color: 'rgba(153, 204, 255, 0.15)'
+                            },
+                            angleLines: {
+                                color: 'rgba(153, 204, 255, 0.15)'
+                            },
+                            pointLabels: {
+                                color: 'rgba(240, 232, 216, 0.8)',
+                                font: { size: 11, family: 'Inter' }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+
+            this.chartInstances.push(chart);
+        });
+    }
+
+    renderStressTimeline(sentimentSummary) {
+        const section = document.getElementById('stress-timeline-chart');
+        const canvas = document.getElementById('stress-timeline-canvas');
+        if (!section || !canvas) return;
+
+        const timeline = sentimentSummary?.stress_timeline;
+        if (!timeline || timeline.length === 0) {
+            section.classList.add('hidden');
+            return;
+        }
+
+        section.classList.remove('hidden');
+
+        if (typeof Chart === 'undefined') return;
+
+        const labels = timeline.map(p => {
+            const totalSec = p.time || 0;
+            const min = Math.floor(totalSec / 60);
+            const sec = Math.floor(totalSec % 60);
+            return `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+        });
+        const data = timeline.map(p => (p.stress || 0) * 100); // Convert 0-1 to percentage
+
+        const ctx = canvas.getContext('2d');
+
+        // Gradient fill: green at bottom, orange in middle, red at top
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.parentElement.clientHeight || 200);
+        gradient.addColorStop(0, 'rgba(204, 102, 102, 0.4)');
+        gradient.addColorStop(0.5, 'rgba(255, 153, 51, 0.25)');
+        gradient.addColorStop(1, 'rgba(102, 204, 153, 0.1)');
+
+        const chart = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Stress Level',
+                    data: data,
+                    fill: true,
+                    backgroundColor: gradient,
+                    borderColor: 'rgba(255, 204, 153, 0.8)',
+                    borderWidth: 2,
+                    pointBackgroundColor: 'rgba(255, 204, 153, 1)',
+                    pointBorderColor: 'rgba(255, 204, 153, 1)',
+                    pointRadius: 2,
+                    pointHoverRadius: 5,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        min: 0,
+                        max: 100,
+                        ticks: {
+                            stepSize: 25,
+                            color: 'rgba(240, 232, 216, 0.5)',
+                            font: { family: 'JetBrains Mono', size: 10 },
+                            callback: (val) => val + '%'
+                        },
+                        grid: {
+                            color: 'rgba(153, 204, 255, 0.1)'
+                        },
+                        title: {
+                            display: true,
+                            text: 'STRESS',
+                            color: 'rgba(240, 232, 216, 0.5)',
+                            font: { family: 'Antonio', size: 11, weight: 600 }
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: 'rgba(240, 232, 216, 0.5)',
+                            font: { family: 'JetBrains Mono', size: 10 },
+                            maxRotation: 0,
+                            autoSkip: true,
+                            maxTicksLimit: 10
+                        },
+                        grid: {
+                            color: 'rgba(153, 204, 255, 0.05)'
+                        },
+                        title: {
+                            display: true,
+                            text: 'MISSION TIME',
+                            color: 'rgba(240, 232, 216, 0.5)',
+                            font: { family: 'Antonio', size: 11, weight: 600 }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(13, 13, 36, 0.95)',
+                        titleColor: '#FFCC99',
+                        bodyColor: '#F0E8D8',
+                        borderColor: 'rgba(255, 204, 153, 0.3)',
+                        borderWidth: 1,
+                        titleFont: { family: 'Antonio', size: 12 },
+                        bodyFont: { family: 'JetBrains Mono', size: 11 },
+                        callbacks: {
+                            label: (context) => `Stress: ${Math.round(context.parsed.y)}%`
+                        }
+                    }
+                }
+            }
+        });
+
+        this.chartInstances.push(chart);
+    }
+
+    animateValue(element, start, end, duration, suffix = '') {
+        if (!element) return;
+        const range = end - start;
+        const startTime = performance.now();
+
+        const step = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            // Ease-out cubic
+            const eased = 1 - Math.pow(1 - progress, 3);
+            const current = start + range * eased;
+
+            if (Number.isInteger(end)) {
+                element.textContent = Math.round(current) + suffix;
+            } else {
+                element.textContent = current.toFixed(1) + suffix;
+            }
+
+            if (progress < 1) {
+                requestAnimationFrame(step);
+            }
+        };
+
+        requestAnimationFrame(step);
+    }
 }
 
 
@@ -2186,7 +2861,7 @@ class App {
             const notice = document.createElement('div');
             notice.className = 'audio-disabled-notice';
             notice.innerHTML = `
-                <span class="notice-icon">🔒</span>
+                <span class="notice-icon"><svg class="icon"><use href="#icon-shield"></use></svg></span>
                 <div class="notice-text">
                     <strong>Audio Upload Disabled</strong>
                     <p>Audio recording and upload are disabled on this server. You can still view existing analyses from the archive below.</p>
@@ -2233,7 +2908,7 @@ class App {
         const existingNotice = document.querySelector('.audio-disabled-notice');
         if (existingNotice) {
             existingNotice.innerHTML = `
-                <span class="notice-icon">📖</span>
+                <span class="notice-icon"><svg class="icon"><use href="#icon-shield"></use></svg></span>
                 <div class="notice-text">
                     <strong>Read-Only Mode</strong>
                     <p>This server is in read-only mode. You can browse and download existing analyses from the archive below, but new analysis and regeneration are disabled.</p>
@@ -2434,7 +3109,7 @@ class App {
     async toggleRecording() {
         if (this.recorder.isRecording) {
             // Stop recording
-            this.recordBtn.innerHTML = '<span class="icon">&#9679;</span> Record';
+            this.recordBtn.innerHTML = '<svg class="icon"><use href="#icon-record"></use></svg><span>Record</span>';
             this.recordBtn.classList.remove('recording');
             clearInterval(this.timerInterval);
 
@@ -2476,7 +3151,7 @@ class App {
                 }
 
                 await this.recorder.start();
-                this.recordBtn.innerHTML = '<span class="icon">&#9632;</span> Stop';
+                this.recordBtn.innerHTML = '<svg class="icon"><use href="#icon-stop"></use></svg><span>Stop</span>';
                 this.recordBtn.classList.add('recording');
 
                 // Update timer
@@ -2624,7 +3299,9 @@ class App {
             if (metadata) {
                 this.currentMetadata = metadata;
                 this.titleInput.value = metadata.display_title || '';
-                this.starBtn.innerHTML = metadata.starred ? '&#9733;' : '&#9734;';
+                this.starBtn.innerHTML = metadata.starred
+                    ? '<svg class="icon"><use href="#icon-star-filled"></use></svg>'
+                    : '<svg class="icon"><use href="#icon-star"></use></svg>';
                 this.starBtn.classList.toggle('starred', metadata.starred);
             }
         } else {
@@ -2661,7 +3338,9 @@ class App {
                 starred: newStarred
             });
 
-            this.starBtn.innerHTML = newStarred ? '&#9733;' : '&#9734;';
+            this.starBtn.innerHTML = newStarred
+                ? '<svg class="icon"><use href="#icon-star-filled"></use></svg>'
+                : '<svg class="icon"><use href="#icon-star"></use></svg>';
             this.starBtn.classList.toggle('starred', newStarred);
 
             if (this.currentMetadata) {
@@ -3020,7 +3699,7 @@ class App {
                 <div class="archive-item ${isStarred ? 'starred' : ''}" data-filename="${analysis.filename}">
                     <div class="archive-item-info" onclick="app.loadArchivedAnalysis('${analysis.filename}')">
                         <div class="archive-item-header">
-                            ${isStarred ? '<span class="star-indicator">&#9733;</span>' : ''}
+                            ${isStarred ? '<span class="star-indicator"><svg class="icon icon-sm"><use href="#icon-star-filled"></use></svg></span>' : ''}
                             <span class="archive-item-title">${this.escapeHtml(title)}</span>
                         </div>
                         <div class="archive-item-meta">
@@ -3032,12 +3711,12 @@ class App {
                     <div class="archive-item-actions">
                         ${analysis.recording_filename && !this.audioDisabled ? `
                             <button class="btn-icon" onclick="event.stopPropagation(); app.downloadArchivedAudio('${analysis.recording_filename}')" title="Download Audio">
-                                &#127911;
+                                <svg class="icon"><use href="#icon-waveform"></use></svg>
                             </button>
                         ` : ''}
                         ${!this.readOnlyMode ? `
                             <button class="btn-icon delete" onclick="event.stopPropagation(); app.deleteAnalysis('${analysis.filename}')" title="Delete">
-                                &#128465;
+                                <svg class="icon"><use href="#icon-trash"></use></svg>
                             </button>
                         ` : ''}
                     </div>
@@ -3071,6 +3750,10 @@ class App {
                 if (data.metadata && data.metadata.recording_file) {
                     this.savedRecordingPath = `data/recordings/${data.metadata.recording_file}`;
                     this.downloadAudioBtn.classList.remove('hidden');
+                    // Set audio player source for click-to-play timeline
+                    if (this.audioPlayer) {
+                        this.audioPlayer.src = `/api/recordings/${data.metadata.recording_file}`;
+                    }
                 } else {
                     this.downloadAudioBtn.classList.add('hidden');
                 }
@@ -3220,7 +3903,7 @@ class App {
                     unavailableEl.classList.remove('hidden');
                     unavailableEl.innerHTML = `
                         <div class="llm-skipped-notice">
-                            <span class="notice-icon">❌</span>
+                            <span class="notice-icon"><svg class="icon"><use href="#icon-shield"></use></svg></span>
                             <strong>Generation Failed</strong>
                             <p>${error.message}</p>
                             <p class="notice-tip">Click "Regenerate" to try again.</p>
@@ -3330,7 +4013,7 @@ class App {
                     unavailableEl.classList.remove('hidden');
                     unavailableEl.innerHTML = `
                         <div class="llm-skipped-notice">
-                            <span class="notice-icon">❌</span>
+                            <span class="notice-icon"><svg class="icon"><use href="#icon-shield"></use></svg></span>
                             <strong>Generation Failed</strong>
                             <p>${error.message}</p>
                             <p class="notice-tip">Click "Regenerate" to try again.</p>
@@ -3350,6 +4033,36 @@ class App {
         const mins = Math.floor(seconds / 60);
         const secs = Math.floor(seconds % 60);
         return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    initiateDrill(button, drillIdx) {
+        const card = document.getElementById(`drill-card-${drillIdx}`);
+        const expanded = document.getElementById(`drill-expanded-${drillIdx}`);
+        if (!card || !expanded) return;
+
+        // Hide the initiate button
+        button.classList.add('hidden');
+        // Show expanded section
+        expanded.classList.remove('hidden');
+        // Add active glow
+        card.classList.add('drill-active');
+    }
+
+    completeDrill(button, drillIdx) {
+        const card = document.getElementById(`drill-card-${drillIdx}`);
+        const expanded = document.getElementById(`drill-expanded-${drillIdx}`);
+        if (!card || !expanded) return;
+
+        // Success animation
+        card.classList.remove('drill-active');
+        card.classList.add('drill-completing');
+
+        setTimeout(() => {
+            card.classList.remove('drill-completing');
+            card.classList.add('drill-completed');
+            // Collapse the expanded section
+            expanded.classList.add('hidden');
+        }, 800);
     }
 
     showStatus(message, type = 'info') {

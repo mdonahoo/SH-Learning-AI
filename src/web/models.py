@@ -8,6 +8,24 @@ from typing import Dict, List, Optional, Any
 from pydantic import BaseModel, Field
 
 
+class SegmentSentiment(BaseModel):
+    """Per-segment stress and sentiment analysis result."""
+
+    stress_level: float = Field(description="Composite stress score (0-1)")
+    stress_label: str = Field(description="Stress category: low/moderate/high")
+    emotion: str = Field(
+        description="Emotion label: calm/focused/tense/urgent/critical"
+    )
+    sentiment: str = Field(description="Polarity: positive/neutral/negative")
+    sentiment_score: float = Field(
+        description="Sentiment polarity score (-1 to 1)"
+    )
+    signals: Dict[str, float] = Field(
+        default_factory=dict,
+        description="Breakdown of individual scoring signals"
+    )
+
+
 class TranscriptionSegment(BaseModel):
     """Single transcription segment with speaker attribution."""
 
@@ -22,6 +40,9 @@ class TranscriptionSegment(BaseModel):
     )
     speaker_role: Optional[str] = Field(
         default=None, description="Inferred bridge role"
+    )
+    sentiment: Optional[SegmentSentiment] = Field(
+        default=None, description="Stress/sentiment analysis for this segment"
     )
 
 
@@ -326,6 +347,40 @@ class TrainingRecommendations(BaseModel):
     )
 
 
+class WaveformData(BaseModel):
+    """Audio waveform amplitude envelope for timeline visualization."""
+
+    sample_rate: int = Field(description="Output samples per second")
+    duration_seconds: float = Field(description="Audio duration in seconds")
+    amplitude: List[float] = Field(
+        default_factory=list, description="Normalized 0-1 RMS amplitude values"
+    )
+    peak_amplitude: float = Field(description="Peak raw amplitude value")
+    average_amplitude: float = Field(description="Average raw amplitude value")
+
+
+class SentimentSummary(BaseModel):
+    """Aggregate stress/sentiment statistics across all segments."""
+
+    average_stress: float = Field(description="Mean stress level (0-1)")
+    peak_stress_time: float = Field(
+        description="Timestamp of peak stress in seconds"
+    )
+    peak_stress_level: float = Field(description="Maximum stress level (0-1)")
+    stress_distribution: Dict[str, int] = Field(
+        default_factory=dict,
+        description="Percentage distribution: low/moderate/high"
+    )
+    speaker_stress: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Per-speaker stress statistics"
+    )
+    stress_timeline: List[Dict[str, float]] = Field(
+        default_factory=list,
+        description="Downsampled stress timeline for frontend chart"
+    )
+
+
 class AnalysisResult(BaseModel):
     """Complete audio analysis result."""
 
@@ -357,6 +412,13 @@ class AnalysisResult(BaseModel):
     )
     training_recommendations: Optional[TrainingRecommendations] = Field(
         default=None, description="Training recommendations for educational contexts"
+    )
+    # Sentiment spectrogram data
+    waveform_data: Optional[WaveformData] = Field(
+        default=None, description="Audio waveform amplitude envelope"
+    )
+    sentiment_summary: Optional[SentimentSummary] = Field(
+        default=None, description="Aggregate stress/sentiment statistics"
     )
     processing_time_seconds: float = Field(
         description="Total processing time in seconds"

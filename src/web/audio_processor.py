@@ -185,18 +185,35 @@ except ImportError:
     generate_summary_sync = None
     generate_story_sync = None
 
+# Sentiment spectrogram components
+try:
+    from src.metrics.sentiment_analyzer import BridgeSentimentAnalyzer
+    SENTIMENT_ANALYZER_AVAILABLE = True
+except ImportError:
+    SENTIMENT_ANALYZER_AVAILABLE = False
+    BridgeSentimentAnalyzer = None
+
+try:
+    from src.audio.waveform_analyzer import WaveformAnalyzer
+    WAVEFORM_ANALYZER_AVAILABLE = True
+except ImportError:
+    WAVEFORM_ANALYZER_AVAILABLE = False
+    WaveformAnalyzer = None
+
 
 # Progress step definitions
 ANALYSIS_STEPS = [
     {"id": "convert", "label": "Converting audio", "weight": 5},
-    {"id": "transcribe", "label": "Transcribing audio", "weight": 25},
-    {"id": "diarize", "label": "Identifying speakers", "weight": 12},
-    {"id": "roles", "label": "Inferring roles", "weight": 8},
-    {"id": "quality", "label": "Analyzing communication quality", "weight": 8},
-    {"id": "scorecards", "label": "Generating scorecards", "weight": 10},
+    {"id": "waveform", "label": "Extracting audio waveform", "weight": 3},
+    {"id": "transcribe", "label": "Transcribing audio", "weight": 23},
+    {"id": "diarize", "label": "Identifying speakers", "weight": 11},
+    {"id": "sentiment", "label": "Analyzing crew stress levels", "weight": 5},
+    {"id": "roles", "label": "Inferring roles", "weight": 7},
+    {"id": "quality", "label": "Analyzing communication quality", "weight": 7},
+    {"id": "scorecards", "label": "Generating scorecards", "weight": 9},
     {"id": "confidence", "label": "Analyzing confidence", "weight": 5},
-    {"id": "learning", "label": "Evaluating learning metrics", "weight": 7},
-    {"id": "habits", "label": "Analyzing 7 Habits", "weight": 10},
+    {"id": "learning", "label": "Evaluating learning metrics", "weight": 6},
+    {"id": "habits", "label": "Analyzing 7 Habits", "weight": 9},
     {"id": "training", "label": "Generating training recommendations", "weight": 5},
     {"id": "narrative", "label": "Generating team analysis", "weight": 5},
     {"id": "story", "label": "Generating mission story", "weight": 5},
@@ -1151,6 +1168,8 @@ class AudioProcessor:
             'learning_evaluation': None,
             'seven_habits': None,
             'training_recommendations': None,
+            'waveform_data': None,
+            'sentiment_summary': None,
             'narrative_summary': None,
             'saved_recording_path': None,
             'processing_time_seconds': 0
@@ -1175,6 +1194,19 @@ class AudioProcessor:
         saved_path = self.save_recording(wav_path)
         results['saved_recording_path'] = saved_path
         progress = 5
+
+        # Step 1b: Extract waveform amplitude envelope
+        if WAVEFORM_ANALYZER_AVAILABLE and WaveformAnalyzer:
+            try:
+                update_progress("waveform", "Extracting audio waveform", progress)
+                waveform_analyzer = WaveformAnalyzer()
+                results['waveform_data'] = waveform_analyzer.extract_envelope(wav_path)
+                logger.info(
+                    f"Waveform extracted: {len(results['waveform_data'].get('amplitude', []))} samples"
+                )
+            except Exception as e:
+                logger.warning(f"Waveform extraction failed: {e}")
+        progress = 8
 
         try:
             # Step 2: Transcription (with granular progress updates)
@@ -1238,6 +1270,27 @@ class AudioProcessor:
                 transcripts
             )
             results['confidence_filter'] = filter_stats
+
+            # Step 3c: Sentiment/stress analysis
+            if SENTIMENT_ANALYZER_AVAILABLE and BridgeSentimentAnalyzer and segments:
+                try:
+                    update_progress("sentiment", "Analyzing crew stress levels", progress)
+                    sentiment_analyzer = BridgeSentimentAnalyzer()
+                    sentiment_results = sentiment_analyzer.analyze_segments(segments)
+                    results['sentiment_summary'] = sentiment_results.get('summary')
+
+                    # Attach per-segment sentiment to transcription output
+                    scored_segments = sentiment_results.get('segments', [])
+                    for i, seg in enumerate(results['transcription']):
+                        if i < len(scored_segments):
+                            seg['sentiment'] = scored_segments[i]
+
+                    logger.info(
+                        f"Sentiment analysis complete: avg_stress="
+                        f"{results['sentiment_summary'].get('average_stress', 0):.2f}"
+                    )
+                except Exception as e:
+                    logger.warning(f"Sentiment analysis failed: {e}", exc_info=True)
 
             # Step 4: Role inference (uses ALL transcripts - needs full speech for detection)
             if include_detailed and ROLE_INFERENCE_AVAILABLE and transcripts:
