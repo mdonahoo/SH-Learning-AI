@@ -67,3 +67,8 @@ python-multipart>=0.0.6
 
 # Audio format conversion
 pydub>=0.25.1
+
+# ============================================
+# Azure Application Insights (Optional)
+# ============================================
+azure-monitor-opentelemetry>=1.2.0

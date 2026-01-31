@@ -13,10 +13,10 @@ import threading
 import queue
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import List, Optional, Generator
+from typing import Dict, List, Optional, Generator
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, UploadFile, HTTPException, Query, Body
+from fastapi import FastAPI, File, UploadFile, HTTPException, Query, Body, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -32,6 +32,14 @@ from src.web.models import (
 )
 from src.web.audio_processor import AudioProcessor, ANALYSIS_STEPS
 from src.web.archive_manager import ArchiveManager
+from src.web.workspace_manager import WorkspaceManager
+
+# Import telemetry integration (optional)
+try:
+    from src.web.telemetry import initialize_telemetry, track_event
+except ImportError:
+    initialize_telemetry = None
+    track_event = None
 
 # Import narrative generators for regeneration
 try:
@@ -55,28 +63,91 @@ READ_ONLY_MODE = os.getenv('READ_ONLY_MODE', 'false').lower() == 'true'
 # READ_ONLY_MODE implies DISABLE_AUDIO_FILES
 DISABLE_AUDIO_FILES = READ_ONLY_MODE or os.getenv('DISABLE_AUDIO_FILES', 'false').lower() == 'true'
 
-# Global processor and archive manager instances
+# Global processor instance (shared — ML models are expensive)
 _processor: Optional[AudioProcessor] = None
-_archive_manager: Optional[ArchiveManager] = None
+_processor_lock = threading.Lock()
+
+# Global workspace manager (routes file I/O per workspace)
+_workspace_manager: Optional[WorkspaceManager] = None
+
+# Concurrency limiter for analysis operations
+MAX_CONCURRENT_ANALYSES = int(os.getenv('MAX_CONCURRENT_ANALYSES', '2'))
+_analysis_semaphore: Optional[asyncio.Semaphore] = None
+
+
+def get_analysis_semaphore() -> asyncio.Semaphore:
+    """Get or create the analysis concurrency semaphore."""
+    global _analysis_semaphore
+    if _analysis_semaphore is None:
+        _analysis_semaphore = asyncio.Semaphore(MAX_CONCURRENT_ANALYSES)
+    return _analysis_semaphore
 
 
 def get_processor() -> AudioProcessor:
-    """Get or create the audio processor instance."""
+    """Get or create the audio processor instance (thread-safe)."""
     global _processor
     if _processor is None:
-        # Pass shared archive_manager to avoid duplicate instances
-        _processor = AudioProcessor(archive_manager=get_archive_manager())
+        with _processor_lock:
+            if _processor is None:
+                _processor = AudioProcessor()
     return _processor
 
 
-def get_archive_manager() -> ArchiveManager:
-    """Get or create the archive manager instance."""
-    global _archive_manager
-    if _archive_manager is None:
-        _archive_manager = ArchiveManager()
-        # Sync with filesystem on first access
-        _archive_manager.sync_with_filesystem()
-    return _archive_manager
+def get_workspace_manager() -> WorkspaceManager:
+    """Get or create the workspace manager instance."""
+    global _workspace_manager
+    if _workspace_manager is None:
+        _workspace_manager = WorkspaceManager()
+    return _workspace_manager
+
+
+async def get_workspace_id(request: Request) -> str:
+    """
+    Extract and validate workspace ID from request header.
+
+    Args:
+        request: The incoming HTTP request.
+
+    Returns:
+        Validated workspace ID string.
+
+    Raises:
+        HTTPException: If header is missing or ID format is invalid.
+    """
+    workspace_id = request.headers.get('X-Workspace-ID', '')
+    if not workspace_id:
+        raise HTTPException(400, "Missing X-Workspace-ID header")
+    ws_mgr = get_workspace_manager()
+    if not ws_mgr.validate_workspace_id(workspace_id):
+        raise HTTPException(400, "Invalid workspace ID format")
+    return workspace_id
+
+
+def _resolve_analysis(
+    filename: str,
+    workspace_dirs: Dict,
+    ws_mgr: WorkspaceManager
+) -> Optional[Path]:
+    """
+    Find the directory containing a given analysis file.
+
+    Checks the workspace first, then falls back to shared.
+
+    Args:
+        filename: Analysis JSON filename.
+        workspace_dirs: Workspace directory dict from ensure_workspace().
+        ws_mgr: WorkspaceManager instance.
+
+    Returns:
+        Path to the directory containing the file, or None if not found.
+    """
+    ws_path = workspace_dirs['analyses'] / filename
+    if ws_path.exists():
+        return workspace_dirs['analyses']
+    shared_dir = ws_mgr.shared_analyses_dir
+    if shared_dir.exists() and (shared_dir / filename).exists():
+        return shared_dir
+    return None
 
 
 # Request model for metadata updates
@@ -121,6 +192,10 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Initialize Application Insights telemetry (no-ops if not configured)
+    if initialize_telemetry is not None:
+        initialize_telemetry(application)
 
     # Mount static files
     static_dir = Path(__file__).parent.parent.parent / "static"
@@ -172,7 +247,8 @@ async def get_config():
     return {
         "audio_disabled": DISABLE_AUDIO_FILES,
         "read_only": READ_ONLY_MODE,
-        "max_upload_mb": MAX_UPLOAD_MB
+        "max_upload_mb": MAX_UPLOAD_MB,
+        "appinsights_connection_string": os.getenv('APPINSIGHTS_CONNECTION_STRING', ''),
     }
 
 
@@ -427,7 +503,9 @@ class TelemetryStopResponse(BaseModel):
 
 
 @app.post("/api/telemetry/start", response_model=TelemetryStartResponse)
-async def start_telemetry_recording():
+async def start_telemetry_recording(
+    workspace_id: str = Depends(get_workspace_id)
+):
     """
     Start recording game telemetry from Starship Horizons.
 
@@ -458,8 +536,9 @@ async def start_telemetry_recording():
         # Start event tracking for role correlation
         client.start_event_tracking()
 
-        # Store session
+        # Store session with workspace ownership
         _telemetry_sessions[session_id] = {
+            'workspace_id': workspace_id,
             'client': client,
             'start_time': datetime.now(),
             'events': [],
@@ -482,7 +561,10 @@ async def start_telemetry_recording():
 
 
 @app.post("/api/telemetry/stop", response_model=TelemetryStopResponse)
-async def stop_telemetry_recording(request: TelemetryStopRequest):
+async def stop_telemetry_recording(
+    request: TelemetryStopRequest,
+    workspace_id: str = Depends(get_workspace_id)
+):
     """
     Stop recording game telemetry and save the data.
 
@@ -497,6 +579,10 @@ async def stop_telemetry_recording(request: TelemetryStopRequest):
 
     session = _telemetry_sessions[session_id]
 
+    # Verify workspace ownership
+    if session.get('workspace_id') != workspace_id:
+        raise HTTPException(status_code=404, detail=f"Telemetry session not found: {session_id}")
+
     try:
         client = session['client']
         start_time = session['start_time']
@@ -509,9 +595,10 @@ async def stop_telemetry_recording(request: TelemetryStopRequest):
         # Get tracked events for role correlation
         tracked_events = client.get_tracked_events()
 
-        # Save telemetry data to file
-        telemetry_dir = Path("data/telemetry")
-        telemetry_dir.mkdir(parents=True, exist_ok=True)
+        # Save telemetry data to workspace directory
+        ws_mgr = get_workspace_manager()
+        dirs = ws_mgr.ensure_workspace(workspace_id)
+        telemetry_dir = dirs['telemetry']
 
         telemetry_file = telemetry_dir / f"telemetry_{session_id}.json"
 
@@ -564,7 +651,10 @@ async def stop_telemetry_recording(request: TelemetryStopRequest):
 
 
 @app.get("/api/telemetry/status/{session_id}")
-async def get_telemetry_status(session_id: str):
+async def get_telemetry_status(
+    session_id: str,
+    workspace_id: str = Depends(get_workspace_id)
+):
     """
     Get the status of a telemetry recording session.
     """
@@ -572,6 +662,11 @@ async def get_telemetry_status(session_id: str):
         raise HTTPException(status_code=404, detail=f"Telemetry session not found: {session_id}")
 
     session = _telemetry_sessions[session_id]
+
+    # Verify workspace ownership
+    if session.get('workspace_id') != workspace_id:
+        raise HTTPException(status_code=404, detail=f"Telemetry session not found: {session_id}")
+
     client = session.get('client')
 
     return {
@@ -594,7 +689,8 @@ async def analyze_audio(
     ),
     include_detailed: bool = Query(
         True, description="Include detailed analysis (scorecards, learning metrics)"
-    )
+    ),
+    workspace_id: str = Depends(get_workspace_id)
 ):
     """
     Analyze audio file with full pipeline.
@@ -648,12 +744,20 @@ async def analyze_audio(
         tmp_path = tmp.name
 
     try:
+        ws_mgr = get_workspace_manager()
+        dirs = ws_mgr.ensure_workspace(workspace_id)
+        archive_mgr = ws_mgr.get_archive_manager(workspace_id)
+
         processor = get_processor()
         results = processor.analyze_audio(
             tmp_path,
             include_diarization=include_diarization,
             include_quality=include_quality,
-            include_detailed=include_detailed
+            include_detailed=include_detailed,
+            recordings_dir=str(dirs['recordings']),
+            analyses_dir=str(dirs['analyses']),
+            archive_manager=archive_mgr,
+            telemetry_dir=str(dirs['telemetry'])
         )
 
         return AnalysisResult(
@@ -686,7 +790,8 @@ async def analyze_audio_stream(
     file: UploadFile = File(..., description="Audio file to analyze"),
     include_narrative: bool = Query(True, description="Include LLM team analysis"),
     include_story: bool = Query(True, description="Include LLM mission story"),
-    telemetry_session_id: Optional[str] = Query(None, description="Telemetry recording session ID")
+    telemetry_session_id: Optional[str] = Query(None, description="Telemetry recording session ID"),
+    workspace_id: str = Depends(get_workspace_id)
 ):
     """
     Analyze audio file with streaming progress updates.
@@ -739,6 +844,11 @@ async def analyze_audio_stream(
 
     logger.info(f"Analysis options: include_narrative={_include_narrative}, include_story={_include_story}, telemetry_session_id={_telemetry_session_id}")
 
+    # Resolve workspace directories before spawning thread
+    ws_mgr = get_workspace_manager()
+    dirs = ws_mgr.ensure_workspace(workspace_id)
+    archive_mgr = ws_mgr.get_archive_manager(workspace_id)
+
     def run_analysis():
         """Run analysis in background thread."""
         try:
@@ -751,7 +861,11 @@ async def analyze_audio_stream(
                 include_narrative=_include_narrative,
                 include_story=_include_story,
                 progress_callback=progress_callback,
-                telemetry_session_id=_telemetry_session_id
+                telemetry_session_id=_telemetry_session_id,
+                recordings_dir=str(dirs['recordings']),
+                analyses_dir=str(dirs['analyses']),
+                archive_manager=archive_mgr,
+                telemetry_dir=str(dirs['telemetry'])
             )
             progress_queue.put({'type': 'result', 'data': results})
         except Exception as e:
@@ -805,7 +919,10 @@ async def get_analysis_steps():
 
 
 @app.get("/api/recordings/{filename}")
-async def download_recording(filename: str):
+async def download_recording(
+    filename: str,
+    workspace_id: str = Depends(get_workspace_id)
+):
     """Download a saved recording."""
     # Check if audio downloads are disabled
     if DISABLE_AUDIO_FILES:
@@ -814,15 +931,21 @@ async def download_recording(filename: str):
             detail="Audio file downloads are disabled on this server"
         )
 
-    processor = get_processor()
-
     # Security: only allow files from recordings directory
     if '..' in filename or '/' in filename:
         raise HTTPException(status_code=400, detail="Invalid filename")
 
-    file_path = processor.recordings_dir / filename
+    ws_mgr = get_workspace_manager()
+    dirs = ws_mgr.ensure_workspace(workspace_id)
+
+    # Check workspace first, then shared
+    file_path = dirs['recordings'] / filename
     if not file_path.exists():
-        raise HTTPException(status_code=404, detail="Recording not found")
+        shared_path = ws_mgr.shared_recordings_dir / filename
+        if shared_path.exists():
+            file_path = shared_path
+        else:
+            raise HTTPException(status_code=404, detail="Recording not found")
 
     return FileResponse(
         str(file_path),
@@ -832,66 +955,131 @@ async def download_recording(filename: str):
 
 
 @app.get("/api/recordings")
-async def list_recordings():
+async def list_recordings(
+    workspace_id: str = Depends(get_workspace_id)
+):
     """List all saved recordings."""
-    processor = get_processor()
+    ws_mgr = get_workspace_manager()
+    dirs = ws_mgr.ensure_workspace(workspace_id)
 
-    if not processor.recordings_dir.exists():
-        return {"recordings": []}
-
+    seen_filenames = set()
     recordings = []
-    for f in sorted(processor.recordings_dir.glob("*.wav"), reverse=True):
-        recordings.append({
-            "filename": f.name,
-            "size_bytes": f.stat().st_size,
-            "created": f.stat().st_mtime
-        })
+
+    # Workspace recordings first
+    recordings_dir = dirs['recordings']
+    if recordings_dir.exists():
+        for f in sorted(recordings_dir.glob("*.wav"), reverse=True):
+            seen_filenames.add(f.name)
+            recordings.append({
+                "filename": f.name,
+                "size_bytes": f.stat().st_size,
+                "created": f.stat().st_mtime,
+                "shared": False
+            })
+
+    # Shared (global) recordings
+    shared_dir = ws_mgr.shared_recordings_dir
+    if shared_dir.exists():
+        for f in sorted(shared_dir.glob("*.wav"), reverse=True):
+            if f.name not in seen_filenames:
+                recordings.append({
+                    "filename": f.name,
+                    "size_bytes": f.stat().st_size,
+                    "created": f.stat().st_mtime,
+                    "shared": True
+                })
+
+    # Sort combined list by creation time descending
+    recordings.sort(key=lambda r: r["created"], reverse=True)
 
     return {"recordings": recordings[:50]}  # Limit to 50 most recent
 
 
 @app.get("/api/analyses")
-async def list_analyses():
-    """List all saved analyses."""
+async def list_analyses(
+    workspace_id: str = Depends(get_workspace_id)
+):
+    """List all saved analyses (workspace + shared)."""
+    ws_mgr = get_workspace_manager()
+    dirs = ws_mgr.ensure_workspace(workspace_id)
     processor = get_processor()
-    analyses = processor.list_analyses()
-    return {"analyses": analyses}
+
+    # Workspace analyses
+    workspace_analyses = processor.list_analyses(analyses_dir=str(dirs['analyses']))
+    for a in workspace_analyses:
+        a['shared'] = False
+    seen = {a['filename'] for a in workspace_analyses}
+
+    # Shared (global) analyses
+    shared_dir = ws_mgr.shared_analyses_dir
+    if shared_dir.exists():
+        shared_analyses = processor.list_analyses(analyses_dir=str(shared_dir))
+        for a in shared_analyses:
+            if a['filename'] not in seen:
+                a['shared'] = True
+                workspace_analyses.append(a)
+
+    return {"analyses": workspace_analyses}
 
 
 @app.get("/api/analyses/{filename}")
-async def get_analysis(filename: str):
-    """Get a specific saved analysis."""
-    processor = get_processor()
-
+async def get_analysis(
+    filename: str,
+    workspace_id: str = Depends(get_workspace_id)
+):
+    """Get a specific saved analysis (workspace first, then shared)."""
     # Security: only allow valid filenames
     if '..' in filename or '/' in filename:
         raise HTTPException(status_code=400, detail="Invalid filename")
 
-    analysis = processor.get_analysis(filename)
-    if analysis is None:
-        raise HTTPException(status_code=404, detail="Analysis not found")
+    ws_mgr = get_workspace_manager()
+    dirs = ws_mgr.ensure_workspace(workspace_id)
+    processor = get_processor()
 
-    return analysis
+    # Check workspace first
+    analysis = processor.get_analysis(filename, analyses_dir=str(dirs['analyses']))
+    if analysis is not None:
+        return analysis
+
+    # Fall back to shared
+    shared_dir = ws_mgr.shared_analyses_dir
+    if shared_dir.exists():
+        analysis = processor.get_analysis(filename, analyses_dir=str(shared_dir))
+        if analysis is not None:
+            return analysis
+
+    raise HTTPException(status_code=404, detail="Analysis not found")
 
 
 @app.delete("/api/analyses/{filename}")
-async def delete_analysis(filename: str):
-    """Delete a saved analysis."""
+async def delete_analysis(
+    filename: str,
+    workspace_id: str = Depends(get_workspace_id)
+):
+    """Delete a saved analysis (workspace only — shared analyses cannot be deleted)."""
     if READ_ONLY_MODE:
         raise HTTPException(
             status_code=403,
             detail="Server is in read-only mode. Deletion is disabled."
         )
 
-    processor = get_processor()
-    archive_mgr = get_archive_manager()
-
     # Security: only allow valid filenames
     if '..' in filename or '/' in filename:
         raise HTTPException(status_code=400, detail="Invalid filename")
 
-    file_path = processor.analyses_dir / filename
+    ws_mgr = get_workspace_manager()
+    dirs = ws_mgr.ensure_workspace(workspace_id)
+    archive_mgr = ws_mgr.get_archive_manager(workspace_id)
+
+    file_path = dirs['analyses'] / filename
     if not file_path.exists():
+        # Check if it's a shared analysis
+        shared_path = ws_mgr.shared_analyses_dir / filename
+        if shared_path.exists():
+            raise HTTPException(
+                status_code=403,
+                detail="Shared analyses cannot be deleted"
+            )
         raise HTTPException(status_code=404, detail="Analysis not found")
 
     try:
@@ -904,7 +1092,10 @@ async def delete_analysis(filename: str):
 
 
 @app.post("/api/analyses/{filename}/regenerate-narrative")
-async def regenerate_narrative(filename: str):
+async def regenerate_narrative(
+    filename: str,
+    workspace_id: str = Depends(get_workspace_id)
+):
     """Regenerate the AI team analysis narrative for an existing analysis."""
     if READ_ONLY_MODE:
         raise HTTPException(
@@ -918,14 +1109,19 @@ async def regenerate_narrative(filename: str):
             detail="Narrative generation not available. Ensure Ollama is running."
         )
 
-    processor = get_processor()
-
     # Security: only allow valid filenames
     if '..' in filename or '/' in filename:
         raise HTTPException(status_code=400, detail="Invalid filename")
 
-    # Load existing analysis
-    analysis = processor.get_analysis(filename)
+    ws_mgr = get_workspace_manager()
+    dirs = ws_mgr.ensure_workspace(workspace_id)
+    processor = get_processor()
+
+    # Load existing analysis (workspace first, then shared)
+    analyses_dir = _resolve_analysis(filename, dirs, ws_mgr)
+    if analyses_dir is None:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+    analysis = processor.get_analysis(filename, analyses_dir=str(analyses_dir))
     if analysis is None:
         raise HTTPException(status_code=404, detail="Analysis not found")
 
@@ -950,8 +1146,8 @@ async def regenerate_narrative(filename: str):
             else:
                 analysis['narrative_summary'] = narrative_result
 
-            # Save updated analysis
-            file_path = processor.analyses_dir / filename
+            # Save updated analysis to workspace (even if source was shared)
+            file_path = dirs['analyses'] / filename
             with open(file_path, 'w') as f:
                 json.dump(analysis, f, indent=2, default=str)
 
@@ -972,7 +1168,10 @@ async def regenerate_narrative(filename: str):
 
 
 @app.post("/api/analyses/{filename}/regenerate-story")
-async def regenerate_story(filename: str):
+async def regenerate_story(
+    filename: str,
+    workspace_id: str = Depends(get_workspace_id)
+):
     """Regenerate the AI mission story for an existing analysis."""
     if READ_ONLY_MODE:
         raise HTTPException(
@@ -986,14 +1185,19 @@ async def regenerate_story(filename: str):
             detail="Story generation not available. Ensure Ollama is running."
         )
 
-    processor = get_processor()
-
     # Security: only allow valid filenames
     if '..' in filename or '/' in filename:
         raise HTTPException(status_code=400, detail="Invalid filename")
 
-    # Load existing analysis
-    analysis = processor.get_analysis(filename)
+    ws_mgr = get_workspace_manager()
+    dirs = ws_mgr.ensure_workspace(workspace_id)
+    processor = get_processor()
+
+    # Load existing analysis (workspace first, then shared)
+    analyses_dir = _resolve_analysis(filename, dirs, ws_mgr)
+    if analyses_dir is None:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+    analysis = processor.get_analysis(filename, analyses_dir=str(analyses_dir))
     if analysis is None:
         raise HTTPException(status_code=404, detail="Analysis not found")
 
@@ -1019,7 +1223,7 @@ async def regenerate_story(filename: str):
                 analysis['story_narrative'] = story_result
 
             # Save updated analysis
-            file_path = processor.analyses_dir / filename
+            file_path = dirs['analyses'] / filename
             with open(file_path, 'w') as f:
                 json.dump(analysis, f, indent=2, default=str)
 
@@ -1040,7 +1244,10 @@ async def regenerate_story(filename: str):
 
 
 @app.post("/api/analyses/{filename}/regenerate-narrative-stream")
-async def regenerate_narrative_stream(filename: str):
+async def regenerate_narrative_stream(
+    filename: str,
+    workspace_id: str = Depends(get_workspace_id)
+):
     """Regenerate narrative with streaming progress updates."""
     if READ_ONLY_MODE:
         async def readonly_stream():
@@ -1052,6 +1259,8 @@ async def regenerate_narrative_stream(filename: str):
             yield f"data: {json.dumps({'type': 'error', 'message': 'Narrative generation not available'})}\n\n"
         return StreamingResponse(error_stream(), media_type="text/event-stream")
 
+    ws_mgr = get_workspace_manager()
+    dirs = ws_mgr.ensure_workspace(workspace_id)
     processor = get_processor()
 
     if '..' in filename or '/' in filename:
@@ -1059,7 +1268,13 @@ async def regenerate_narrative_stream(filename: str):
             yield f"data: {json.dumps({'type': 'error', 'message': 'Invalid filename'})}\n\n"
         return StreamingResponse(error_stream(), media_type="text/event-stream")
 
-    analysis = processor.get_analysis(filename)
+    # Check workspace first, then shared
+    resolved_dir = _resolve_analysis(filename, dirs, ws_mgr)
+    if resolved_dir is None:
+        async def error_stream():
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Analysis not found'})}\n\n"
+        return StreamingResponse(error_stream(), media_type="text/event-stream")
+    analysis = processor.get_analysis(filename, analyses_dir=str(resolved_dir))
     if analysis is None:
         async def error_stream():
             yield f"data: {json.dumps({'type': 'error', 'message': 'Analysis not found'})}\n\n"
@@ -1140,7 +1355,7 @@ async def regenerate_narrative_stream(filename: str):
                 else:
                     analysis['narrative_summary'] = narrative_result
 
-                file_path = processor.analyses_dir / filename
+                file_path = dirs['analyses'] / filename
                 with open(file_path, 'w') as f:
                     json.dump(analysis, f, indent=2, default=str)
 
@@ -1156,7 +1371,10 @@ async def regenerate_narrative_stream(filename: str):
 
 
 @app.post("/api/analyses/{filename}/regenerate-story-stream")
-async def regenerate_story_stream(filename: str):
+async def regenerate_story_stream(
+    filename: str,
+    workspace_id: str = Depends(get_workspace_id)
+):
     """Regenerate story with streaming progress updates."""
     if READ_ONLY_MODE:
         async def readonly_stream():
@@ -1168,6 +1386,8 @@ async def regenerate_story_stream(filename: str):
             yield f"data: {json.dumps({'type': 'error', 'message': 'Story generation not available'})}\n\n"
         return StreamingResponse(error_stream(), media_type="text/event-stream")
 
+    ws_mgr = get_workspace_manager()
+    dirs = ws_mgr.ensure_workspace(workspace_id)
     processor = get_processor()
 
     if '..' in filename or '/' in filename:
@@ -1175,7 +1395,13 @@ async def regenerate_story_stream(filename: str):
             yield f"data: {json.dumps({'type': 'error', 'message': 'Invalid filename'})}\n\n"
         return StreamingResponse(error_stream(), media_type="text/event-stream")
 
-    analysis = processor.get_analysis(filename)
+    # Check workspace first, then shared
+    resolved_dir = _resolve_analysis(filename, dirs, ws_mgr)
+    if resolved_dir is None:
+        async def error_stream():
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Analysis not found'})}\n\n"
+        return StreamingResponse(error_stream(), media_type="text/event-stream")
+    analysis = processor.get_analysis(filename, analyses_dir=str(resolved_dir))
     if analysis is None:
         async def error_stream():
             yield f"data: {json.dumps({'type': 'error', 'message': 'Analysis not found'})}\n\n"
@@ -1251,7 +1477,7 @@ async def regenerate_story_stream(filename: str):
                 else:
                     analysis['story_narrative'] = story_result
 
-                file_path = processor.analyses_dir / filename
+                file_path = dirs['analyses'] / filename
                 with open(file_path, 'w') as f:
                     json.dump(analysis, f, indent=2, default=str)
 
@@ -1274,15 +1500,18 @@ async def regenerate_story_stream(filename: str):
 async def get_archive_index(
     starred_only: bool = Query(False, description="Only return starred analyses"),
     tag: Optional[str] = Query(None, description="Filter by tag"),
-    search: Optional[str] = Query(None, description="Search in titles and notes")
+    search: Optional[str] = Query(None, description="Search in titles and notes"),
+    workspace_id: str = Depends(get_workspace_id)
 ):
     """
     Get the full archive index with metadata.
 
     Returns all analyses with their titles, tags, notes, and other metadata.
+    Includes both workspace-specific and shared (global) analyses.
     Supports filtering by starred status, tags, and search query.
     """
-    archive_mgr = get_archive_manager()
+    ws_mgr = get_workspace_manager()
+    archive_mgr = ws_mgr.get_archive_manager(workspace_id)
 
     # Sync with filesystem in case files were added/removed externally
     archive_mgr.sync_with_filesystem()
@@ -1293,17 +1522,44 @@ async def get_archive_index(
         search_query=search
     )
 
+    # Workspace analyses
+    ws_list = []
+    seen = set()
+    for a in analyses:
+        d = a.to_dict()
+        d['shared'] = False
+        ws_list.append(d)
+        seen.add(a.filename)
+
+    # Shared (global) analyses
+    shared_mgr = ws_mgr.get_shared_archive_manager()
+    shared_mgr.sync_with_filesystem()
+    shared_analyses = shared_mgr.list_analyses(
+        starred_only=starred_only,
+        tag_filter=tag,
+        search_query=search
+    )
+    for a in shared_analyses:
+        if a.filename not in seen:
+            d = a.to_dict()
+            d['shared'] = True
+            ws_list.append(d)
+
+    # Merge tags from both
+    all_tags = list(set(archive_mgr.get_all_tags() + shared_mgr.get_all_tags()))
+
     return {
-        "analyses": [a.to_dict() for a in analyses],
+        "analyses": ws_list,
         "summary": archive_mgr.get_index_summary(),
-        "tags": archive_mgr.get_all_tags()
+        "tags": all_tags
     }
 
 
 @app.patch("/api/analyses/{filename}/metadata")
 async def update_analysis_metadata(
     filename: str,
-    update: MetadataUpdate
+    update: MetadataUpdate,
+    workspace_id: str = Depends(get_workspace_id)
 ):
     """
     Update metadata for a specific analysis.
@@ -1322,19 +1578,37 @@ async def update_analysis_metadata(
     if '..' in filename or '/' in filename:
         raise HTTPException(status_code=400, detail="Invalid filename")
 
-    archive_mgr = get_archive_manager()
-    processor = get_processor()
+    ws_mgr = get_workspace_manager()
+    dirs = ws_mgr.ensure_workspace(workspace_id)
+    archive_mgr = ws_mgr.get_archive_manager(workspace_id)
 
-    # Check if analysis exists
+    # Check if analysis exists in workspace or shared
+    is_shared = False
     metadata = archive_mgr.get_analysis(filename)
     if not metadata:
-        # Try to sync and check again
         archive_mgr.sync_with_filesystem()
         metadata = archive_mgr.get_analysis(filename)
-        if not metadata:
+    if not metadata:
+        # Check shared archive
+        shared_mgr = ws_mgr.get_shared_archive_manager()
+        shared_meta = shared_mgr.get_analysis(filename)
+        if not shared_meta:
+            shared_mgr.sync_with_filesystem()
+            shared_meta = shared_mgr.get_analysis(filename)
+        if not shared_meta:
             raise HTTPException(status_code=404, detail="Analysis not found")
+        # Register shared analysis in workspace archive for metadata tracking
+        is_shared = True
+        archive_mgr.add_analysis(
+            filename=shared_meta.filename,
+            recording_filename=shared_meta.recording_filename,
+            auto_title=shared_meta.auto_title,
+            duration_seconds=shared_meta.duration_seconds,
+            speaker_count=shared_meta.speaker_count,
+            segment_count=shared_meta.segment_count
+        )
 
-    # Update archive index
+    # Update workspace archive index
     updated = archive_mgr.update_analysis(
         filename=filename,
         user_title=update.user_title,
@@ -1346,9 +1620,9 @@ async def update_analysis_metadata(
     if not updated:
         raise HTTPException(status_code=500, detail="Failed to update metadata")
 
-    # Also update the analysis JSON file itself
+    # Also update the analysis JSON file itself (workspace copy only)
     try:
-        file_path = processor.analyses_dir / filename
+        file_path = dirs['analyses'] / filename
         if file_path.exists():
             with open(file_path, 'r') as f:
                 analysis_data = json.load(f)
@@ -1380,14 +1654,17 @@ async def update_analysis_metadata(
 
 
 @app.post("/api/archive-index/sync")
-async def sync_archive_index():
+async def sync_archive_index(
+    workspace_id: str = Depends(get_workspace_id)
+):
     """
     Manually trigger archive index synchronization.
 
     Syncs the index with the filesystem, adding entries for new files
     and removing entries for deleted files.
     """
-    archive_mgr = get_archive_manager()
+    ws_mgr = get_workspace_manager()
+    archive_mgr = ws_mgr.get_archive_manager(workspace_id)
     result = archive_mgr.sync_with_filesystem()
 
     return {
@@ -1463,6 +1740,211 @@ async def load_model():
             raise HTTPException(status_code=500, detail="Failed to load model")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# Admin Panel Routes
+# ============================================================================
+
+@app.get("/admin", response_class=FileResponse)
+async def serve_admin():
+    """Serve the admin panel HTML page."""
+    static_dir = Path(__file__).parent.parent.parent / "static"
+    admin_path = static_dir / "admin.html"
+    if admin_path.exists():
+        return FileResponse(str(admin_path))
+    raise HTTPException(status_code=404, detail="Admin panel not found")
+
+
+@app.get("/api/admin/stats")
+async def admin_global_stats():
+    """Get global statistics across all workspaces."""
+    ws_mgr = get_workspace_manager()
+    return ws_mgr.get_global_stats()
+
+
+@app.get("/api/admin/workspaces")
+async def admin_list_workspaces():
+    """List all workspaces with summary statistics."""
+    ws_mgr = get_workspace_manager()
+    return {"workspaces": ws_mgr.list_workspaces()}
+
+
+@app.get("/api/admin/workspaces/{workspace_id}")
+async def admin_get_workspace(workspace_id: str):
+    """Get detailed statistics for a single workspace."""
+    ws_mgr = get_workspace_manager()
+    if not ws_mgr.validate_workspace_id(workspace_id):
+        raise HTTPException(status_code=400, detail="Invalid workspace ID format")
+    stats = ws_mgr.get_workspace_stats(workspace_id)
+    if stats is None:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    return stats
+
+
+@app.delete("/api/admin/workspaces/{workspace_id}")
+async def admin_delete_workspace(workspace_id: str):
+    """Delete an entire workspace and all its data."""
+    ws_mgr = get_workspace_manager()
+    if not ws_mgr.validate_workspace_id(workspace_id):
+        raise HTTPException(status_code=400, detail="Invalid workspace ID format")
+    deleted = ws_mgr.delete_workspace(workspace_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    return {"status": "ok", "message": f"Workspace {workspace_id} deleted"}
+
+
+@app.get("/api/admin/workspaces/{workspace_id}/archive-index")
+async def admin_workspace_archive_index(workspace_id: str):
+    """Get the archive index for a specific workspace."""
+    ws_mgr = get_workspace_manager()
+    if not ws_mgr.validate_workspace_id(workspace_id):
+        raise HTTPException(status_code=400, detail="Invalid workspace ID format")
+
+    ws_dir = ws_mgr.base_dir / workspace_id
+    if not ws_dir.exists():
+        raise HTTPException(status_code=404, detail="Workspace not found")
+
+    archive_mgr = ws_mgr.get_archive_manager(workspace_id)
+    archive_mgr.sync_with_filesystem()
+    analyses = archive_mgr.list_analyses()
+    return {
+        "analyses": [a.to_dict() for a in analyses],
+        "summary": archive_mgr.get_index_summary(),
+    }
+
+
+@app.get("/api/admin/workspaces/{workspace_id}/analyses/{filename}")
+async def admin_get_analysis(workspace_id: str, filename: str):
+    """Get a specific analysis JSON from a workspace."""
+    if '..' in filename or '/' in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    ws_mgr = get_workspace_manager()
+    if not ws_mgr.validate_workspace_id(workspace_id):
+        raise HTTPException(status_code=400, detail="Invalid workspace ID format")
+
+    ws_dir = ws_mgr.base_dir / workspace_id
+    if not ws_dir.exists():
+        raise HTTPException(status_code=404, detail="Workspace not found")
+
+    file_path = ws_dir / 'analyses' / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Analysis not found")
+
+    try:
+        with open(file_path, 'r') as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read analysis: {e}")
+
+
+@app.get("/api/admin/workspaces/{workspace_id}/analyses/{filename}/download")
+async def admin_download_analysis(workspace_id: str, filename: str):
+    """Download an analysis file from a workspace."""
+    if '..' in filename or '/' in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    ws_mgr = get_workspace_manager()
+    if not ws_mgr.validate_workspace_id(workspace_id):
+        raise HTTPException(status_code=400, detail="Invalid workspace ID format")
+
+    file_path = ws_mgr.base_dir / workspace_id / 'analyses' / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Analysis not found")
+
+    return FileResponse(
+        str(file_path),
+        media_type="application/json",
+        filename=filename,
+    )
+
+
+@app.delete("/api/admin/workspaces/{workspace_id}/analyses/{filename}")
+async def admin_delete_analysis(workspace_id: str, filename: str):
+    """Delete an analysis file from a workspace (admin can also delete shared)."""
+    if '..' in filename or '/' in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    ws_mgr = get_workspace_manager()
+    if not ws_mgr.validate_workspace_id(workspace_id):
+        raise HTTPException(status_code=400, detail="Invalid workspace ID format")
+
+    # Check workspace analyses first
+    file_path = ws_mgr.base_dir / workspace_id / 'analyses' / filename
+    if file_path.exists():
+        try:
+            file_path.unlink()
+            archive_mgr = ws_mgr.get_archive_manager(workspace_id)
+            archive_mgr.delete_analysis(filename)
+            return {"status": "ok", "message": f"Deleted {filename}"}
+        except OSError as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    # Admin privilege: also check and delete shared analyses
+    shared_path = ws_mgr.shared_analyses_dir / filename
+    if shared_path.exists():
+        try:
+            shared_path.unlink()
+            shared_mgr = ws_mgr.get_shared_archive_manager()
+            shared_mgr.delete_analysis(filename)
+            return {"status": "ok", "message": f"Deleted shared analysis {filename}"}
+        except OSError as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    raise HTTPException(status_code=404, detail="Analysis not found")
+
+
+@app.get("/api/admin/workspaces/{workspace_id}/recordings/{filename}")
+async def admin_get_recording(workspace_id: str, filename: str):
+    """Serve a recording audio file from a workspace."""
+    if '..' in filename or '/' in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    ws_mgr = get_workspace_manager()
+    if not ws_mgr.validate_workspace_id(workspace_id):
+        raise HTTPException(status_code=400, detail="Invalid workspace ID format")
+
+    file_path = ws_mgr.base_dir / workspace_id / 'recordings' / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Recording not found")
+
+    return FileResponse(
+        str(file_path),
+        media_type="audio/wav",
+        filename=filename,
+    )
+
+
+@app.get("/api/admin/shared")
+async def admin_list_shared():
+    """List all shared data files (analyses, recordings, telemetry)."""
+    ws_mgr = get_workspace_manager()
+    result: Dict[str, list] = {
+        'analyses': [],
+        'recordings': [],
+        'telemetry': [],
+    }
+
+    for key, dir_path in [
+        ('analyses', ws_mgr.shared_analyses_dir),
+        ('recordings', ws_mgr.shared_recordings_dir),
+        ('telemetry', ws_mgr.shared_telemetry_dir),
+    ]:
+        if dir_path.exists():
+            for f in sorted(dir_path.iterdir()):
+                if f.is_file():
+                    try:
+                        stat = f.stat()
+                        result[key].append({
+                            'filename': f.name,
+                            'size_bytes': stat.st_size,
+                            'modified': stat.st_mtime,
+                        })
+                    except OSError:
+                        continue
+
+    return result
 
 
 # Error handlers

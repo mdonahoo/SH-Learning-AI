@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="lcars">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0a0a1e">
+    <title>System Administration - Mission Analysis System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/admin.css">
+</head>
+<body>
+
+<div class="container">
+    <!-- LCARS Header -->
+    <header class="lcars-header">
+        <div class="lcars-elbow">
+            <div class="lcars-elbow-vertical"></div>
+            <div class="lcars-elbow-curve"></div>
+        </div>
+        <div class="lcars-header-bar">
+            <div class="lcars-header-content">
+                <svg class="icon icon-lg" viewBox="0 0 24 24">
+                    <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <div class="logo-text">
+                    <h1>System Administration</h1>
+                    <p class="subtitle">Workspace Management Console</p>
+                </div>
+            </div>
+            <a href="/" class="admin-back-link">Back to Main App</a>
+        </div>
+    </header>
+
+    <!-- Breadcrumb Navigation -->
+    <nav id="breadcrumb" class="admin-breadcrumb">
+        <span class="breadcrumb-item active" data-view="workspaces">Workspaces</span>
+    </nav>
+
+    <!-- Global Stats Panel -->
+    <section class="lcars-panel" id="stats-section">
+        <div class="lcars-panel-bar periwinkle"></div>
+        <div class="lcars-panel-body">
+            <h2>System Overview</h2>
+            <div class="stats-grid" id="global-stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-workspaces">--</div>
+                    <div class="stat-label">Workspaces</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-analyses">--</div>
+                    <div class="stat-label">Total Analyses</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-recordings">--</div>
+                    <div class="stat-label">Total Recordings</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-disk">--</div>
+                    <div class="stat-label">Disk Usage</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Workspaces Table View -->
+    <section class="lcars-panel" id="workspaces-section">
+        <div class="lcars-panel-bar gold"></div>
+        <div class="lcars-panel-body">
+            <div class="section-header">
+                <h2>Workspaces</h2>
+                <button class="btn btn-secondary btn-sm" onclick="adminApp.loadWorkspaces()">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 4v6h6M23 20v-6h-6" stroke-linecap="round"/>
+                        <path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" stroke-linecap="round"/>
+                    </svg>
+                    Refresh
+                </button>
+            </div>
+            <div id="workspaces-table" class="workspace-table">
+                <p class="empty-state">Loading workspaces...</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Workspace Detail Panel (hidden) -->
+    <section class="lcars-panel hidden" id="workspace-detail-section">
+        <div class="lcars-panel-bar blue"></div>
+        <div class="lcars-panel-body">
+            <div class="section-header">
+                <h2>Workspace Detail</h2>
+                <span class="uuid-display" id="detail-workspace-id"></span>
+            </div>
+            <div class="stats-grid" id="workspace-stats">
+            </div>
+            <div class="ws-detail-panel">
+                <h3>Analyses</h3>
+                <div id="detail-analyses" class="file-list"></div>
+                <h3>Recordings</h3>
+                <div id="detail-recordings" class="file-list"></div>
+                <h3>Telemetry</h3>
+                <div id="detail-telemetry" class="file-list"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Analysis Viewer Panel (hidden) -->
+    <section class="lcars-panel hidden" id="analysis-viewer-section">
+        <div class="lcars-panel-bar purple"></div>
+        <div class="lcars-panel-body">
+            <div class="section-header">
+                <h2 id="analysis-viewer-title">Analysis</h2>
+                <button class="btn btn-secondary btn-sm" id="analysis-download-btn">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <path d="M12 4v12m0 0l-4-4m4 4l4-4M4 18h16"/>
+                    </svg>
+                    Download JSON
+                </button>
+            </div>
+            <div class="analysis-viewer" id="analysis-viewer-content">
+            </div>
+            <details class="raw-json-toggle">
+                <summary>Raw JSON</summary>
+                <pre id="analysis-raw-json" class="raw-json"></pre>
+            </details>
+        </div>
+    </section>
+
+    <!-- Shared Data Panel -->
+    <section class="lcars-panel" id="shared-section">
+        <div class="lcars-panel-bar orange"></div>
+        <div class="lcars-panel-body">
+            <div class="section-header">
+                <h2>Shared Data</h2>
+            </div>
+            <div id="shared-data-content">
+                <p class="empty-state">Loading shared data...</p>
+            </div>
+        </div>
+    </section>
+
+    <footer class="lcars-footer">
+        <div class="lcars-footer-bar"></div>
+        <div class="lcars-footer-content">
+            <span>System Administration</span>
+            <span class="footer-divider">&bull;</span>
+            <span>Mission Analysis System</span>
+        </div>
+        <div class="lcars-footer-end"></div>
+    </footer>
+</div>
+
+<script src="/static/admin.js"></script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-01-29T20:36:27.243153",
+  "updated_at": "2026-01-30T22:13:20.974031",
   "analyses": {
     "analysis_20260128_060905": {
       "filename": "analysis_20260128_060905.json",
@@ -43,20 +43,6 @@
       "notes": "",
       "starred": false,
       "display_title": "Endeavor_02"
-    },
-    "analysis_20260128_143008_pre_llm": {
-      "filename": "analysis_20260128_143008_pre_llm.json",
-      "recording_filename": "recording_20260128_143008.wav",
-      "auto_title": "Combat scenario preparing shield defenses",
-      "user_title": "Hyperion_01",
-      "created_at": "2026-01-28T16:06:54.953567",
-      "duration_seconds": 3909.924,
-      "speaker_count": 10,
-      "segment_count": 1141,
-      "tags": [],
-      "notes": "",
-      "starred": false,
-      "display_title": "Hyperion_01"
     },
     "analysis_20260128_152724_improved": {
       "filename": "analysis_20260128_152724_improved.json",
@@ -113,20 +99,6 @@
       "notes": "",
       "starred": false,
       "display_title": "Hyperion_02"
-    },
-    "analysis_20260128_194029_pre_llm": {
-      "filename": "analysis_20260128_194029_pre_llm.json",
-      "recording_filename": "recording_20260128_194029.wav",
-      "auto_title": "Crew coordination practice undocking and navigation",
-      "user_title": "MagFest (15 min)",
-      "created_at": "2026-01-28T20:14:42.048595",
-      "duration_seconds": 901.215,
-      "speaker_count": 5,
-      "segment_count": 253,
-      "tags": [],
-      "notes": "",
-      "starred": true,
-      "display_title": "MagFest (15 min)"
     }
   }
 }

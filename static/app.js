@@ -100,6 +100,21 @@ class AudioRecorder {
 class ApiClient {
     constructor(baseUrl = '') {
         this.baseUrl = baseUrl;
+        this.workspaceId = this._getOrCreateWorkspaceId();
+    }
+
+    _getOrCreateWorkspaceId() {
+        const KEY = 'sh-workspace-id';
+        let id = localStorage.getItem(KEY);
+        if (!id) {
+            id = crypto.randomUUID();
+            localStorage.setItem(KEY, id);
+        }
+        return id;
+    }
+
+    _headers(extra = {}) {
+        return { 'X-Workspace-ID': this.workspaceId, ...extra };
     }
 
     async analyze(file, options = {}) {
@@ -118,6 +133,7 @@ class ApiClient {
 
         const response = await fetch(url, {
             method: 'POST',
+            headers: this._headers(),
             body: formData
         });
 
@@ -135,6 +151,7 @@ class ApiClient {
 
         const response = await fetch(`${this.baseUrl}/api/transcribe`, {
             method: 'POST',
+            headers: this._headers(),
             body: formData
         });
 
@@ -169,6 +186,7 @@ class ApiClient {
 
             fetch(url, {
                 method: 'POST',
+                headers: this._headers(),
                 body: formData
             }).then(response => {
                 if (!response.ok) {
@@ -220,12 +238,14 @@ class ApiClient {
     }
 
     async health() {
-        const response = await fetch(`${this.baseUrl}/api/health`);
+        const response = await fetch(`${this.baseUrl}/api/health`,
+            { headers: this._headers() });
         return response.json();
     }
 
     async listAnalyses() {
-        const response = await fetch(`${this.baseUrl}/api/analyses`);
+        const response = await fetch(`${this.baseUrl}/api/analyses`,
+            { headers: this._headers() });
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
@@ -238,7 +258,8 @@ class ApiClient {
         if (options.tag) params.append('tag', options.tag);
         if (options.search) params.append('search', options.search);
 
-        const response = await fetch(`${this.baseUrl}/api/archive-index?${params.toString()}`);
+        const response = await fetch(`${this.baseUrl}/api/archive-index?${params.toString()}`,
+            { headers: this._headers() });
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
@@ -246,7 +267,8 @@ class ApiClient {
     }
 
     async getServicesStatus() {
-        const response = await fetch(`${this.baseUrl}/api/services-status`);
+        const response = await fetch(`${this.baseUrl}/api/services-status`,
+            { headers: this._headers() });
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
@@ -254,7 +276,8 @@ class ApiClient {
     }
 
     async getAnalysis(filename) {
-        const response = await fetch(`${this.baseUrl}/api/analyses/${filename}`);
+        const response = await fetch(`${this.baseUrl}/api/analyses/${filename}`,
+            { headers: this._headers() });
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
@@ -263,7 +286,8 @@ class ApiClient {
 
     async deleteAnalysis(filename) {
         const response = await fetch(`${this.baseUrl}/api/analyses/${filename}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: this._headers()
         });
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
@@ -274,9 +298,7 @@ class ApiClient {
     async updateMetadata(filename, metadata) {
         const response = await fetch(`${this.baseUrl}/api/analyses/${filename}/metadata`, {
             method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: this._headers({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(metadata)
         });
         if (!response.ok) {
@@ -287,7 +309,8 @@ class ApiClient {
 
     async startTelemetry() {
         const response = await fetch(`${this.baseUrl}/api/telemetry/start`, {
-            method: 'POST'
+            method: 'POST',
+            headers: this._headers()
         });
         if (!response.ok) {
             const error = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -299,9 +322,7 @@ class ApiClient {
     async stopTelemetry(sessionId) {
         const response = await fetch(`${this.baseUrl}/api/telemetry/stop`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: this._headers({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({ session_id: sessionId })
         });
         if (!response.ok) {
@@ -312,7 +333,8 @@ class ApiClient {
     }
 
     async getTelemetryStatus(sessionId) {
-        const response = await fetch(`${this.baseUrl}/api/telemetry/status/${sessionId}`);
+        const response = await fetch(`${this.baseUrl}/api/telemetry/status/${sessionId}`,
+            { headers: this._headers() });
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
@@ -2821,11 +2843,18 @@ class App {
 
     async loadConfig() {
         try {
-            const response = await fetch('/api/config');
+            const response = await fetch('/api/config', {
+                headers: { 'X-Workspace-ID': this.api.workspaceId }
+            });
             if (response.ok) {
                 const config = await response.json();
                 this.audioDisabled = config.audio_disabled || false;
                 this.readOnlyMode = config.read_only || false;
+
+                // Initialize Application Insights telemetry if configured
+                if (config.appinsights_connection_string) {
+                    SHTelemetry.initialize(config.appinsights_connection_string, this.api.workspaceId);
+                }
 
                 this.applyAudioDisabledState();
                 this.applyReadOnlyState();
@@ -2967,6 +2996,25 @@ class App {
             this.titleInput.addEventListener('change', () => this.saveTitle());
             this.titleInput.addEventListener('blur', () => this.saveTitle());
         }
+
+        // Telemetry: audio player play
+        if (this.audioPlayer) {
+            this.audioPlayer.addEventListener('play', () => SHTelemetry.trackEvent('audio_preview_play'));
+        }
+
+        // Telemetry: analysis option checkbox changes
+        const narrativeCheckbox = document.getElementById('include-narrative');
+        const storyCheckbox = document.getElementById('include-story');
+        const telemetryCheckbox = document.getElementById('include-telemetry');
+        if (narrativeCheckbox) {
+            narrativeCheckbox.addEventListener('change', () => SHTelemetry.trackEvent('option_toggle', { option: 'include_narrative', value: String(narrativeCheckbox.checked) }));
+        }
+        if (storyCheckbox) {
+            storyCheckbox.addEventListener('change', () => SHTelemetry.trackEvent('option_toggle', { option: 'include_story', value: String(storyCheckbox.checked) }));
+        }
+        if (telemetryCheckbox) {
+            telemetryCheckbox.addEventListener('change', () => SHTelemetry.trackEvent('option_toggle', { option: 'include_telemetry', value: String(telemetryCheckbox.checked) }));
+        }
     }
 
     toggleSection(sectionId) {
@@ -2975,6 +3023,7 @@ class App {
         } else {
             this.collapsedSections.add(sectionId);
         }
+        SHTelemetry.trackEvent('section_toggle', { section_id: sectionId, state: this.collapsedSections.has(sectionId) ? 'collapsed' : 'expanded' });
         this.updateSectionState(sectionId);
     }
 
@@ -3001,10 +3050,12 @@ class App {
         if (panel && details) {
             panel.classList.toggle('expanded');
             details.classList.toggle('hidden');
+            SHTelemetry.trackEvent('service_status_toggle', { state: details.classList.contains('hidden') ? 'collapsed' : 'expanded' });
         }
     }
 
     async checkServicesStatus() {
+        SHTelemetry.trackEvent('service_status_refresh');
         try {
             const status = await this.api.getServicesStatus();
             this.updateServiceStatusDisplay(status);
@@ -3109,6 +3160,7 @@ class App {
     async toggleRecording() {
         if (this.recorder.isRecording) {
             // Stop recording
+            SHTelemetry.trackEvent('record_stop', { telemetry_enabled: String(!!this.telemetrySessionId) }, { duration_seconds: this.recorder.getElapsedTime() });
             this.recordBtn.innerHTML = '<svg class="icon"><use href="#icon-record"></use></svg><span>Record</span>';
             this.recordBtn.classList.remove('recording');
             clearInterval(this.timerInterval);
@@ -3151,6 +3203,7 @@ class App {
                 }
 
                 await this.recorder.start();
+                SHTelemetry.trackEvent('record_start', { telemetry_enabled: String(includeTelemetry) });
                 this.recordBtn.innerHTML = '<svg class="icon"><use href="#icon-stop"></use></svg><span>Stop</span>';
                 this.recordBtn.classList.add('recording');
 
@@ -3200,6 +3253,7 @@ class App {
         const file = event.target.files[0];
         if (!file) return;
 
+        SHTelemetry.trackEvent('file_upload', { file_type: file.type || 'unknown' }, { file_size_bytes: file.size });
         this.currentBlob = file;
         this.fileName.textContent = file.name;
         this.showAudioPreview(file);
@@ -3237,6 +3291,7 @@ class App {
             // Read analysis options from checkboxes
             const includeNarrative = document.getElementById('include-narrative')?.checked ?? true;
             const includeStory = document.getElementById('include-story')?.checked ?? true;
+            SHTelemetry.trackEvent('analysis_start', { include_narrative: String(includeNarrative), include_story: String(includeStory) });
 
             // Include telemetry session ID if available
             const telemetrySessionId = this.telemetrySessionId;
@@ -3274,11 +3329,13 @@ class App {
             this.updateAnalysisInfo();
 
             this.showStatus('Analysis complete!', 'success');
+            SHTelemetry.trackEvent('analysis_complete', { speaker_count: String(results.speakers?.length || 0) }, { processing_time: results.processing_time_seconds || 0 });
 
             // Refresh archive to show new analysis
             this.loadArchive();
         } catch (error) {
             console.error('Analysis failed:', error);
+            SHTelemetry.trackEvent('analysis_error', { error: error.message });
             this.showStatus('Analysis failed: ' + error.message, 'error');
         } finally {
             this.analyzeBtn.disabled = false;
@@ -3314,6 +3371,7 @@ class App {
 
         const newTitle = this.titleInput.value.trim();
         if (!newTitle) return;
+        SHTelemetry.trackEvent('title_edit', { filename: this.currentFilename });
 
         try {
             await this.api.updateMetadata(this.currentFilename, {
@@ -3332,6 +3390,7 @@ class App {
         if (!this.currentFilename) return;
 
         const newStarred = !(this.currentMetadata?.starred || false);
+        SHTelemetry.trackEvent('star_toggle', { starred: String(newStarred) });
 
         try {
             await this.api.updateMetadata(this.currentFilename, {
@@ -3561,6 +3620,7 @@ class App {
     }
 
     switchTab(tabId) {
+        SHTelemetry.trackEvent('tab_switch', { tab_id: tabId });
         // Update tab buttons
         document.querySelectorAll('.tab').forEach(tab => {
             tab.classList.toggle('active', tab.dataset.tab === tabId);
@@ -3578,6 +3638,7 @@ class App {
             this.showStatus('No analysis results to download', 'error');
             return;
         }
+        SHTelemetry.trackEvent('download_report', { format: 'markdown' });
 
         // Generate markdown
         const markdown = this.renderer.generateMarkdown(this.currentResults);
@@ -3601,6 +3662,7 @@ class App {
     }
 
     downloadAudio() {
+        SHTelemetry.trackEvent('download_audio', { source: this.savedRecordingPath ? 'server' : 'local' });
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 
         // If we have a server-saved path, use the API endpoint
@@ -3639,6 +3701,7 @@ class App {
         try {
             const data = await this.api.getArchiveIndex();
             this.archiveData = data.analyses || [];
+            SHTelemetry.trackEvent('archive_refresh', {}, { analysis_count: this.archiveData.length });
 
             // Update archive count badge
             const countBadge = document.getElementById('archive-count');
@@ -3663,6 +3726,7 @@ class App {
     filterArchive() {
         const searchQuery = document.getElementById('archive-search')?.value?.toLowerCase() || '';
         const starredOnly = document.getElementById('starred-only')?.checked || false;
+        SHTelemetry.trackEvent('archive_search', { has_query: String(!!searchQuery), starred_only: String(starredOnly) });
 
         let filtered = this.archiveData;
 
@@ -3732,6 +3796,7 @@ class App {
     }
 
     async loadArchivedAnalysis(filename) {
+        SHTelemetry.trackEvent('archive_load', { filename: filename });
         // Find and mark the clicked item as loading
         const archiveItem = document.querySelector(`.archive-item[data-filename="${filename}"]`);
         if (archiveItem) {
@@ -3797,6 +3862,7 @@ class App {
         if (!confirm('Delete this analysis? This cannot be undone.')) {
             return;
         }
+        SHTelemetry.trackEvent('analysis_delete', { filename: filename });
 
         try {
             await this.api.deleteAnalysis(filename);
@@ -3813,6 +3879,7 @@ class App {
             this.showStatus('No analysis loaded to regenerate', 'error');
             return;
         }
+        SHTelemetry.trackEvent('regenerate_narrative', { filename: this.currentFilename });
 
         const btn = document.getElementById('regenerate-narrative-btn');
         const contentEl = document.getElementById('narrative-section');
@@ -3853,7 +3920,8 @@ class App {
 
         try {
             const response = await fetch(`/api/analyses/${this.currentFilename}/regenerate-narrative-stream`, {
-                method: 'POST'
+                method: 'POST',
+                headers: { 'X-Workspace-ID': this.api.workspaceId }
             });
 
             const reader = response.body.getReader();
@@ -3923,6 +3991,7 @@ class App {
             this.showStatus('No analysis loaded to regenerate', 'error');
             return;
         }
+        SHTelemetry.trackEvent('regenerate_story', { filename: this.currentFilename });
 
         const btn = document.getElementById('regenerate-story-btn');
         const contentEl = document.getElementById('story-section');
@@ -3963,7 +4032,8 @@ class App {
 
         try {
             const response = await fetch(`/api/analyses/${this.currentFilename}/regenerate-story-stream`, {
-                method: 'POST'
+                method: 'POST',
+                headers: { 'X-Workspace-ID': this.api.workspaceId }
             });
 
             const reader = response.body.getReader();

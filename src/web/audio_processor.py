@@ -507,12 +507,17 @@ class AudioProcessor:
                 except Exception as e:
                     logger.warning(f"Failed to cleanup chunk {chunk_path}: {e}")
 
-    def _load_telemetry_events(self, session_id: str) -> Optional[List[Dict[str, Any]]]:
+    def _load_telemetry_events(
+        self,
+        session_id: str,
+        telemetry_dir: Optional[str] = None
+    ) -> Optional[List[Dict[str, Any]]]:
         """
         Load telemetry events from a telemetry session.
 
         Args:
             session_id: The telemetry session ID
+            telemetry_dir: Optional directory override for workspace isolation
 
         Returns:
             List of telemetry events in correlator format, or None if not found
@@ -539,7 +544,8 @@ class AudioProcessor:
 
             # Try to load from telemetry file (stopped session)
             if not events:
-                telemetry_file = Path(f"data/telemetry/telemetry_{session_id}.json")
+                target_dir = Path(telemetry_dir) if telemetry_dir else Path("data/telemetry")
+                telemetry_file = target_dir / f"telemetry_{session_id}.json"
                 if telemetry_file.exists():
                     import json
                     with open(telemetry_file, 'r') as f:
@@ -586,13 +592,19 @@ class AudioProcessor:
             logger.error(f"Failed to load telemetry events: {e}", exc_info=True)
             return None
 
-    def save_recording(self, audio_path: str, original_filename: str = None) -> Optional[str]:
+    def save_recording(
+        self,
+        audio_path: str,
+        original_filename: str = None,
+        recordings_dir: Optional[str] = None
+    ) -> Optional[str]:
         """
         Save a recording to the recordings directory.
 
         Args:
             audio_path: Path to the audio file (typically WAV after conversion)
             original_filename: Original filename for reference
+            recordings_dir: Optional directory override for workspace isolation
 
         Returns:
             Path to saved recording, or None if saving is disabled
@@ -604,11 +616,14 @@ class AudioProcessor:
             from datetime import datetime
             import shutil
 
+            target_dir = Path(recordings_dir) if recordings_dir else self.recordings_dir
+            target_dir.mkdir(parents=True, exist_ok=True)
+
             # Generate timestamped filename
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             ext = Path(audio_path).suffix or '.wav'
             saved_name = f"recording_{timestamp}{ext}"
-            saved_path = self.recordings_dir / saved_name
+            saved_path = target_dir / saved_name
 
             # Copy the file
             shutil.copy2(audio_path, saved_path)
@@ -626,7 +641,9 @@ class AudioProcessor:
         recording_path: Optional[str] = None,
         suffix: str = "",
         register_archive: bool = True,
-        timestamp: Optional[str] = None
+        timestamp: Optional[str] = None,
+        analyses_dir: Optional[str] = None,
+        archive_manager: Optional[Any] = None
     ) -> Optional[str]:
         """
         Save analysis results to JSON file with auto-generated title.
@@ -637,6 +654,8 @@ class AudioProcessor:
             suffix: Optional suffix for filename (e.g., "_pre_llm")
             register_archive: Whether to register in archive index (False for intermediate saves)
             timestamp: Optional timestamp string for filename (to ensure pre-LLM and final use same base)
+            analyses_dir: Optional directory override for workspace isolation
+            archive_manager: Optional ArchiveManager override for workspace isolation
 
         Returns:
             Path to saved analysis JSON, or None if saving is disabled
@@ -648,11 +667,15 @@ class AudioProcessor:
             import json
             from datetime import datetime
 
+            target_dir = Path(analyses_dir) if analyses_dir else self.analyses_dir
+            target_dir.mkdir(parents=True, exist_ok=True)
+            target_mgr = archive_manager if archive_manager is not None else self._archive_manager
+
             # Generate timestamped filename (use provided timestamp for consistency)
             if timestamp is None:
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             saved_name = f"analysis_{timestamp}{suffix}.json"
-            saved_path = self.analyses_dir / saved_name
+            saved_path = target_dir / saved_name
 
             # Use existing title from results if available, otherwise generate
             auto_title = results.get('auto_title')
@@ -684,6 +707,8 @@ class AudioProcessor:
                     'speaker_count': len(results.get('speakers', [])),
                     'segment_count': len(results.get('transcription', [])),
                     'auto_title': auto_title,
+                    'processing_time_seconds': results.get('processing_time_seconds', 0),
+                    'step_timings': results.get('step_timings', {}),
                 },
                 'results': results
             }
@@ -695,10 +720,10 @@ class AudioProcessor:
             logger.info(f"Analysis saved: {saved_path}")
 
             # Register with archive manager (skip for intermediate saves like pre-LLM)
-            if self._archive_manager and register_archive:
+            if target_mgr and register_archive:
                 try:
                     recording_filename = Path(recording_path).name if recording_path else None
-                    self._archive_manager.add_analysis(
+                    target_mgr.add_analysis(
                         filename=saved_name,
                         recording_filename=recording_filename,
                         auto_title=auto_title,
@@ -716,18 +741,25 @@ class AudioProcessor:
             logger.warning(f"Failed to save analysis: {e}")
             return None
 
-    def list_analyses(self) -> List[Dict[str, Any]]:
+    def list_analyses(
+        self,
+        analyses_dir: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """
         List all saved analyses.
+
+        Args:
+            analyses_dir: Optional directory override for workspace isolation
 
         Returns:
             List of analysis metadata dictionaries
         """
-        if not self.analyses_dir.exists():
+        target_dir = Path(analyses_dir) if analyses_dir else self.analyses_dir
+        if not target_dir.exists():
             return []
 
         analyses = []
-        for f in sorted(self.analyses_dir.glob("analysis_*.json"), reverse=True):
+        for f in sorted(target_dir.glob("analysis_*.json"), reverse=True):
             try:
                 import json
                 with open(f, 'r') as fp:
@@ -740,6 +772,8 @@ class AudioProcessor:
                         'speaker_count': metadata.get('speaker_count', 0),
                         'segment_count': metadata.get('segment_count', 0),
                         'recording_file': metadata.get('recording_file'),
+                        'processing_time_seconds': metadata.get('processing_time_seconds', 0),
+                        'step_timings': metadata.get('step_timings', {}),
                         'size_bytes': f.stat().st_size,
                     })
             except Exception as e:
@@ -748,12 +782,17 @@ class AudioProcessor:
 
         return analyses[:100]  # Limit to 100 most recent
 
-    def get_analysis(self, filename: str) -> Optional[Dict[str, Any]]:
+    def get_analysis(
+        self,
+        filename: str,
+        analyses_dir: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
         """
         Get a specific saved analysis.
 
         Args:
             filename: Analysis filename (e.g., 'analysis_20260116_120000.json')
+            analyses_dir: Optional directory override for workspace isolation
 
         Returns:
             Analysis data or None if not found
@@ -762,7 +801,8 @@ class AudioProcessor:
         if '..' in filename or '/' in filename:
             return None
 
-        file_path = self.analyses_dir / filename
+        target_dir = Path(analyses_dir) if analyses_dir else self.analyses_dir
+        file_path = target_dir / filename
         if not file_path.exists():
             return None
 
@@ -1120,7 +1160,11 @@ class AudioProcessor:
         include_story: bool = True,
         progress_callback: Optional[callable] = None,
         events: Optional[List[Dict[str, Any]]] = None,
-        telemetry_session_id: Optional[str] = None
+        telemetry_session_id: Optional[str] = None,
+        recordings_dir: Optional[str] = None,
+        analyses_dir: Optional[str] = None,
+        archive_manager: Optional[Any] = None,
+        telemetry_dir: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Run full audio analysis pipeline.
@@ -1135,13 +1179,19 @@ class AudioProcessor:
             progress_callback: Optional callback function(step_id, step_label, progress_pct)
             events: Optional list of telemetry events for role confidence boosting
             telemetry_session_id: Optional telemetry session ID to load game data from
+            recordings_dir: Optional directory override for workspace isolation
+            analyses_dir: Optional directory override for workspace isolation
+            archive_manager: Optional ArchiveManager override for workspace isolation
+            telemetry_dir: Optional directory override for workspace isolation
 
         Returns:
             Complete analysis results dictionary
         """
         # Load telemetry from session if provided
         if telemetry_session_id and events is None:
-            events = self._load_telemetry_events(telemetry_session_id)
+            events = self._load_telemetry_events(
+                telemetry_session_id, telemetry_dir=telemetry_dir
+            )
         start_time = time.time()
         # Generate timestamp for consistent file naming (pre-LLM and final use same base)
         from datetime import datetime
@@ -1178,8 +1228,12 @@ class AudioProcessor:
         # Track cumulative progress
         progress = 0
 
+        # Per-step timing breakdown
+        step_timings = {}
+
         # Step 1: Convert to WAV if needed
         update_progress("convert", "Converting audio format", progress)
+        step_start = time.time()
         wav_path = audio_path
         converted = False
         input_ext = Path(audio_path).suffix.lower()
@@ -1191,16 +1245,19 @@ class AudioProcessor:
                 logger.warning(f"Conversion failed, trying direct: {e}")
 
         # Save recording if enabled
-        saved_path = self.save_recording(wav_path)
+        saved_path = self.save_recording(wav_path, recordings_dir=recordings_dir)
         results['saved_recording_path'] = saved_path
+        step_timings['convert_and_save'] = round(time.time() - step_start, 2)
         progress = 5
 
         # Step 1b: Extract waveform amplitude envelope
         if WAVEFORM_ANALYZER_AVAILABLE and WaveformAnalyzer:
             try:
                 update_progress("waveform", "Extracting audio waveform", progress)
+                step_start = time.time()
                 waveform_analyzer = WaveformAnalyzer()
                 results['waveform_data'] = waveform_analyzer.extract_envelope(wav_path)
+                step_timings['waveform'] = round(time.time() - step_start, 2)
                 logger.info(
                     f"Waveform extracted: {len(results['waveform_data'].get('amplitude', []))} samples"
                 )
@@ -1211,24 +1268,28 @@ class AudioProcessor:
         try:
             # Step 2: Transcription (with granular progress updates)
             update_progress("transcribe", "Transcribing audio with Whisper", progress)
+            step_start = time.time()
             segments, info = self.transcribe_with_segments(
                 wav_path,
                 progress_callback=progress_callback  # Pass through for granular updates
             )
             results['duration_seconds'] = info.get('duration', 0)
             results['language'] = info.get('language', 'unknown')
+            step_timings['transcription'] = round(time.time() - step_start, 2)
             progress = 35
 
             # Step 3: Speaker diarization
             diarization_result = None
             if include_diarization and DIARIZATION_AVAILABLE and segments:
                 update_progress("diarize", "Identifying speakers", progress)
+                step_start = time.time()
                 segments, diarization_result = self._add_speaker_info(wav_path, segments)
                 results['speakers'] = self._calculate_speaker_stats(segments)
 
                 # Add diarization methodology to results if available
                 if diarization_result:
                     results['diarization_methodology'] = diarization_result.methodology_note
+                step_timings['diarization'] = round(time.time() - step_start, 2)
             progress = 50
 
             # Step 3b: Post-process transcription (cleanup and merge)
@@ -1275,6 +1336,7 @@ class AudioProcessor:
             if SENTIMENT_ANALYZER_AVAILABLE and BridgeSentimentAnalyzer and segments:
                 try:
                     update_progress("sentiment", "Analyzing crew stress levels", progress)
+                    step_start = time.time()
                     sentiment_analyzer = BridgeSentimentAnalyzer()
                     sentiment_results = sentiment_analyzer.analyze_segments(segments)
                     results['sentiment_summary'] = sentiment_results.get('summary')
@@ -1285,6 +1347,7 @@ class AudioProcessor:
                         if i < len(scored_segments):
                             seg['sentiment'] = scored_segments[i]
 
+                    step_timings['sentiment'] = round(time.time() - step_start, 2)
                     logger.info(
                         f"Sentiment analysis complete: avg_stress="
                         f"{results['sentiment_summary'].get('average_stress', 0):.2f}"
@@ -1295,6 +1358,7 @@ class AudioProcessor:
             # Step 4: Role inference (uses ALL transcripts - needs full speech for detection)
             if include_detailed and ROLE_INFERENCE_AVAILABLE and transcripts:
                 update_progress("roles", "Inferring crew roles", progress)
+                step_start = time.time()
                 results['role_assignments'] = self._analyze_roles(
                     transcripts,
                     diarization_result=diarization_result
@@ -1355,50 +1419,63 @@ class AudioProcessor:
                     except Exception as e:
                         logger.warning(f"Telemetry correlation failed: {e}", exc_info=True)
 
+            if include_detailed and ROLE_INFERENCE_AVAILABLE and transcripts:
+                step_timings['role_inference'] = round(time.time() - step_start, 2)
             progress = 60
 
             # Step 5: Communication quality analysis (uses FILTERED transcripts)
             if include_quality and QUALITY_ANALYZER_AVAILABLE and filtered_transcripts:
                 update_progress("quality", "Analyzing communication quality", progress)
+                step_start = time.time()
                 # Build filtered segments for quality analyzer
                 filtered_segments = [
                     s for s in segments
                     if min(1.0, max(0.0, (s.get('confidence', 0) + 1) / 2)) >= self.analysis_confidence_threshold
                 ] if self.analysis_confidence_threshold > 0 else segments
                 results['communication_quality'] = self._analyze_quality(filtered_segments)
+                step_timings['communication_quality'] = round(time.time() - step_start, 2)
             progress = 70
 
             # Step 6: Speaker scorecards (uses FILTERED transcripts)
             if include_detailed and SCORECARD_AVAILABLE and filtered_transcripts:
                 update_progress("scorecards", "Generating speaker scorecards", progress)
+                step_start = time.time()
                 # Pass role assignments so scorecards show detected roles
                 results['speaker_scorecards'] = self._generate_scorecards(
                     filtered_transcripts,
                     results.get('role_assignments', [])
                 )
+                step_timings['scorecards'] = round(time.time() - step_start, 2)
             progress = 85
 
             # Step 7: Confidence distribution (uses ALL transcripts - shows full distribution)
             if include_detailed and CONFIDENCE_ANALYZER_AVAILABLE and transcripts:
                 update_progress("confidence", "Analyzing confidence distribution", progress)
+                step_start = time.time()
                 results['confidence_distribution'] = self._analyze_confidence(transcripts)
+                step_timings['confidence'] = round(time.time() - step_start, 2)
             progress = 90
 
             # Step 8: Learning evaluation (uses FILTERED transcripts)
             if include_detailed and LEARNING_EVALUATOR_AVAILABLE and filtered_transcripts:
                 update_progress("learning", "Evaluating learning metrics", progress)
+                step_start = time.time()
                 results['learning_evaluation'] = self._evaluate_learning(filtered_transcripts)
+                step_timings['learning'] = round(time.time() - step_start, 2)
             progress = 80
 
             # Step 9: 7 Habits analysis (uses FILTERED transcripts)
             if include_detailed and SEVEN_HABITS_AVAILABLE and filtered_transcripts:
                 update_progress("habits", "Analyzing 7 Habits framework", progress)
+                step_start = time.time()
                 results['seven_habits'] = self._analyze_seven_habits(filtered_transcripts)
+                step_timings['seven_habits'] = round(time.time() - step_start, 2)
             progress = 90
 
             # Step 10: Training recommendations (uses FILTERED transcripts)
             if include_detailed and TRAINING_RECOMMENDATIONS_AVAILABLE and filtered_transcripts:
                 update_progress("training", "Generating training recommendations", progress)
+                step_start = time.time()
                 # Pass comprehensive analysis results for data-driven recommendations
                 comm_quality = results.get('communication_quality') or {}
                 conf_dist = results.get('confidence_distribution') or {}
@@ -1439,6 +1516,7 @@ class AudioProcessor:
                 results['training_recommendations'] = self._generate_training_recommendations(
                     filtered_transcripts, analysis_context
                 )
+                step_timings['training_recommendations'] = round(time.time() - step_start, 2)
             progress = 95
 
             # Generate title ONCE before any saves (ensures consistency across pre-LLM and final)
@@ -1453,17 +1531,7 @@ class AudioProcessor:
                 except Exception as e:
                     logger.warning(f"Title generation failed: {e}")
 
-            # Save analysis BEFORE LLM processing (for debugging/comparison)
-            pre_llm_path = self.save_analysis(
-                results,
-                results.get('saved_recording_path'),
-                suffix="_pre_llm",
-                register_archive=False,  # Don't clutter archive with intermediate saves
-                timestamp=analysis_timestamp
-            )
-            if pre_llm_path:
-                results['pre_llm_analysis_path'] = pre_llm_path
-                logger.info(f"Pre-LLM analysis saved: {pre_llm_path}")
+            # Pre-LLM checkpoint removed — only the final report is saved
 
             # Step 11: LLM Team Analysis Narrative
             # Skip LLM for very long recordings to avoid context overflow
@@ -1493,6 +1561,7 @@ class AudioProcessor:
                     narrative_result = generate_summary_sync(results)
 
                     llm_duration = time.time() - llm_start
+                    step_timings['llm_narrative'] = round(llm_duration, 2)
                     if narrative_result:
                         results['narrative_summary'] = narrative_result
                         results['narrative_summary']['generation_time'] = round(llm_duration, 1)
@@ -1516,6 +1585,7 @@ class AudioProcessor:
                     story_result = generate_story_sync(results)
 
                     story_duration = time.time() - story_start
+                    step_timings['llm_story'] = round(story_duration, 2)
                     if story_result:
                         results['story_narrative'] = story_result
                         results['story_narrative']['generation_time'] = round(story_duration, 1)
@@ -1533,8 +1603,12 @@ class AudioProcessor:
 
         finally:
             # Always calculate processing time in finally block
-            results['processing_time_seconds'] = time.time() - start_time
-            logger.info(f"Total processing time: {results['processing_time_seconds']:.1f}s")
+            results['processing_time_seconds'] = round(time.time() - start_time, 2)
+            results['step_timings'] = step_timings
+            logger.info(
+                f"Total processing time: {results['processing_time_seconds']:.1f}s | "
+                f"Step breakdown: {step_timings}"
+            )
 
             # Clean up converted file
             if converted and wav_path != audio_path:
@@ -1547,7 +1621,9 @@ class AudioProcessor:
         saved_analysis_path = self.save_analysis(
             results,
             results.get('saved_recording_path'),
-            timestamp=analysis_timestamp
+            timestamp=analysis_timestamp,
+            analyses_dir=analyses_dir,
+            archive_manager=archive_manager
         )
         results['saved_analysis_path'] = saved_analysis_path
 
