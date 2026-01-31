@@ -269,7 +269,7 @@ def preprocess_audio(
     normalize: bool = True,
     highpass: bool = True,
     noise_reduce: bool = True,
-    noise_strength: float = 0.3
+    noise_strength: float = 0.5
 ) -> np.ndarray:
     """
     Full preprocessing pipeline for audio.
@@ -280,7 +280,7 @@ def preprocess_audio(
         normalize: Apply normalization
         highpass: Apply high-pass filter
         noise_reduce: Apply noise reduction
-        noise_strength: Noise reduction strength (0-1)
+        noise_strength: Noise reduction strength (0-1, default 0.5 for bridge env)
 
     Returns:
         Preprocessed audio

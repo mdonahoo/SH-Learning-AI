@@ -3446,6 +3446,7 @@ class App {
         // Original step labels
         this.originalLabels = {
             'convert': 'Converting audio',
+            'model_load': 'Loading Whisper model',
             'transcribe': 'Transcribing',
             'diarize': 'Identifying crew',
             'roles': 'Inferring roles',
@@ -3458,7 +3459,7 @@ class App {
         };
 
         // Step order for index tracking
-        this.stepOrder = ['convert', 'transcribe', 'diarize', 'roles', 'quality', 'scorecards', 'confidence', 'learning', 'habits', 'training'];
+        this.stepOrder = ['convert', 'model_load', 'transcribe', 'diarize', 'roles', 'quality', 'scorecards', 'confidence', 'learning', 'habits', 'training'];
 
         // Reset all steps
         document.querySelectorAll('#progress-steps .step').forEach(step => {

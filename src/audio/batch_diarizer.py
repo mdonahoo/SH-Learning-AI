@@ -313,7 +313,7 @@ class BatchSpeakerDiarizer:
                     normalize=True,
                     highpass=True,
                     noise_reduce=True,
-                    noise_strength=0.3
+                    noise_strength=float(os.getenv('NOISE_REDUCE_STRENGTH', '0.5'))
                 )
 
                 # Log post-processing stats

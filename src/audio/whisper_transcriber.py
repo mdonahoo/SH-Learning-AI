@@ -28,21 +28,39 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-# Domain-specific vocabulary prompt for Starship Horizons and Empty Epsilon
-# This biases Whisper toward recognizing game-specific terms
+# Optimized domain-specific prompt for Whisper (~150 words, ~195 tokens).
+# Whisper silently truncates initial_prompt to the last ~224 tokens, so this
+# prompt is intentionally short.  The most commonly mis-recognized terms
+# (warp, ship names, alien races) appear first.
 STARSHIP_HORIZONS_PROMPT = (
+    "Starship Horizons bridge simulator. "
+    "Warp drive, go to warp, maximum warp, engage warp, drop out of warp, "
+    "warp jammer, warp jammed, warp factor, warp one, warp two, warping. "
+    "Ships: Hedge, USS Hedge, Hyperion, Endeavor, Damocles, Lutren, Belgore, MSF. "
+    "Races: Craylor, Craylord, Kralien, Torgoth, Arvonian, Ximni, Skaraan. "
+    "Weapons: nuke, nukes, EMP, homing missile, torpedo, HVLI, terahertz, "
+    "left tube, right tube, phasers, beam weapons. "
+    "Stations: helm, tactical, science, engineering, communications. "
+    "Navigation: waypoint, bearing, heading, impulse, full stop, evasive maneuvers. "
+    "Alerts: red alert, shields up, battle stations. "
+    "Commands: engage, fire, aye captain, on screen, make it so. "
+    "Locations: Paravera, Calavera, Faraday, Starbase Delta. "
+    "Docking: undock, Space Dock, shuttle bay."
+)
+
+# Full prompt preserved for reference and documentation.
+# NOT used at runtime — Whisper's ~224 token limit would silently truncate it.
+STARSHIP_HORIZONS_PROMPT_FULL = (
     # Starship Horizons specific
     "Starship Horizons bridge simulator, USS Donahoo, captain's log, stardate. "
     "Star systems: Paravera, Calavera, Caravera, Faraday, Parrot Arrow, Starbase Delta. "
     "Galaxy map, galaxy view, zoom in, zoom out. "
-
     # Alien races and factions
     "Alien races: Craylor, Craylord, Craylords, cralor, Kralien, Torgoth, Arvonian, Ximni, Skaraan. "
     "Human Navy, human navy headquarters, fleet admiral, fleet command, fleet disposition. "
     "Treaty: treaty, the treaty, Craylor treaty, human Craylor treaty, human Craylord treaty, "
     "held a treaty, treaty for years, treaty is in effect. "
     "Neutral zone, blue neutral border zone, border patrol, tensions rising. "
-
     # Ship names and designations - critical (often misheard)
     "Player ship: Hedge, USS Hedge, the Hedge, of Hedge, crew of Hedge. "
     "Common phrases: captain and crew of Hedge, commanding officer of Hedge, "
@@ -51,7 +69,6 @@ STARSHIP_HORIZONS_PROMPT = (
     "Endeavor, USS Endeavor, Damocles, USS Damocles, Endeavor and Damocles. "
     "Enemy ships: Lutren, Lutrench, Belgore, MSF, Wickert, Phobos, core trailer, chord trailer. "
     "Ship designations: 215, 302, 307, 310, 22, 32, R2. "
-
     # CRITICAL: "warp" not "work" - this is a sci-fi bridge simulator
     "IMPORTANT: In this context, 'warp' is a navigation term, NOT 'work'. "
     "Warp terms: warp, warp drive, warp to, go to warp, warp factor, warping, "
@@ -59,11 +76,9 @@ STARSHIP_HORIZONS_PROMPT = (
     "warp speed, maximum warp, engage warp, drop out of warp, out of warp, "
     "warp one, warp two, warp three, warp point, warp point three, waypoint. "
     "War: war declared, war has been declared, war depicted. "
-
     # Bridge stations (both games)
     "Bridge stations: helm, tactical, science, engineering, operations, communications, "
     "weapons officer, relay officer, single pilot. "
-
     # Ship systems
     "Ship systems: warp drive, warp core, warp engines, impulse engines, impulse drive, "
     "shields, shield strength, shield frequency, phasers, phaser banks, phaser array, "
@@ -71,7 +86,6 @@ STARSHIP_HORIZONS_PROMPT = (
     "forward shields, aft shields, port shields, starboard shields, "
     "sensor array, long-range sensors, short-range sensors, scanners, "
     "transporter, tractor beam, combat maneuver, jump drive, reactor. "
-
     # Navigation terms - warp is critical (not 'work')
     "Navigation: waypoint, sector, bearing, mark, coordinates, heading, "
     "waypoint one, waypoint two, waypoint three, waypoint four, waypoint five, "
@@ -82,21 +96,17 @@ STARSHIP_HORIZONS_PROMPT = (
     "ready to warp, warping, we warp, warp one, warp two, best speed, recommend warp two, "
     "ETA, coming about, closing distance, intercept course, evasive maneuvers. "
     "Maneuvers: combat maneuver, flyby, fly past, bring us around, turn us around, hell turn. "
-
     # UI interaction terms
     "UI commands: tap, tap the system, tap a thing, scan it, select, click, swipe. "
-
     # Communications and docking
     "Communications: comm station, hail, hailing frequencies, channel open, "
     "transmitting, receiving, subspace, distress signal, distress call. "
     "Docking: Space Dock, docking permission, undock, undock us, undocking, "
     "request permission, back us out, meters clear, hundred meters. "
-
     # Alerts and conditions
     "Alerts: red alert, condition red, yellow alert, condition yellow, "
     "battle stations, all hands, shields up, shields down, "
     "general quarters, action stations, stand down. "
-
     # Combat terminology
     "Combat: fire, open fire, cease fire, fire at will, weapons free, "
     "attack pattern, attack pattern Delta, attack pattern Alpha, "
@@ -104,7 +114,6 @@ STARSHIP_HORIZONS_PROMPT = (
     "direct hit, hull damage, hull breach, shields failing, shields holding, "
     "torpedoes away, firing phasers, beam weapons, projectile weapons, "
     "missile lock, countermeasures, point defense. "
-
     # Weapons and tubes - critical for accuracy
     "Tubes: left tube, right tube, load tubes, put in tubes, unload, "
     "install the right tube, launch the missile, launch left tube, launch right tube. "
@@ -119,18 +128,15 @@ STARSHIP_HORIZONS_PROMPT = (
     "Calibrate: calibrate, recalibrate, calibrate the shields, calibrate to their shields. "
     "Beam ship: beam ship, we are a beam ship, we are primarily a beam ship, "
     "primarily a beam ship, we are a beam vessel, our beams. "
-
     # Commands and responses
     "Commands: engage, make it so, on screen, main viewer, acknowledged, "
     "aye sir, aye captain, aye aye, affirmative, negative, copy that, roger, "
     "helm responds, ready captain, standing by, awaiting orders. "
-
     # Status reports
     "Status: nominal, operational, online, offline, damaged, destroyed, "
     "critical, stable, maneuvering, in position, on station, "
     "power levels, energy reserves, coolant levels, heat levels, "
     "damage control, repair teams, damage report. "
-
     # Empty Epsilon specific
     "Empty Epsilon: Artemis, spaceship bridge simulator, "
     "nebula, asteroid field, black hole, wormhole, "
@@ -138,36 +144,30 @@ STARSHIP_HORIZONS_PROMPT = (
     "probe, supply drop, artifact, anomaly, "
     "dock, supply station, defense platform, sentry turret, "
     "player ship, CPU ship, scenario, mission objective. "
-
     # Crew coordination and scanning
     "Crew: speak from diaphragm, bridge crew, away team, "
     "triangulate, scan the planet, scan the planets, scan complete, scan results, "
     "balance power, power distribution, boost shields, boost weapons, "
     "route power, divert power, emergency power. "
-
     # Mission briefing and commands
     "Briefing: here's the briefing, greetings captain, greetings captain and crew, "
     "your mission, patrol the border, patrol the border area, "
     "relieved of command, relieved of fleet command duties, "
     "relay officer's directives, imminent intrusion, imminent Craylor intrusion. "
-
     # Station-specific commands
     "Science: scan, scanning, get a scan, scan the contacts, scan on, "
     "call sign, interpretation, type, ship type, weak against. "
     "Engineering: boost to beams, boosting our beam weapons, energy is down. "
     "Weapons: stand by to engage, alternate targets, focus on, switch to. "
     "Helm: undock, undock us, take us to, copy that, copy down. "
-
     # Objects and entities
     "Objects: drones, interact with drones, probes, asteroids, debris, "
     "planets, moons, stations, ships, contacts. "
-
     # Commonly fragmented phrases (keep these together)
     "Common phrases: standby, stand by, deploy the shuttle, good idea, "
     "get back, containment field, we're gonna need, ready to go, "
     "retrieve them, over there, out there, what do you see, "
     "shuttle bay, shuttle is ready, shuttle deployed, shuttle returning. "
-
     # Captain phrases (often spoken by person without console)
     "Captain speech: Science what do you see, Helm set a course, "
     "Tactical fire when ready, Engineering boost shields, "
@@ -175,15 +175,20 @@ STARSHIP_HORIZONS_PROMPT = (
     "good work, well done, proceed, carry on, make it so. "
 )
 
-# Alternative shorter prompt if the full one causes issues
-STARSHIP_HORIZONS_PROMPT_SHORT = (
-    "Starship bridge simulator. Stations: helm, tactical, science, engineering, ops. "
-    "Terms: warp, impulse, shields, phasers, torpedoes, bearing, mark, heading. "
-    "Commands: engage, fire, on screen, aye captain, red alert, shields up. "
-    "Races: Craylor, Craylord, human Craylord treaty, Kralien, Torgoth. "
-    "Ships: Hedge, Lutren, Belgore, MSF, warp jammer. "
-    "Weapons: left tube, right tube, homing missiles, nukes, EMPs, terahertz. "
-    "Locations: Paravera, Calavera, Faraday, Starbase Delta."
+# Hotwords for faster-whisper beam search biasing.
+# IMPORTANT: In faster-whisper 1.2.1 hotwords tokens are added to the decoder
+# prompt alongside initial_prompt tokens.  The Whisper decoder has a 448-token
+# context window, so (hotwords + initial_prompt + overhead) must leave room for
+# generated text (~100 tokens).  Keep hotwords under ~110 tokens.
+# Focus on terms Whisper commonly misrecognizes (proper nouns, domain jargon).
+# Override via WHISPER_HOTWORDS env var.
+STARSHIP_HORIZONS_HOTWORDS = (
+    "warp, warping, warp drive, warp jammer, warp jammed, "
+    "Hedge, Hyperion, Endeavor, Damocles, "
+    "Craylor, Craylord, Kralien, Daichi, Arvonian, Ximni, Skaraan, "
+    "nuke, EMP, HVLI, terahertz, "
+    "Caravera, Calavera, Faraday, Starbase Delta, "
+    "Horizons, Lutren, Belgore, Wickert, Phobos"
 )
 
 # Known Whisper hallucinations to filter out
@@ -770,6 +775,12 @@ class WhisperTranscriber:
             STARSHIP_HORIZONS_PROMPT
         )
 
+        # Hotwords for beam search biasing (no token limit unlike initial_prompt)
+        self.hotwords = os.getenv(
+            'WHISPER_HOTWORDS',
+            STARSHIP_HORIZONS_HOTWORDS
+        )
+
         # Model path
         model_path = Path(os.getenv('WHISPER_MODEL_PATH', './data/models/whisper/'))
         model_path.mkdir(parents=True, exist_ok=True)
@@ -830,9 +841,16 @@ class WhisperTranscriber:
             logger.info("PyTorch not available for GPU detection, using CPU")
             return 'cpu'
 
-    def load_model(self) -> bool:
+    def load_model(
+        self,
+        progress_callback: Optional[callable] = None
+    ) -> bool:
         """
         Load the Whisper model into memory.
+
+        Args:
+            progress_callback: Optional callback(step_id, label, progress_pct)
+                for reporting model loading progress to the UI.
 
         Returns:
             True if model loaded successfully
@@ -842,7 +860,15 @@ class WhisperTranscriber:
                 logger.debug("Model already loaded")
                 return True
 
+            def _report(label: str):
+                if progress_callback:
+                    try:
+                        progress_callback("model_load", label, 8)
+                    except Exception as e:
+                        logger.warning(f"Progress callback error: {e}")
+
             try:
+                _report(f"Loading Whisper model ({self.model_size}) on {self.device}...")
                 logger.info(f"Loading Whisper model: {self.model_size}")
                 start_time = time.time()
 
@@ -859,6 +885,7 @@ class WhisperTranscriber:
                 logger.info(f"✓ Whisper model loaded in {load_time:.2f}s")
 
                 # Warm up model with dummy audio
+                _report("Warming up Whisper model...")
                 self._warmup_model()
 
                 return True
@@ -1080,7 +1107,8 @@ class WhisperTranscriber:
                 compression_ratio_threshold=2.4,  # Reject highly repetitive segments
                 beam_size=5,  # Larger beam = better accuracy (default is 5)
                 best_of=5,  # Consider more candidates for better accuracy
-                temperature=0.0,  # Deterministic output for consistency
+                temperature=[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],  # Fallback on poor segments
+                hotwords=self.hotwords,  # Domain vocabulary beam biasing
                 repetition_penalty=1.0,  # Normal penalty - allow natural repetition
                 no_repeat_ngram_size=0,  # Disabled - allow natural speech patterns
                 hallucination_silence_threshold=0.8,  # Less aggressive silence detection
@@ -1203,7 +1231,8 @@ class WhisperTranscriber:
                 compression_ratio_threshold=2.4,  # Reject highly repetitive segments
                 log_prob_threshold=-1.0,  # Filter low-confidence output
                 no_speech_threshold=0.6,
-                temperature=0.0,  # Deterministic output
+                temperature=[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],  # Fallback on poor segments
+                hotwords=self.hotwords,  # Domain vocabulary beam biasing
                 hallucination_silence_threshold=0.8,  # Less aggressive silence detection
             )
 
@@ -1544,7 +1573,8 @@ class WhisperTranscriber:
                 compression_ratio_threshold=2.4,
                 log_prob_threshold=-1.0,
                 no_speech_threshold=0.6,
-                temperature=0.0,
+                temperature=[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],  # Fallback on poor segments
+                hotwords=self.hotwords,  # Domain vocabulary beam biasing
                 hallucination_silence_threshold=0.5,
             )
 

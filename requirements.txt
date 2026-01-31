@@ -33,7 +33,7 @@ webrtcvad>=2.0.10
 # AI/ML - Local Transcription (Faster-Whisper)
 faster-whisper>=1.0.0
 torch>=2.0.0
-torchaudio>=2.0.0
+torchaudio>=2.0.0,<2.5.0
 
 # Performance Monitoring
 psutil>=5.9.0

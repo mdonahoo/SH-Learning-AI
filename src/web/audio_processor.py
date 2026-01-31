@@ -205,7 +205,8 @@ except ImportError:
 ANALYSIS_STEPS = [
     {"id": "convert", "label": "Converting audio", "weight": 5},
     {"id": "waveform", "label": "Extracting audio waveform", "weight": 3},
-    {"id": "transcribe", "label": "Transcribing audio", "weight": 23},
+    {"id": "model_load", "label": "Loading Whisper model", "weight": 5},
+    {"id": "transcribe", "label": "Transcribing audio", "weight": 18},
     {"id": "diarize", "label": "Identifying speakers", "weight": 11},
     {"id": "sentiment", "label": "Analyzing crew stress levels", "weight": 5},
     {"id": "roles", "label": "Inferring roles", "weight": 7},
@@ -351,9 +352,16 @@ class AudioProcessor:
         except ImportError:
             return False
 
-    def load_model(self) -> bool:
+    def load_model(
+        self,
+        progress_callback: Optional[callable] = None
+    ) -> bool:
         """
         Load Whisper model.
+
+        Args:
+            progress_callback: Optional callback(step_id, label, progress_pct)
+                for reporting model loading progress to the UI.
 
         Returns:
             True if model loaded successfully
@@ -369,7 +377,7 @@ class AudioProcessor:
             self._transcriber = WhisperTranscriber(
                 model_size=self.whisper_model_size
             )
-            self._transcriber.load_model()
+            self._transcriber.load_model(progress_callback=progress_callback)
             self._model_loaded = True
             logger.info(f"Whisper model '{self.whisper_model_size}' loaded")
             return True
@@ -915,7 +923,8 @@ class AudioProcessor:
                 word_timestamps=True,
                 beam_size=5,  # Better accuracy with beam search
                 best_of=5,    # Consider more candidates
-                temperature=0.0,  # Deterministic output for consistency
+                temperature=[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],  # Fallback on poor segments
+                hotwords=self._transcriber.hotwords,  # Domain vocabulary beam biasing
                 condition_on_previous_text=True,  # Better context awareness
                 no_speech_threshold=0.6,  # Filter out non-speech
             )
@@ -984,7 +993,7 @@ class AudioProcessor:
             - info: {language, duration, language_probability}
         """
         if not self._model_loaded:
-            self.load_model()
+            self.load_model(progress_callback=progress_callback)
 
         if not self._transcriber:
             raise RuntimeError("Whisper transcriber not available")
@@ -1093,7 +1102,8 @@ class AudioProcessor:
             word_timestamps=True,
             beam_size=5,  # Better accuracy with beam search
             best_of=5,    # Consider more candidates
-            temperature=0.0,  # Deterministic output for consistency
+            temperature=[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],  # Fallback on poor segments
+            hotwords=self._transcriber.hotwords,  # Domain vocabulary beam biasing
             condition_on_previous_text=False,  # Prevent hallucination propagation
             no_speech_threshold=0.6,  # Filter out non-speech
             repetition_penalty=1.5,  # Penalize repeated tokens
@@ -1283,7 +1293,9 @@ class AudioProcessor:
             if include_diarization and DIARIZATION_AVAILABLE and segments:
                 update_progress("diarize", "Identifying speakers", progress)
                 step_start = time.time()
-                segments, diarization_result = self._add_speaker_info(wav_path, segments)
+                segments, diarization_result = self._add_speaker_info(
+                    wav_path, segments, progress_callback=progress_callback
+                )
                 results['speakers'] = self._calculate_speaker_stats(segments)
 
                 # Add diarization methodology to results if available
@@ -2022,7 +2034,8 @@ class AudioProcessor:
     def _add_speaker_info(
         self,
         wav_path: str,
-        segments: List[Dict[str, Any]]
+        segments: List[Dict[str, Any]],
+        progress_callback: Optional[callable] = None
     ) -> Tuple[List[Dict[str, Any]], Optional['DiarizationResult']]:
         """
         Add speaker identification to segments.
@@ -2033,6 +2046,11 @@ class AudioProcessor:
         3. Neural (pyannote): Most accurate, benefits from GPU
         4. Simple (spectral): Fallback when others unavailable
 
+        Args:
+            wav_path: Path to WAV audio file
+            segments: Transcription segments to add speaker info to
+            progress_callback: Optional callback(step_id, label, progress_pct)
+
         Returns:
             Tuple of (updated_segments, DiarizationResult or None)
             - segments: Original segments with 'speaker_id' and 'speaker_confidence'
@@ -2040,10 +2058,18 @@ class AudioProcessor:
         """
         diarization_result = None
 
+        def _diarize_progress(label: str):
+            if progress_callback:
+                try:
+                    progress_callback("diarize", label, 35)
+                except Exception as e:
+                    logger.warning(f"Progress callback error: {e}")
+
         try:
             diarizer = None
 
             # Load audio once for all methods
+            _diarize_progress("Loading audio for speaker identification...")
             audio = AudioSegment.from_wav(wav_path)
             samples = np.array(audio.get_array_of_samples(), dtype=np.float32)
             samples = samples / 32768.0  # Normalize to -1 to 1
@@ -2054,6 +2080,7 @@ class AudioProcessor:
 
                 # Initialize batch diarizer if needed
                 if self._batch_diarizer is None:
+                    _diarize_progress("Loading batch speaker diarizer...")
                     self._batch_diarizer = BatchSpeakerDiarizer(
                         similarity_threshold=self.speaker_embedding_threshold,
                         min_speakers=self.min_expected_speakers,
@@ -2061,6 +2088,7 @@ class AudioProcessor:
                     )
 
                 # Perform two-pass diarization
+                _diarize_progress("Running two-pass speaker clustering...")
                 segments, diarization_result = self._batch_diarizer.diarize_complete(
                     samples, segments, audio.frame_rate
                 )
@@ -2071,12 +2099,14 @@ class AudioProcessor:
 
                 # Initialize CPU diarizer if needed
                 if self._cpu_diarizer is None:
+                    _diarize_progress("Loading CPU speaker encoder (resemblyzer)...")
                     self._cpu_diarizer = CPUSpeakerDiarizer(
                         similarity_threshold=self.speaker_embedding_threshold,
                         min_speakers=self.min_expected_speakers,
                         max_speakers=self.max_expected_speakers
                     )
 
+                _diarize_progress("Clustering speaker embeddings...")
                 segments = self._cpu_diarizer.process_segments_batch(
                     segments, samples, audio.frame_rate
                 )
@@ -2098,6 +2128,7 @@ class AudioProcessor:
 
                 # Initialize neural diarizer if needed
                 if self._neural_diarizer is None:
+                    _diarize_progress("Loading pyannote neural diarization model...")
                     self._neural_diarizer = NeuralSpeakerDiarizer(
                         similarity_threshold=self.speaker_embedding_threshold,
                         min_speakers=self.min_expected_speakers,
@@ -2105,6 +2136,7 @@ class AudioProcessor:
                     )
 
                 # Use full pipeline diarization and alignment
+                _diarize_progress("Running neural speaker diarization pipeline...")
                 segments = self._neural_diarizer.diarize_and_align(wav_path, segments)
                 diarizer = self._neural_diarizer
 
