@@ -51,6 +51,14 @@ except ImportError:
     NARRATIVE_AVAILABLE = False
     logger.warning("Narrative summary module not available for regeneration")
 
+# Import hallucination prevention
+try:
+    from src.llm.hallucination_prevention import clean_hallucinations
+    HALLUCINATION_PREVENTION_AVAILABLE = True
+except ImportError:
+    HALLUCINATION_PREVENTION_AVAILABLE = False
+    clean_hallucinations = None
+
 load_dotenv()
 
 logger = logging.getLogger(__name__)
@@ -1624,7 +1632,13 @@ async def regenerate_story_stream(
                     "model": generator.ollama_model,
                     "prompt": prompt,
                     "stream": True,
-                    "options": {"temperature": 0.7, "num_predict": 2048}
+                    "options": {
+                        "temperature": 0.5,
+                        "top_p": 0.9,
+                        "top_k": 50,
+                        "repeat_penalty": 1.1,
+                        "num_predict": 2500
+                    }
                 },
                 timeout=300.0
             ) as response:
@@ -1651,10 +1665,25 @@ async def regenerate_story_stream(
             generation_time = round(time.time() - start_time, 1)
 
             if story:
+                # Validate output if hallucination prevention available
+                validation_issues = []
+                if HALLUCINATION_PREVENTION_AVAILABLE and clean_hallucinations:
+                    try:
+                        transcripts = results_data.get('transcription', [])
+                        story, validation_issues = clean_hallucinations(
+                            story,
+                            transcripts,
+                            results_data,
+                            add_warning=True
+                        )
+                    except Exception as e:
+                        logger.warning(f"Hallucination validation failed: {e}")
+
                 story_result = {
                     'story': story,
                     'model': generator.ollama_model,
-                    'generation_time': generation_time
+                    'generation_time': generation_time,
+                    'validation_issues': len(validation_issues) if validation_issues else 0
                 }
 
                 # Update and save analysis (handle nested 'results' structure)

@@ -869,31 +869,28 @@ Write a narrative nonfiction story (800-1200 words) about this bridge crew's ses
 ## STRUCTURE
 Write 3-6 sections, each with a descriptive markdown header (## format) based on natural story beats. Headers should be specific and evocative — based on what actually happened.
 
-GOOD headers: "## The Turret That Turned", "## Racing to Outpost D-3", "## A Question of Credits"
+GOOD headers: descriptive, specific to what actually happened in THIS session (e.g., "## The Miscalculated Jump", "## When the Shields Dropped")
 BAD headers: "## Opening", "## Rising Action", "## Climax", "## Resolution"
 
 ## TONE & STYLE: NARRATIVE NONFICTION
 
-GOOD example:
-"The team started with 620 credits and a clear strategy. 'Taking these first three is gonna be good,' someone noted. What they didn't realize was that every outpost they captured would drain credits from a shared pool — and soon they'd be racing to stay solvent."
+GOOD tone: Grounded in specifics from the transcript, weaving real quotes into prose. Reads like a magazine feature about a real event.
+BAD tone: Melodramatic fiction with invented details, characters, or scenarios not in the data.
 
-BAD example:
-"Captain Rodriguez surveyed the bridge with steely determination as alarms blared across the command deck. The fate of the galaxy hung in the balance."
-
-Your story should read like a magazine feature about a real event — engaging, specific, honest. The entertainment comes from authenticity, not invention.
+IMPORTANT: Your ONLY source material is the SESSION DATA above. Do NOT use any content from these instructions as story material. Every detail, quote, and event in your story MUST come from the transcript and game data provided.
 
 ## CRITICAL RULES
 1. The TRANSCRIPT is your primary source — but respect the confidence markers:
    - Lines in "quotes" = HIGH CONFIDENCE. Safe to quote verbatim in your story.
    - Lines in ~tildes~ = LOW CONFIDENCE. The words may be wrong. Paraphrase the general gist, do NOT quote these verbatim. Use hedging: "someone mentioned...", "the crew discussed...", "what sounded like..."
-2. Use EXACT NUMBERS from game data: credits, outpost names, marine counts, target IDs.
-3. DO NOT INVENT scenarios, combat, characters, or drama not in the data.
+2. Use EXACT NUMBERS from game data only if game data is provided. If no game context is available, rely solely on transcript content.
+3. DO NOT INVENT scenarios, combat, characters, names, numbers, or drama not in the data. If a detail is not in the session data, do not include it.
 4. Use GENDER-NEUTRAL language (they/them, "the Captain", "the officer"). Never "he said" or "she ordered".
 5. Use role names as characters (the Captain, Flight, Tactical, Operations, Sciences, Engineer).
 6. Be HONEST about bugs, mistakes, confusion, miscommunication — these are often the best parts of the story.
 7. Include direct quotes ONLY from high-confidence "quoted" lines. Aim for 8-12 quotes woven naturally into prose.
 8. Maintain CHRONOLOGICAL order — never jump backward in time.
-9. Find the REAL story: a sentry turret spawning as hostile IS the drama. Crew discovering shared credits IS the twist.
+9. Find the REAL story in the actual transcript — the drama comes from what actually happened, not from invented events.
 10. Write in PAST TENSE, third person.
 
 ## FORMAT
