@@ -367,9 +367,13 @@ class BatchSpeakerDiarizer:
 
         # Merge sentence fragments from orphan speakers
         # This catches cases where a sentence is split mid-utterance
+        # Scale orphan threshold with recording length to avoid absorbing
+        # real speakers who happen to have few segments in longer recordings
+        total_segments = len(segments)
+        scaled_orphan_threshold = max(2, min(5, total_segments // 50))
         segments = self._merge_sentence_fragments(
             segments,
-            max_orphan_segments=2,  # Speakers with ≤2 segments are orphans
+            max_orphan_segments=scaled_orphan_threshold,
             max_time_gap=3.0  # Merge if within 3 seconds of major speaker
         )
 
@@ -540,9 +544,13 @@ class BatchSpeakerDiarizer:
 
         # Merge sentence fragments from orphan speakers
         # This catches cases where a sentence is split mid-utterance
+        # Scale orphan threshold with recording length to avoid absorbing
+        # real speakers who happen to have few segments in longer recordings
+        total_segments = len(segments)
+        scaled_orphan_threshold = max(2, min(5, total_segments // 50))
         segments = self._merge_sentence_fragments(
             segments,
-            max_orphan_segments=2,  # Speakers with ≤2 segments are orphans
+            max_orphan_segments=scaled_orphan_threshold,
             max_time_gap=3.0  # Merge if within 3 seconds of major speaker
         )
 

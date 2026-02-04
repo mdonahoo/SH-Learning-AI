@@ -204,7 +204,6 @@ class RolePatterns:
         # Starship Horizons game-specific operations
         r"(?i)\b(credits?|alliance|resources?)\b",
         r"(?i)\b(capture|captured|outpost)\b",
-        r"(?i)\b(assist|granted)\b",
     ])
 
     COMMUNICATIONS_PATTERNS: List[str] = field(default_factory=lambda: [
@@ -330,6 +329,9 @@ class RoleInferenceEngine:
         self._role_pattern_map = self._build_role_pattern_map()
         self._addressing_patterns = self._build_addressing_patterns()
         self._self_id_patterns = self._build_self_identification_patterns()
+        # Cache of per-speaker role scores for use in conflict resolution
+        self._speaker_role_scores: Dict[str, Dict[BridgeRole, float]] = {}
+        self._speaker_matched_keywords: Dict[str, Dict[BridgeRole, set]] = {}
 
     def _build_role_pattern_map(self) -> Dict[BridgeRole, List[str]]:
         """Build mapping of roles to their detection patterns."""
@@ -486,7 +488,16 @@ class RoleInferenceEngine:
 
             if utterance_count > 0:
                 # Component 1: Keyword density (normalized within speaker)
-                density = utterances_with_role / utterance_count
+                # Cap denominator to prevent density dilution in long recordings.
+                # A speaker saying 8 role keywords in 120 utterances is just as
+                # role-indicative as 8 in 30 — they just talked more.
+                # Use proportional cap: never reduce density by more than 2x vs
+                # a 10-min baseline. This prevents dilution for moderate speakers
+                # while preserving relative role ordering for dominant speakers.
+                density_floor = 60  # ~10 minutes of typical conversation
+                density_cap = max(density_floor, utterance_count // 2)
+                effective_count = min(utterance_count, density_cap)
+                density = utterances_with_role / effective_count
 
                 # Component 2: Keyword diversity (distinct types, capped)
                 diversity = min(1.0, distinct_keywords / 5)
@@ -530,6 +541,14 @@ class RoleInferenceEngine:
                         diversity * 0.40 +
                         prominence_score * 0.15
                     )
+
+                # Bonus for high absolute keyword evidence (helps in long recordings
+                # where density dilution can still reduce scores despite the cap)
+                total_role_matches = role_match_counts.get(role, 0)
+                if total_role_matches >= 10:
+                    role_scores[role] = min(1.0, role_scores[role] + 0.10)
+                elif total_role_matches >= 6:
+                    role_scores[role] = min(1.0, role_scores[role] + 0.05)
 
         # Apply self-identification boost — strong evidence of role assignment
         for role, id_texts in self_identified_roles.items():
@@ -686,6 +705,12 @@ class RoleInferenceEngine:
             prominence
         )
 
+        # Cache role scores and matched keywords for conflict resolution fallback
+        self._speaker_role_scores[speaker] = dict(role_scores)
+        self._speaker_matched_keywords[speaker] = {
+            r: set(kws) for r, kws in matched_keywords.items()
+        }
+
         return SpeakerRoleAnalysis(
             speaker=speaker,
             inferred_role=inferred_role,
@@ -835,7 +860,7 @@ class RoleInferenceEngine:
                     f"(confidence: {primary.confidence:.0%}, prominence: {primary.utterance_percentage:.0f}%)"
                 )
 
-                # Others become support roles or unknown
+                # Others: try next-best role, then XO, then unknown
                 for secondary in sorted_speakers[1:]:
                     confidence_gap = primary.confidence - secondary.confidence
                     prominence_gap = primary.utterance_percentage - secondary.utterance_percentage
@@ -852,24 +877,35 @@ class RoleInferenceEngine:
                         logger.debug(
                             f"  {secondary.speaker} -> XO (high prominence: {secondary.utterance_percentage:.0f}%)"
                         )
-                    # Moderate prominence -> crew member
-                    elif secondary.utterance_percentage > 10:
-                        reassignments[secondary.speaker] = BridgeRole.UNKNOWN
-                        logger.debug(
-                            f"  {secondary.speaker} -> Unknown (moderate evidence)"
-                        )
                     else:
-                        # Low volume, lower confidence
-                        reassignments[secondary.speaker] = BridgeRole.UNKNOWN
+                        # Try next-best role from cached scores
+                        fallback_role = self._find_fallback_role(
+                            secondary.speaker, role, reassignments
+                        )
+                        reassignments[secondary.speaker] = fallback_role
+                        if fallback_role != BridgeRole.UNKNOWN:
+                            logger.debug(
+                                f"  {secondary.speaker} -> {fallback_role.value} (fallback from {role.value})"
+                            )
+
+        # Collect roles already claimed by primary winners (not in reassignments)
+        claimed_roles: set = set()
+        for analysis in results.values():
+            if analysis.speaker not in reassignments and analysis.inferred_role != BridgeRole.UNKNOWN:
+                claimed_roles.add(analysis.inferred_role)
 
         # Apply reassignments with adjusted confidence
         for speaker, new_role in reassignments.items():
             old_analysis = results[speaker]
 
-            # Calculate new confidence based on reassignment type and original strength
+            # Calculate new confidence based on reassignment type
             if new_role == BridgeRole.EXECUTIVE_OFFICER:
-                # XO gets decent confidence if they were close to primary
                 new_confidence = min(0.7, old_analysis.confidence * 0.8)
+            elif new_role != BridgeRole.UNKNOWN:
+                # Fallback to next-best role: use score from cached data
+                cached_scores = self._speaker_role_scores.get(speaker, {})
+                fallback_score = cached_scores.get(new_role, 0)
+                new_confidence = min(0.7, fallback_score * 0.8)
             else:
                 new_confidence = 0.0
 
@@ -888,6 +924,57 @@ class RoleInferenceEngine:
             )
 
         return results
+
+    def _find_fallback_role(
+        self,
+        speaker: str,
+        lost_role: BridgeRole,
+        current_reassignments: Dict[str, BridgeRole]
+    ) -> BridgeRole:
+        """
+        Find the next-best role for a speaker who lost their primary in conflict.
+
+        Checks cached role scores for viable alternatives that aren't already
+        taken by another speaker's primary assignment or reassignment.
+
+        Args:
+            speaker: Speaker ID
+            lost_role: The role they lost in conflict
+            current_reassignments: Already-decided reassignments
+
+        Returns:
+            Next-best BridgeRole or UNKNOWN if nothing viable
+        """
+        cached_scores = self._speaker_role_scores.get(speaker, {})
+        cached_keywords = self._speaker_matched_keywords.get(speaker, {})
+
+        if not cached_scores:
+            return BridgeRole.UNKNOWN
+
+        # Sort candidate roles by score (excluding the lost role)
+        candidates = sorted(
+            ((role, score) for role, score in cached_scores.items()
+             if role != lost_role and role != BridgeRole.UNKNOWN),
+            key=lambda x: -x[1]
+        )
+
+        for role, score in candidates:
+            # Must have at least 1 distinct keyword for this role
+            distinct_count = len(cached_keywords.get(role, set()))
+            if distinct_count < self.MIN_KEYWORD_TYPES:
+                continue
+
+            # Must have a meaningful score
+            if score < 0.15:
+                continue
+
+            logger.debug(
+                f"  Fallback candidate for {speaker}: {role.value} "
+                f"(score={score:.3f}, distinct={distinct_count})"
+            )
+            return role
+
+        return BridgeRole.UNKNOWN
 
     # Patterns that indicate a speaker is ADDRESSING someone (not being that role)
     ADDRESSING_PATTERNS = {
