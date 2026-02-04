@@ -8,6 +8,8 @@ import asyncio
 import json
 import logging
 import os
+import re
+import socket
 import tempfile
 import threading
 import queue
@@ -20,7 +22,7 @@ from fastapi import FastAPI, File, UploadFile, HTTPException, Query, Body, Reque
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from src.web.models import (
     AnalysisResult,
@@ -62,6 +64,93 @@ CORS_ORIGINS = os.getenv('WEB_CORS_ORIGINS', '*').split(',')
 READ_ONLY_MODE = os.getenv('READ_ONLY_MODE', 'false').lower() == 'true'
 # READ_ONLY_MODE implies DISABLE_AUDIO_FILES
 DISABLE_AUDIO_FILES = READ_ONLY_MODE or os.getenv('DISABLE_AUDIO_FILES', 'false').lower() == 'true'
+
+# Project root for .env file operations
+_PROJECT_ROOT = Path(__file__).parent.parent.parent
+
+
+def _is_valid_host(host: str) -> bool:
+    """
+    Validate a hostname or IPv4 address.
+
+    Args:
+        host: Hostname or IPv4 address string.
+
+    Returns:
+        True if the host is a valid IPv4 address or RFC 1123 hostname.
+    """
+    if not host or len(host) > 253:
+        return False
+
+    # Check IPv4
+    ipv4_pattern = re.compile(r'^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$')
+    m = ipv4_pattern.match(host)
+    if m:
+        return all(0 <= int(octet) <= 255 for octet in m.groups())
+
+    # Check RFC 1123 hostname
+    hostname_pattern = re.compile(
+        r'^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?'
+        r'(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$'
+    )
+    return bool(hostname_pattern.match(host))
+
+
+def _update_env_file(updates: Dict[str, str]) -> None:
+    """
+    Update the .env file with the given key-value pairs.
+
+    Reads the existing file, replaces matching KEY=value lines, appends
+    missing keys, and writes atomically via a temp file + rename.
+
+    Args:
+        updates: Dictionary of environment variable names to new values.
+
+    Raises:
+        OSError: If the file cannot be written.
+    """
+    env_path = _PROJECT_ROOT / '.env'
+    lines: List[str] = []
+    found_keys: set = set()
+
+    if env_path.exists():
+        with open(env_path, 'r') as f:
+            for line in f:
+                stripped = line.strip()
+                # Check if this line sets one of our keys
+                matched = False
+                for key in updates:
+                    if stripped.startswith(f'{key}=') or stripped.startswith(f'# {key}='):
+                        # Only replace uncommented lines
+                        if stripped.startswith(f'{key}='):
+                            lines.append(f'{key}={updates[key]}\n')
+                            found_keys.add(key)
+                            matched = True
+                            break
+                if not matched:
+                    lines.append(line if line.endswith('\n') else line + '\n')
+
+    # Append any keys that were not found in the file
+    for key, value in updates.items():
+        if key not in found_keys:
+            lines.append(f'{key}={value}\n')
+
+    # Write atomically via temp file + rename
+    tmp_fd, tmp_path = tempfile.mkstemp(
+        dir=str(env_path.parent), suffix='.env.tmp'
+    )
+    try:
+        with os.fdopen(tmp_fd, 'w') as f:
+            f.writelines(lines)
+        os.replace(tmp_path, str(env_path))
+    except Exception:
+        # Clean up temp file on failure
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+
 
 # Global processor instance (shared — ML models are expensive)
 _processor: Optional[AudioProcessor] = None
@@ -502,6 +591,30 @@ class TelemetryStopResponse(BaseModel):
     telemetry_file: Optional[str] = None
 
 
+class GameServerConfig(BaseModel):
+    """Request body for game server configuration update."""
+    game_host: str
+    game_port_ws: int = Field(ge=1, le=65535)
+    game_port_api: int = Field(ge=1, le=65535)
+    game_port_https: int = Field(default=1866, ge=1, le=65535)
+    game_port_wss: int = Field(default=1867, ge=1, le=65535)
+
+
+class ConnectionTestRequest(BaseModel):
+    """Request body for testing game server connectivity."""
+    host: str
+    port_ws: int = Field(ge=1, le=65535)
+    port_api: int = Field(ge=1, le=65535)
+
+
+class ConnectionTestResponse(BaseModel):
+    """Response for game server connection test."""
+    ws_reachable: bool
+    api_reachable: bool
+    ws_detail: str
+    api_detail: str
+
+
 @app.post("/api/telemetry/start", response_model=TelemetryStartResponse)
 async def start_telemetry_recording(
     workspace_id: str = Depends(get_workspace_id)
@@ -527,11 +640,26 @@ async def start_telemetry_recording(
         game_port = int(os.getenv('GAME_PORT_WS', '1865'))
 
         # Create telemetry client
+        logger.info(f"Creating telemetry client for {game_host}:{game_port}")
         client = BrowserMimicWebSocket(host=game_host, port=game_port)
 
         # Connect to game server
-        if not client.connect(screen_name='captain', is_main_viewer=True):
-            raise HTTPException(status_code=503, detail="Failed to connect to game server")
+        if not client.connect(screen_name='mainscreen', is_main_viewer=True, user_name='AI-Observer'):
+            raise HTTPException(
+                status_code=503,
+                detail=f"WebSocket connection to {game_host}:{game_port} failed (5s timeout). "
+                       f"TCP port is reachable but WebSocket handshake did not complete."
+            )
+
+        # Brief wait to confirm game is sending packets back
+        import time
+        time.sleep(1.0)
+        packet_count = sum(client.packet_counts.values())
+        if packet_count == 0:
+            logger.warning(
+                "Connected to game server but received 0 packets after 1s. "
+                "The game may not have accepted the client."
+            )
 
         # Start event tracking for role correlation
         client.start_event_tracking()
@@ -545,12 +673,18 @@ async def start_telemetry_recording(
             'status': 'recording'
         }
 
-        logger.info(f"Started telemetry recording session: {session_id}")
+        logger.info(
+            f"Started telemetry recording session: {session_id} "
+            f"({packet_count} packets received in first 1s)"
+        )
 
         return TelemetryStartResponse(
             session_id=session_id,
             status="recording",
-            message=f"Telemetry recording started. Connected to {game_host}:{game_port}"
+            message=(
+                f"Telemetry recording started. Connected to {game_host}:{game_port} "
+                f"as AI-Observer ({packet_count} packets received)"
+            )
         )
 
     except ImportError as e:
@@ -676,6 +810,48 @@ async def get_telemetry_status(
         'events_captured': sum(client.packet_counts.values()) if client else 0,
         'packet_types': len(client.packet_counts) if client else 0
     }
+
+
+@app.get("/api/telemetry/{session_id}/download")
+async def download_telemetry(
+    session_id: str,
+    workspace_id: str = Depends(get_workspace_id)
+):
+    """
+    Download the telemetry JSON file for a completed session.
+
+    Args:
+        session_id: The telemetry session identifier.
+        workspace_id: Workspace ID from request header.
+
+    Returns:
+        The telemetry JSON file as a download.
+    """
+    telemetry_file = None
+
+    # Try to get file path from session data
+    if session_id in _telemetry_sessions:
+        session = _telemetry_sessions[session_id]
+        if session.get('workspace_id') != workspace_id:
+            raise HTTPException(status_code=404, detail=f"Telemetry session not found: {session_id}")
+        telemetry_file = session.get('telemetry_file')
+
+    # Fall back to scanning workspace telemetry directory
+    if not telemetry_file:
+        ws_mgr = get_workspace_manager()
+        dirs = ws_mgr.ensure_workspace(workspace_id)
+        candidate = dirs['telemetry'] / f"telemetry_{session_id}.json"
+        if candidate.exists():
+            telemetry_file = str(candidate)
+
+    if not telemetry_file or not Path(telemetry_file).exists():
+        raise HTTPException(status_code=404, detail=f"Telemetry file not found for session: {session_id}")
+
+    return FileResponse(
+        str(telemetry_file),
+        media_type="application/json",
+        filename=f"telemetry_{session_id}.json"
+    )
 
 
 @app.post("/api/analyze", response_model=AnalysisResult)
@@ -883,11 +1059,16 @@ async def analyze_audio_stream(
 
     async def event_stream():
         """Generate SSE events."""
+        # Send initial padding to force proxy buffers to flush.
+        # VS Code port forwarding and other proxies buffer small
+        # responses; a 2KB comment forces them to start streaming.
+        yield ": " + " " * 2048 + "\n\n"
+
         while True:
             try:
-                # Check for updates (non-blocking with timeout)
+                # Non-blocking check — never block the event loop
                 try:
-                    msg = progress_queue.get(timeout=0.1)
+                    msg = progress_queue.get_nowait()
                 except queue.Empty:
                     await asyncio.sleep(0.1)
                     continue
@@ -906,8 +1087,9 @@ async def analyze_audio_stream(
         event_stream(),
         media_type="text/event-stream",
         headers={
-            "Cache-Control": "no-cache",
+            "Cache-Control": "no-cache, no-transform",
             "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
         }
     )
 
@@ -1056,7 +1238,7 @@ async def delete_analysis(
     filename: str,
     workspace_id: str = Depends(get_workspace_id)
 ):
-    """Delete a saved analysis (workspace only — shared analyses cannot be deleted)."""
+    """Delete a saved analysis from workspace or shared analyses."""
     if READ_ONLY_MODE:
         raise HTTPException(
             status_code=403,
@@ -1073,19 +1255,23 @@ async def delete_analysis(
 
     file_path = dirs['analyses'] / filename
     if not file_path.exists():
-        # Check if it's a shared analysis
+        # Check if it's in the shared analyses directory
         shared_path = ws_mgr.shared_analyses_dir / filename
         if shared_path.exists():
-            raise HTTPException(
-                status_code=403,
-                detail="Shared analyses cannot be deleted"
-            )
-        raise HTTPException(status_code=404, detail="Analysis not found")
+            file_path = shared_path
+        else:
+            raise HTTPException(status_code=404, detail="Analysis not found")
 
     try:
         file_path.unlink()
-        # Also remove from archive index
+        # Remove from workspace archive index
         archive_mgr.delete_analysis(filename)
+        # Also remove from shared archive index if present
+        try:
+            shared_mgr = ws_mgr.get_shared_archive_manager()
+            shared_mgr.delete_analysis(filename)
+        except Exception:
+            pass
         return {"status": "ok", "message": f"Deleted {filename}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -1675,6 +1861,186 @@ async def sync_archive_index(
     }
 
 
+# ============================================================================
+# Archive Browsing Routes
+# ============================================================================
+
+ARCHIVE_BASE = Path(os.getenv('DATA_DIR', 'data')) / 'archive'
+ARCHIVE_ID_PATTERN = re.compile(r'^\d{8}_\d{6}$')
+
+
+def _validate_archive_id(archive_id: str) -> Path:
+    """
+    Validate archive ID and return its directory path.
+
+    Args:
+        archive_id: Archive batch identifier (YYYYMMDD_HHMMSS).
+
+    Returns:
+        Path to the archive directory.
+
+    Raises:
+        HTTPException: If archive ID is invalid or not found.
+    """
+    if not ARCHIVE_ID_PATTERN.match(archive_id):
+        raise HTTPException(status_code=400, detail="Invalid archive ID format")
+    archive_dir = ARCHIVE_BASE / archive_id
+    if not archive_dir.is_dir():
+        raise HTTPException(status_code=404, detail="Archive not found")
+    return archive_dir
+
+
+@app.get("/api/archives")
+async def list_archives():
+    """
+    List all archive batches.
+
+    Scans data/archive/ for directories containing a manifest.json.
+    Returns a summary of each batch sorted newest-first.
+    """
+    if not ARCHIVE_BASE.is_dir():
+        return {"archives": []}
+
+    archives = []
+    for entry in sorted(ARCHIVE_BASE.iterdir(), reverse=True):
+        if not entry.is_dir() or not ARCHIVE_ID_PATTERN.match(entry.name):
+            continue
+        manifest_path = entry / 'manifest.json'
+        if not manifest_path.exists():
+            continue
+        try:
+            with open(manifest_path, 'r') as f:
+                manifest = json.load(f)
+            archives.append({
+                'archive_id': manifest.get('archive_id', entry.name),
+                'created_at': manifest.get('created_at'),
+                'description': manifest.get('description', ''),
+                'file_counts': manifest.get('file_counts', {}),
+                'total_size_bytes': manifest.get('total_size_bytes', 0),
+                'session_count': len(manifest.get('sessions', [])),
+            })
+        except (json.JSONDecodeError, OSError) as e:
+            logger.warning(f"Failed to read manifest for archive {entry.name}: {e}")
+
+    return {"archives": archives}
+
+
+@app.get("/api/archives/{archive_id}")
+async def get_archive_manifest(archive_id: str):
+    """
+    Get the full manifest for an archive batch.
+
+    Returns session groupings, file counts, and metadata.
+    """
+    archive_dir = _validate_archive_id(archive_id)
+    manifest_path = archive_dir / 'manifest.json'
+
+    if not manifest_path.exists():
+        raise HTTPException(status_code=404, detail="Manifest not found")
+
+    try:
+        with open(manifest_path, 'r') as f:
+            manifest = json.load(f)
+        return manifest
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=500, detail=f"Invalid manifest: {e}")
+
+
+@app.get("/api/archives/{archive_id}/analyses")
+async def list_archive_analyses(archive_id: str):
+    """
+    List all analyses in an archive batch.
+
+    Returns the archive index with metadata for each analysis.
+    """
+    archive_dir = _validate_archive_id(archive_id)
+    index_path = archive_dir / 'archive_index.json'
+
+    if index_path.exists():
+        try:
+            with open(index_path, 'r') as f:
+                return json.load(f)
+        except json.JSONDecodeError as e:
+            raise HTTPException(status_code=500, detail=f"Invalid archive index: {e}")
+
+    # Fallback: list files directly
+    analyses_dir = archive_dir / 'analyses'
+    if not analyses_dir.is_dir():
+        return {"analyses": {}}
+
+    files = sorted(f.name for f in analyses_dir.glob('analysis_*.json'))
+    return {"analyses": {f.replace('.json', ''): {"filename": f} for f in files}}
+
+
+@app.get("/api/archives/{archive_id}/analyses/{filename}")
+async def get_archive_analysis(archive_id: str, filename: str):
+    """
+    Get a specific analysis JSON from an archive batch.
+
+    Returns the full analysis data including results and metadata.
+    """
+    archive_dir = _validate_archive_id(archive_id)
+
+    if '..' in filename or '/' in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    if not filename.endswith('.json'):
+        filename = f"{filename}.json"
+
+    file_path = archive_dir / 'analyses' / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Analysis not found")
+
+    return FileResponse(
+        str(file_path),
+        media_type="application/json",
+        filename=filename,
+    )
+
+
+@app.get("/api/archives/{archive_id}/recordings/{filename}")
+async def get_archive_recording(archive_id: str, filename: str):
+    """
+    Download a recording WAV file from an archive batch.
+    """
+    archive_dir = _validate_archive_id(archive_id)
+
+    if '..' in filename or '/' in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    file_path = archive_dir / 'recordings' / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Recording not found")
+
+    return FileResponse(
+        str(file_path),
+        media_type="audio/wav",
+        filename=filename,
+    )
+
+
+@app.get("/api/archives/{archive_id}/telemetry/{filename}")
+async def get_archive_telemetry(archive_id: str, filename: str):
+    """
+    Download a telemetry JSON file from an archive batch.
+    """
+    archive_dir = _validate_archive_id(archive_id)
+
+    if '..' in filename or '/' in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    if not filename.endswith('.json'):
+        filename = f"{filename}.json"
+
+    file_path = archive_dir / 'telemetry' / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Telemetry file not found")
+
+    return FileResponse(
+        str(file_path),
+        media_type="application/json",
+        filename=filename,
+    )
+
+
 @app.post("/api/transcribe", response_model=TranscriptionResult)
 async def transcribe_audio(
     file: UploadFile = File(..., description="Audio file to transcribe")
@@ -1945,6 +2311,156 @@ async def admin_list_shared():
                         continue
 
     return result
+
+
+# ============================================================================
+# Game Server Configuration Endpoints
+# ============================================================================
+
+@app.get("/api/admin/game-config")
+async def get_game_config():
+    """
+    Get current game server configuration.
+
+    Returns the current GAME_HOST, GAME_PORT_WS, and GAME_PORT_API
+    values from the environment, plus a read_only flag.
+    """
+    return {
+        "game_host": os.environ.get('GAME_HOST', ''),
+        "game_port_ws": int(os.environ.get('GAME_PORT_WS', '1865')),
+        "game_port_api": int(os.environ.get('GAME_PORT_API', '1864')),
+        "game_port_https": int(os.environ.get('GAME_PORT_HTTPS', '1866')),
+        "game_port_wss": int(os.environ.get('GAME_PORT_WSS', '1867')),
+        "read_only": READ_ONLY_MODE,
+    }
+
+
+@app.post("/api/admin/game-config")
+async def update_game_config(config: GameServerConfig):
+    """
+    Update game server configuration.
+
+    Validates input, updates os.environ for immediate effect, and
+    persists the changes to the .env file for restart durability.
+    Blocked by READ_ONLY_MODE.
+    """
+    if READ_ONLY_MODE:
+        raise HTTPException(
+            status_code=403,
+            detail="Server is in read-only mode. Configuration changes are disabled."
+        )
+
+    # Validate hostname
+    if not config.game_host.strip():
+        raise HTTPException(status_code=400, detail="Game host cannot be empty")
+    if not _is_valid_host(config.game_host.strip()):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid hostname or IP address: {config.game_host}"
+        )
+
+    host = config.game_host.strip()
+    port_ws = str(config.game_port_ws)
+    port_api = str(config.game_port_api)
+    port_https = str(config.game_port_https)
+    port_wss = str(config.game_port_wss)
+
+    # Update os.environ for immediate effect
+    os.environ['GAME_HOST'] = host
+    os.environ['GAME_PORT_WS'] = port_ws
+    os.environ['GAME_PORT_API'] = port_api
+    os.environ['GAME_PORT_HTTPS'] = port_https
+    os.environ['GAME_PORT_WSS'] = port_wss
+
+    # Persist to .env file
+    env_error = None
+    try:
+        _update_env_file({
+            'GAME_HOST': host,
+            'GAME_PORT_WS': port_ws,
+            'GAME_PORT_API': port_api,
+            'GAME_PORT_HTTPS': port_https,
+            'GAME_PORT_WSS': port_wss,
+        })
+    except OSError as e:
+        env_error = str(e)
+        logger.error(f"Failed to write .env file: {e}")
+
+    logger.info(f"Game server config updated: {host}:{port_ws} (API: {port_api})")
+
+    result = {
+        "status": "ok",
+        "game_host": host,
+        "game_port_ws": int(port_ws),
+        "game_port_api": int(port_api),
+        "game_port_https": int(port_https),
+        "game_port_wss": int(port_wss),
+    }
+
+    if env_error:
+        result["warning"] = (
+            f"Configuration applied in memory but failed to save to .env file: {env_error}. "
+            "Changes will be lost on restart."
+        )
+
+    return result
+
+
+@app.post("/api/admin/test-connection", response_model=ConnectionTestResponse)
+async def test_game_connection(request: ConnectionTestRequest):
+    """
+    Test connectivity to a game server.
+
+    Performs TCP socket connect tests on both the WebSocket and API ports
+    with a 3-second timeout. Accepts arbitrary values so the user can
+    test before saving.
+    """
+    if not request.host.strip():
+        raise HTTPException(status_code=400, detail="Host cannot be empty")
+    if not _is_valid_host(request.host.strip()):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid hostname or IP address: {request.host}"
+        )
+
+    host = request.host.strip()
+    timeout = 3.0
+
+    def _test_port(port: int) -> tuple:
+        """Test TCP connectivity to host:port."""
+        try:
+            socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM)
+        except socket.gaierror as e:
+            return False, f"DNS resolution failed for {host}: {e}"
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(timeout)
+        try:
+            sock.connect((host, port))
+            return True, f"Connected to {host}:{port}"
+        except ConnectionRefusedError:
+            return False, f"Connection refused on {host}:{port}"
+        except (TimeoutError, socket.timeout):
+            return False, f"Connection timed out on {host}:{port} ({timeout:.0f}s)"
+        except OSError as e:
+            return False, f"Connection error on {host}:{port}: {e}"
+        finally:
+            sock.close()
+
+    # Run both tests (blocking but fast with 3s timeout)
+    ws_ok, ws_detail = await asyncio.get_event_loop().run_in_executor(
+        None, _test_port, request.port_ws
+    )
+    api_ok, api_detail = await asyncio.get_event_loop().run_in_executor(
+        None, _test_port, request.port_api
+    )
+
+    return ConnectionTestResponse(
+        ws_reachable=ws_ok,
+        api_reachable=api_ok,
+        ws_detail=ws_detail,
+        api_detail=api_detail,
+    )
 
 
 # Error handlers

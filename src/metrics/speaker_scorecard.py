@@ -10,7 +10,7 @@ import re
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass, field
 from collections import defaultdict, Counter
-from datetime import datetime
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +68,14 @@ SCORE_METRICS = [
         score_3="Some coordination patterns",
         score_5="Strong coordination and backup"
     ),
+    ScoreMetric(
+        name="game_effectiveness",
+        display_name="Game Effectiveness",
+        description="Alignment between stated intentions and actual game actions",
+        score_1="Weak follow-through on stated plans",
+        score_3="Moderate alignment between speech and action",
+        score_5="Excellent follow-through on all stated intentions"
+    ),
 ]
 
 
@@ -110,7 +118,9 @@ class SpeakerScorecardGenerator:
         self,
         transcripts: List[Dict[str, Any]],
         role_assignments: Dict[str, str] = None,
-        metrics: List[ScoreMetric] = None
+        metrics: List[ScoreMetric] = None,
+        telemetry_events: Optional[List[Dict[str, Any]]] = None,
+        speech_action_data: Optional[Dict[str, Any]] = None
     ):
         """
         Initialize the scorecard generator.
@@ -119,10 +129,14 @@ class SpeakerScorecardGenerator:
             transcripts: List of transcript dictionaries
             role_assignments: Optional mapping of speaker to role
             metrics: Optional custom scoring metrics
+            telemetry_events: Optional list of game telemetry events
+            speech_action_data: Optional speech-action cross-reference data
         """
         self.transcripts = transcripts
         self.role_assignments = role_assignments or {}
         self.metrics = metrics or SCORE_METRICS
+        self.telemetry_events = telemetry_events or []
+        self.speech_action_data = speech_action_data or {}
 
         # Pre-compute speaker utterances
         self.speaker_utterances: Dict[str, List[Dict]] = defaultdict(list)
@@ -161,8 +175,15 @@ class SpeakerScorecardGenerator:
         scores.append(self._score_technical_accuracy(utterances))
         scores.append(self._score_team_coordination(utterances))
 
-        # Calculate overall score
-        overall = sum(s.score for s in scores) / len(scores) if scores else 0
+        # Add game effectiveness score if telemetry data is available
+        if self.telemetry_events or self.speech_action_data:
+            game_score = self._score_game_effectiveness(speaker, utterances)
+            if game_score:
+                scores.append(game_score)
+
+        # Calculate overall score (exclude score=0 which means insufficient data)
+        scored = [s for s in scores if s.score > 0]
+        overall = sum(s.score for s in scored) / len(scored) if scored else 0
 
         # Identify strengths and development areas
         strengths = self._identify_strengths(scores, utterances)
@@ -257,8 +278,16 @@ class SpeakerScorecardGenerator:
         )
 
     def _score_communication_clarity(self, utterances: List[Dict]) -> SpeakerScore:
-        """Score communication clarity based on confidence and completeness."""
-        threshold_info = "Score 5: ≥80% | Score 4: ≥70% | Score 3: ≥60% | Score 2: ≥50% | Score 1: <50%"
+        """
+        Score communication clarity based on speaking quality indicators.
+
+        Measures the speaker's communication skill using filler word rate,
+        sentence completeness, and average word count per utterance.
+        Whisper transcription confidence is NOT used here — it reflects
+        microphone distance and audio quality, not speaking ability.
+        Audio quality is reported separately in pattern_breakdown.
+        """
+        threshold_info = "Score 5: ≥85% | Score 4: ≥70% | Score 3: ≥55% | Score 2: ≥40% | Score 1: <40%"
 
         if not utterances:
             return SpeakerScore(
@@ -271,10 +300,6 @@ class SpeakerScorecardGenerator:
                 pattern_breakdown={},
                 calculation_details="No utterances to analyze"
             )
-
-        # Factors: confidence, sentence completeness, filler words
-        confidences = [u.get('confidence', 0) for u in utterances]
-        avg_confidence = sum(confidences) / len(confidences)
 
         # Check for incomplete sentences
         incomplete_patterns = [
@@ -293,18 +318,22 @@ class SpeakerScorecardGenerator:
 
         incomplete_count = 0
         filler_count = 0
-        clear_quotes = []  # High confidence, complete utterances
-        unclear_quotes = []  # Low confidence or fillers
+        word_counts = []
+        clear_quotes = []  # Complete utterances without fillers
+        unclear_quotes = []  # Incomplete or filler-laden utterances
 
         for u in utterances:
             text = u.get('text', '')
-            conf = u.get('confidence', 0)
             ts = u.get('timestamp', u.get('start_time', ''))
             if isinstance(ts, (int, float)):
                 ts = f"{int(ts // 60)}:{int(ts % 60):02d}"
 
             is_incomplete = False
             has_filler = False
+
+            # Count words (proxy for utterance substance)
+            words = text.split()
+            word_counts.append(len(words))
 
             for pattern in incomplete_patterns:
                 if re.search(pattern, text):
@@ -322,50 +351,63 @@ class SpeakerScorecardGenerator:
             if ts:
                 quote = f"[{ts}] {quote}"
 
-            if conf >= 0.7 and not is_incomplete and not has_filler:
+            if not is_incomplete and not has_filler and len(words) >= 3:
                 clear_quotes.append(quote)
-            elif is_incomplete or has_filler or conf < 0.5:
+            elif is_incomplete or has_filler:
                 unclear_quotes.append(quote)
 
         total = len(utterances)
         incomplete_rate = incomplete_count / total if total > 0 else 0
         filler_rate = filler_count / total if total > 0 else 0
 
-        # Combined clarity score (confidence weighted most heavily)
-        clarity = avg_confidence * 0.6 + (1 - incomplete_rate) * 0.2 + (1 - filler_rate) * 0.2
+        # Vocabulary/substance score: proportion of utterances with 3+ words
+        substantial_count = sum(1 for wc in word_counts if wc >= 3)
+        substance_rate = substantial_count / total if total > 0 else 0
+
+        # Communication clarity score — based on speaking quality only
+        # Completeness (40%), no-fillers (40%), substance (20%)
+        clarity = (1 - incomplete_rate) * 0.4 + (1 - filler_rate) * 0.4 + substance_rate * 0.2
+
+        # Track audio quality separately for informational purposes
+        confidences = [u.get('confidence', 0) for u in utterances]
+        avg_confidence = sum(confidences) / len(confidences) if confidences else 0
 
         pattern_breakdown = {
             "incomplete_sentences": incomplete_count,
             "filler_words": filler_count,
+            "substantial_utterances": substantial_count,
             "clear_utterances": len(clear_quotes),
-            "unclear_utterances": len(unclear_quotes)
+            "unclear_utterances": len(unclear_quotes),
+            "audio_quality": round(avg_confidence, 2),
         }
 
         calculation_details = (
-            f"Clarity = (confidence × 0.6) + (completeness × 0.2) + (no-fillers × 0.2). "
-            f"Confidence: {avg_confidence:.2f}, Incomplete: {incomplete_rate*100:.1f}%, "
-            f"Fillers: {filler_rate*100:.1f}%. Final clarity: {clarity*100:.1f}%"
+            f"Clarity = (completeness × 0.4) + (no-fillers × 0.4) + (substance × 0.2). "
+            f"Incomplete: {incomplete_rate*100:.1f}%, Fillers: {filler_rate*100:.1f}%, "
+            f"Substantial (≥3 words): {substance_rate*100:.1f}%. "
+            f"Final clarity: {clarity*100:.1f}%. "
+            f"Audio quality (Whisper confidence, not used in score): {avg_confidence:.2f}"
         )
 
-        if clarity >= 0.80:
+        if clarity >= 0.85:
             score = 5
-            evidence = f"Consistently clear (confidence: {avg_confidence:.2f})"
+            evidence = f"Consistently clear ({incomplete_count} incomplete, {filler_count} fillers)"
             quotes = clear_quotes[:3]
         elif clarity >= 0.70:
             score = 4
-            evidence = f"Generally clear (confidence: {avg_confidence:.2f})"
+            evidence = f"Generally clear ({incomplete_count} incomplete, {filler_count} fillers)"
             quotes = clear_quotes[:3]
-        elif clarity >= 0.60:
+        elif clarity >= 0.55:
             score = 3
-            evidence = f"Some clarity issues (confidence: {avg_confidence:.2f}, {incomplete_count} incomplete)"
+            evidence = f"Some clarity issues ({incomplete_count} incomplete, {filler_count} fillers)"
             quotes = unclear_quotes[:3] if unclear_quotes else clear_quotes[:3]
-        elif clarity >= 0.50:
+        elif clarity >= 0.40:
             score = 2
-            evidence = f"Clarity needs work (confidence: {avg_confidence:.2f}, {filler_count} fillers)"
+            evidence = f"Clarity needs work ({incomplete_count} incomplete, {filler_count} fillers)"
             quotes = unclear_quotes[:3]
         else:
             score = 1
-            evidence = f"Frequent unclear communications (confidence: {avg_confidence:.2f})"
+            evidence = f"Frequent unclear communications ({incomplete_count} incomplete, {filler_count} fillers)"
             quotes = unclear_quotes[:3]
 
         return SpeakerScore(
@@ -419,8 +461,12 @@ class SpeakerScorecardGenerator:
                 if next_speaker == speaker:
                     # Calculate time delta
                     try:
-                        t1 = self._parse_timestamp(t.get('timestamp', ''))
-                        t2 = self._parse_timestamp(next_t.get('timestamp', ''))
+                        t1 = self._parse_timestamp(
+                            t.get('timestamp') or t.get('start_time')
+                        )
+                        t2 = self._parse_timestamp(
+                            next_t.get('timestamp') or next_t.get('start_time')
+                        )
                         if t1 and t2:
                             delta = (t2 - t1).total_seconds()
                             if 0 < delta < 30:
@@ -437,43 +483,22 @@ class SpeakerScorecardGenerator:
                     break
 
         if not response_times:
-            # If no clear command-response patterns, use utterance frequency
-            utterance_rate = len(utterances) / self.total_utterances if self.total_utterances > 0 else 0
-            # Get some example utterances
-            example_quotes = []
-            for u in utterances[:3]:
-                text = u.get('text', '')
-                ts = u.get('timestamp', u.get('start_time', ''))
-                if isinstance(ts, (int, float)):
-                    ts = f"{int(ts // 60)}:{int(ts % 60):02d}"
-                quote = f'"{text[:60]}..."' if len(text) > 60 else f'"{text}"'
-                if ts:
-                    quote = f"[{ts}] {quote}"
-                example_quotes.append(quote)
-
+            # No command-response pairs detected — mark as insufficient data
+            # rather than scoring on an unrelated heuristic (engagement rate)
             calculation_details = (
-                f"No command-response pairs detected. Using engagement rate: "
-                f"{len(utterances)}/{self.total_utterances} = {utterance_rate*100:.1f}%"
+                f"No command-response pairs detected for this speaker. "
+                f"Cannot measure response time without paired command/acknowledgment data. "
+                f"Speaker had {len(utterances)} utterances total."
             )
-
-            if utterance_rate >= 0.20:
-                score = 4
-                evidence = f"High engagement ({len(utterances)} utterances, no command-response pairs detected)"
-            elif utterance_rate >= 0.10:
-                score = 3
-                evidence = f"Moderate engagement ({len(utterances)} utterances)"
-            else:
-                score = 2
-                evidence = f"Limited engagement ({len(utterances)} utterances)"
 
             return SpeakerScore(
                 metric_name="response_time",
-                score=score,
-                evidence=evidence,
-                raw_value=utterance_rate,
-                supporting_quotes=example_quotes,
-                threshold_info="Engagement-based: Score 4: ≥20% | Score 3: ≥10% | Score 2: <10%",
-                pattern_breakdown={"utterance_count": len(utterances), "total_utterances": self.total_utterances},
+                score=0,  # 0 = insufficient data, excluded from overall average
+                evidence=f"Insufficient data — no command-response pairs detected ({len(utterances)} utterances)",
+                raw_value=0,
+                supporting_quotes=[],
+                threshold_info="Insufficient data — requires command-response pairs to score",
+                pattern_breakdown={"utterance_count": len(utterances), "command_response_pairs": 0},
                 calculation_details=calculation_details
             )
 
@@ -655,10 +680,151 @@ class SpeakerScorecardGenerator:
             calculation_details=calculation_details
         )
 
+    def _score_game_effectiveness(
+        self,
+        speaker: str,
+        utterances: List[Dict]
+    ) -> Optional[SpeakerScore]:
+        """
+        Score game effectiveness based on telemetry correlation.
+
+        Evaluates how well this speaker's communications aligned with
+        actual game actions.
+
+        Args:
+            speaker: Speaker ID
+            utterances: Speaker's utterances
+
+        Returns:
+            SpeakerScore or None if insufficient data
+        """
+        threshold_info = (
+            "Score 5: ≥70% alignment | Score 4: ≥50% | "
+            "Score 3: ≥30% | Score 2: ≥10% | Score 1: <10%"
+        )
+
+        # Gather evidence from speech-action data
+        aligned_items = self.speech_action_data.get('aligned', [])
+        speech_only_items = self.speech_action_data.get('speech_only', [])
+
+        # Filter to this speaker
+        speaker_aligned = [a for a in aligned_items if a.get('speaker') == speaker]
+        speaker_speech_only = [s for s in speech_only_items if s.get('speaker') == speaker]
+
+        total_speaker_intentions = len(speaker_aligned) + len(speaker_speech_only)
+
+        # If this speaker had no detectable intentions, check if they had
+        # telemetry-correlated events at all
+        if total_speaker_intentions == 0:
+            # Check if there were events near this speaker's utterances
+            nearby_events = 0
+            for u in utterances:
+                u_time = u.get('start_time', u.get('timestamp', 0))
+                if isinstance(u_time, (int, float)):
+                    for event in self.telemetry_events:
+                        e_time = event.get('relative_time', event.get('timestamp', 0))
+                        if isinstance(e_time, (int, float)) and abs(e_time - u_time) < 10:
+                            nearby_events += 1
+                            break
+
+            if nearby_events == 0:
+                return None  # Not enough data to score
+
+            # Score based on activity presence only
+            activity_rate = nearby_events / max(len(utterances), 1)
+            calculation_details = (
+                f"No specific speech-action intentions detected. "
+                f"{nearby_events} game events occurred near this speaker's utterances."
+            )
+
+            if activity_rate >= 0.3:
+                score = 3
+                evidence = f"Active during game events ({nearby_events} nearby events)"
+            elif activity_rate >= 0.1:
+                score = 2
+                evidence = f"Some game activity ({nearby_events} nearby events)"
+            else:
+                score = 2
+                evidence = f"Limited game correlation ({nearby_events} nearby events)"
+
+            return SpeakerScore(
+                metric_name="game_effectiveness",
+                score=score,
+                evidence=evidence,
+                raw_value=activity_rate,
+                supporting_quotes=[],
+                threshold_info="Activity-based: Score 3: ≥30% | Score 2: ≥10%",
+                pattern_breakdown={"nearby_events": nearby_events},
+                calculation_details=calculation_details
+            )
+
+        # Score based on alignment rate
+        alignment_rate = len(speaker_aligned) / total_speaker_intentions
+
+        # Build evidence quotes
+        evidence_quotes = []
+        for item in speaker_aligned[:3]:
+            evidence_quotes.append(
+                f'Stated "{item.get("speech", "")[:60]}" → '
+                f'action "{item.get("action", "")[:60]}" ({item.get("time_delta", 0)}s later)'
+            )
+        for item in speaker_speech_only[:2]:
+            evidence_quotes.append(
+                f'Stated "{item.get("text", "")[:60]}" → no matching game action'
+            )
+
+        calculation_details = (
+            f"Speech-action alignment: {len(speaker_aligned)}/{total_speaker_intentions} "
+            f"intentions matched to game actions = {alignment_rate*100:.1f}%"
+        )
+
+        pattern_breakdown = {
+            "aligned": len(speaker_aligned),
+            "speech_only": len(speaker_speech_only),
+            "total_intentions": total_speaker_intentions,
+        }
+
+        if alignment_rate >= 0.70:
+            score = 5
+            evidence = f"Excellent follow-through ({len(speaker_aligned)}/{total_speaker_intentions} aligned)"
+        elif alignment_rate >= 0.50:
+            score = 4
+            evidence = f"Good follow-through ({len(speaker_aligned)}/{total_speaker_intentions} aligned)"
+        elif alignment_rate >= 0.30:
+            score = 3
+            evidence = f"Moderate follow-through ({len(speaker_aligned)}/{total_speaker_intentions} aligned)"
+        elif alignment_rate >= 0.10:
+            score = 2
+            evidence = f"Limited follow-through ({len(speaker_aligned)}/{total_speaker_intentions} aligned)"
+        else:
+            score = 1
+            evidence = f"Weak follow-through ({len(speaker_aligned)}/{total_speaker_intentions} aligned)"
+
+        return SpeakerScore(
+            metric_name="game_effectiveness",
+            score=score,
+            evidence=evidence,
+            raw_value=alignment_rate,
+            supporting_quotes=evidence_quotes,
+            threshold_info=threshold_info,
+            pattern_breakdown=pattern_breakdown,
+            calculation_details=calculation_details
+        )
+
     def _parse_timestamp(self, ts: Any) -> Optional[datetime]:
-        """Parse timestamp to datetime."""
+        """Parse timestamp to datetime.
+
+        Handles multiple formats:
+        - datetime objects (returned as-is)
+        - float/int (seconds from session start, converted to datetime)
+        - ISO format strings (e.g., '2024-01-15T10:30:00')
+        - Time-only strings (e.g., '10:30:00')
+        """
         if isinstance(ts, datetime):
             return ts
+        if isinstance(ts, (int, float)):
+            # Transcript start_time values are seconds from session start
+            return datetime(2000, 1, 1) + timedelta(seconds=float(ts))
         if isinstance(ts, str):
             try:
                 if 'T' in ts:
@@ -700,7 +866,8 @@ class SpeakerScorecardGenerator:
         areas = []
 
         for score in scores:
-            if score.score <= 2:
+            # Skip insufficient data (score=0) — not a development area
+            if 1 <= score.score <= 2:
                 metric = next(
                     (m for m in self.metrics if m.name == score.metric_name),
                     None

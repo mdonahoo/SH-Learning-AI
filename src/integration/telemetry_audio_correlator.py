@@ -1373,6 +1373,161 @@ class TelemetryAudioCorrelator:
 
         return updates
 
+    def cross_reference_speech_action(self) -> Dict[str, Any]:
+        """
+        Cross-reference crew speech with game actions to find discrepancies.
+
+        Identifies cases where:
+        - Crew said they'd do something but telemetry shows it didn't happen
+        - Game actions occurred that no one discussed
+        - Speech and action are well-aligned (positive reinforcement)
+
+        Returns:
+            Dictionary with aligned actions, speech-only intentions,
+            action-only events, and an alignment score
+        """
+        if not self.transcripts:
+            return {
+                'aligned': [],
+                'speech_only': [],
+                'action_only': [],
+                'alignment_score': 0.0,
+                'total_speech_intentions': 0,
+                'total_game_actions': 0,
+            }
+
+        # Detect speech intentions (crew stating they will do something)
+        intention_patterns = [
+            (re.compile(r'\b(set|setting)\s+(a\s+)?course\b', re.I), 'navigation', 'Set course'),
+            (re.compile(r'\b(fire|firing|arm|arming)\s+(torpedo|phaser|weapon)', re.I), 'tactical', 'Weapons engagement'),
+            (re.compile(r'\b(raise|raising|lower|lowering)\s+shields?\b', re.I), 'tactical', 'Shield adjustment'),
+            (re.compile(r'\b(scan|scanning)\b', re.I), 'science', 'Sensor scan'),
+            (re.compile(r'\b(hail|hailing|open.{0,10}channel)\b', re.I), 'communications', 'Communications'),
+            (re.compile(r'\b(dock|docking)\b', re.I), 'operations', 'Docking operation'),
+            (re.compile(r'\b(red|yellow)\s+alert\b', re.I), 'tactical', 'Alert change'),
+            (re.compile(r'\b(warp|jump|engage)\b', re.I), 'helm', 'Warp/navigation'),
+            (re.compile(r'\b(transfer|load|deploy)\b', re.I), 'operations', 'Resource operation'),
+            (re.compile(r'\b(retrieve|pick.{0,5}up|collect)\b', re.I), 'operations', 'Retrieval operation'),
+        ]
+
+        # Extract speech intentions with timestamps
+        speech_intentions = []
+        for t in self.transcripts:
+            text = t.get('text', '')
+            timestamp = t.get('relative_time', t.get('start_time', 0))
+            speaker = t.get('speaker_id') or t.get('speaker', 'unknown')
+            if not text:
+                continue
+
+            for pattern, category, action_name in intention_patterns:
+                if pattern.search(text):
+                    speech_intentions.append({
+                        'speaker': speaker,
+                        'text': text[:120],
+                        'timestamp': timestamp,
+                        'category': category,
+                        'action_name': action_name,
+                    })
+                    break  # One intention per utterance
+
+        # Build game action list with timestamps
+        game_actions = []
+        for event in self.events:
+            category = event.get('category', '').lower()
+            event_type = event.get('event_type', 'unknown')
+            timestamp = event.get('relative_time', event.get('timestamp', 0))
+            if isinstance(timestamp, datetime):
+                continue
+            data = event.get('data', {})
+
+            # Build description
+            description = event_type.replace('_', ' ').title()
+            message = data.get('message') or data.get('Message', '')
+            if message:
+                description = f"{description}: {str(message)[:80]}"
+
+            game_actions.append({
+                'event_type': event_type,
+                'category': category,
+                'timestamp': timestamp,
+                'description': description,
+            })
+
+        # Match speech intentions to game actions (within 15-second window)
+        match_window = 15.0  # seconds
+        aligned = []
+        matched_speech_indices = set()
+        matched_action_indices = set()
+
+        for si_idx, intention in enumerate(speech_intentions):
+            for ga_idx, action in enumerate(game_actions):
+                if ga_idx in matched_action_indices:
+                    continue
+
+                # Check category alignment
+                cat_match = (
+                    intention['category'] == action['category'] or
+                    (intention['category'] in ('helm', 'navigation') and
+                     action['category'] in ('helm', 'navigation')) or
+                    (intention['category'] == 'tactical' and
+                     action['category'] in ('tactical', 'combat', 'weapons', 'defensive'))
+                )
+
+                if not cat_match:
+                    continue
+
+                # Check time proximity
+                time_delta = action['timestamp'] - intention['timestamp']
+                if -5.0 <= time_delta <= match_window:
+                    aligned.append({
+                        'speech': intention['text'],
+                        'speaker': intention['speaker'],
+                        'speech_time': intention['timestamp'],
+                        'action': action['description'],
+                        'action_time': action['timestamp'],
+                        'time_delta': round(time_delta, 1),
+                        'category': intention['category'],
+                    })
+                    matched_speech_indices.add(si_idx)
+                    matched_action_indices.add(ga_idx)
+                    break
+
+        # Find unmatched speech intentions
+        speech_only = [
+            intention for i, intention in enumerate(speech_intentions)
+            if i not in matched_speech_indices
+        ]
+
+        # Find significant unmatched game actions
+        significant_types = {
+            'alert_change', 'weapons_fire', 'shield_change', 'damage_report',
+            'warp_engage', 'warp_disengage', 'docking_complete', 'scan_complete',
+        }
+        action_only = [
+            action for i, action in enumerate(game_actions)
+            if i not in matched_action_indices and
+            action['event_type'] in significant_types
+        ]
+
+        # Calculate alignment score
+        total_checkable = len(speech_intentions) + len(
+            [a for a in game_actions if a['event_type'] in significant_types]
+        )
+        total_aligned = len(aligned) * 2  # Each alignment covers one from each side
+        alignment_score = (
+            total_aligned / total_checkable if total_checkable > 0 else 0.0
+        )
+
+        return {
+            'aligned': aligned[:20],
+            'speech_only': speech_only[:10],
+            'action_only': action_only[:10],
+            'alignment_score': round(min(1.0, alignment_score), 3),
+            'total_speech_intentions': len(speech_intentions),
+            'total_game_actions': len(game_actions),
+            'total_aligned': len(aligned),
+        }
+
     def get_smart_correlation_summary(self) -> Dict[str, Any]:
         """
         Get a summary of smart correlation analysis.

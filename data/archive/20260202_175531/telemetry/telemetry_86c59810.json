@@ -1,0 +1,3184 @@
+{
+  "session_id": "86c59810",
+  "start_time": "2026-02-01T21:38:51.598657",
+  "end_time": "2026-02-01T21:50:04.556673",
+  "duration_seconds": 672.958016,
+  "packet_counts": {
+    "SESSION": 3,
+    "TARGET-SCIENCE": 91,
+    "VESSEL-CLASSES": 1,
+    "VESSEL-OCCUPANTS": 1,
+    "DAMAGE-TEAMS": 1,
+    "DAMAGE": 1,
+    "ALERT": 3,
+    "CARGO": 5,
+    "TARGET-FLIGHT": 42,
+    "MISSION": 2,
+    "MISSIONS": 1,
+    "PLAYER-OBJECTIVES": 8,
+    "GM-OBJECTIVES": 1,
+    "ENCOUNTERS": 1,
+    "DECKS": 1,
+    "LOCATION-CURRENT": 62,
+    "PERSONNEL": 1,
+    "CAMERAS": 1,
+    "COMPONENTS": 1,
+    "COMPONENT-PARTS": 1,
+    "MODELS": 1,
+    "FACTIONS": 1,
+    "MAP": 1,
+    "PRE-FLIGHT": 1,
+    "ORDNANCE": 2,
+    "DRONES": 1,
+    "CHANNELS": 1,
+    "CONTACTS": 1938,
+    "PLAYER-VESSELS": 10,
+    "CONTROLLERS": 1,
+    "PING": 45,
+    "CARGO-REPAIR": 1,
+    "VARIABLES": 159,
+    "SYSTEM-LOG": 1,
+    "PLAYERS": 157,
+    "EVENTS": 1,
+    "GM-OBJECTS": 3272,
+    "ROLES": 5,
+    "SCREENS": 1,
+    "AUTO-PILOT": 21,
+    "CHANNEL-UPDATE": 32,
+    "CHANNEL-MESSAGE": 35,
+    "TARGET-TACTICAL": 3,
+    "CONTACT-REMOVE": 16,
+    "VESSEL-WAYPOINTS": 7,
+    "ENCOUNTERS-UPDATE": 5,
+    "OBJECT-REMOVE": 4,
+    "GM-OID": 2,
+    "EVENTSTATE": 60,
+    "PROJECTILES": 11
+  },
+  "tracked_events": [
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 0.14419865608215332,
+      "data": {
+        "target_id": 46
+      }
+    },
+    {
+      "event_type": "cargo_operation",
+      "category": "operations",
+      "timestamp": 0.4874544143676758,
+      "data": {
+        "operation_type": "CARGO"
+      }
+    },
+    {
+      "event_type": "cargo_operation",
+      "category": "operations",
+      "timestamp": 4.428269386291504,
+      "data": {
+        "operation_type": "CARGO"
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 6.418916702270508,
+      "data": {
+        "target_id": 11
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 6.7604546546936035,
+      "data": {
+        "target_id": 9
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 8.049904346466064,
+      "data": {
+        "target_id": 9
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 8.860246896743774,
+      "data": {
+        "target_id": 11
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 12.453733921051025,
+      "data": {
+        "target_id": 46
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 34.02857303619385,
+      "data": {
+        "target_id": 9
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 36.18018937110901,
+      "data": {
+        "target_id": 41
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 44.64221715927124,
+      "data": {
+        "target_id": 3
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 50.074554204940796,
+      "data": {
+        "target_id": 4
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 50.94782209396362,
+      "data": {
+        "target_id": 5
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 68.44430708885193,
+      "data": {
+        "target_id": 5
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 70.08323049545288,
+      "data": {
+        "target_id": 3
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 72.36515259742737,
+      "data": {
+        "target_id": 4
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 73.70988035202026,
+      "data": {
+        "target_id": 5
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 74.24365758895874,
+      "data": {
+        "target_id": 9
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 75.52023363113403,
+      "data": {
+        "target_id": 9
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 79.2736599445343,
+      "data": {
+        "target_id": 4
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 81.30713295936584,
+      "data": {
+        "target_id": 3
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 84.57860326766968,
+      "data": {
+        "target_id": 5
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 86.54709005355835,
+      "data": {
+        "target_id": 1
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 87.15290451049805,
+      "data": {
+        "target_id": 6
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 108.67387080192566,
+      "data": {
+        "target_id": 11
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 108.9364709854126,
+      "data": {
+        "target_id": 9
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 110.2402594089508,
+      "data": {
+        "target_id": 9
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 115.87825012207031,
+      "data": {
+        "target_id": 11
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 118.69864845275879,
+      "data": {
+        "target_id": 11
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 121.23036074638367,
+      "data": {
+        "target_id": 9
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 124.3478832244873,
+      "data": {
+        "target_id": 41
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 129.13327836990356,
+      "data": {
+        "target_id": 9
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 129.27005171775818,
+      "data": {
+        "target_id": 11
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 135.7654995918274,
+      "data": {
+        "target_id": 11
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 136.48077249526978,
+      "data": {
+        "target_id": 9
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 138.96420788764954,
+      "data": {
+        "target_id": 11
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 141.65643882751465,
+      "data": {
+        "target_id": 11
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 142.74992418289185,
+      "data": {
+        "target_id": 11
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 143.74504327774048,
+      "data": {
+        "target_id": 46
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 144.48065376281738,
+      "data": {
+        "target_id": 11
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 145.66433453559875,
+      "data": {
+        "target_id": 11
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 147.42754769325256,
+      "data": {
+        "target_id": 11
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 149.13146042823792,
+      "data": {
+        "target_id": 11
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 151.25070977210999,
+      "data": {
+        "target_id": 11
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 151.51808619499207,
+      "data": {
+        "target_id": 46
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 161.4513554573059,
+      "data": {
+        "target_id": 11
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 163.67631220817566,
+      "data": {
+        "target_id": 11
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 170.28093791007996,
+      "data": {
+        "target_id": 9
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 171.54827523231506,
+      "data": {
+        "target_id": 10
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 172.3732352256775,
+      "data": {
+        "target_id": 9
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 173.73900508880615,
+      "data": {
+        "target_id": 11
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 187.4512071609497,
+      "data": {
+        "target_id": 46
+      }
+    },
+    {
+      "event_type": "cargo_operation",
+      "category": "operations",
+      "timestamp": 211.07250595092773,
+      "data": {
+        "operation_type": "CARGO"
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 244.65954160690308,
+      "data": {
+        "target_id": 41
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 254.90281796455383,
+      "data": {
+        "target_id": 9
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 255.81584358215332,
+      "data": {
+        "target_id": 5
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 290.68222403526306,
+      "data": {
+        "target_id": 49
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 295.7515811920166,
+      "data": {
+        "target_id": 49
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 307.0331881046295,
+      "data": {
+        "target_id": 49
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 308.31223368644714,
+      "data": {
+        "target_id": 49
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 310.3926019668579,
+      "data": {
+        "target_id": 49
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 312.9705083370209,
+      "data": {
+        "target_id": 49
+      }
+    },
+    {
+      "event_type": "cargo_operation",
+      "category": "operations",
+      "timestamp": 322.0483968257904,
+      "data": {
+        "operation_type": "CARGO"
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 323.54810309410095,
+      "data": {
+        "target_id": 7
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 323.5482175350189,
+      "data": {
+        "target_id": 49
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 353.63900351524353,
+      "data": {
+        "target_id": 4
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 362.2071650028229,
+      "data": {
+        "target_id": 46
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 370.6387298107147,
+      "data": {
+        "target_id": 11
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 377.5548851490021,
+      "data": {
+        "target_id": 9
+      }
+    },
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 380.9103670120239,
+      "data": {
+        "target_id": 11
+      }
+    },
+    {
+      "event_type": "alert_change",
+      "category": "tactical",
+      "timestamp": 403.0979337692261,
+      "data": {
+        "old_level": null,
+        "new_level": 3,
+        "level_name": "Yellow"
+      }
+    },
+    {
+      "event_type": "cargo_operation",
+      "category": "operations",
+      "timestamp": 407.9892797470093,
+      "data": {
+        "operation_type": "CARGO"
+      }
+    }
+  ],
+  "tracked_events_count": 72,
+  "vessel_data": {
+    "hull_percentage": 100.0,
+    "shield_percentage": 100,
+    "shield_frequency": 0,
+    "shield_harmonics": 0,
+    "shield_sections": {
+      "forward": 100,
+      "aft": 100,
+      "port": 100,
+      "starboard": 100,
+      "dorsal": 100,
+      "ventral": 100
+    },
+    "shield_distribution": {
+      "forward": 25,
+      "aft": 25,
+      "port": 25,
+      "starboard": 25
+    },
+    "damage_events": [],
+    "cumulative_damage": 0,
+    "last_damage_time": null,
+    "damage_sources": {},
+    "systems": {
+      "engines": 100,
+      "weapons": 100,
+      "shields": 100,
+      "sensors": 100,
+      "life_support": 100,
+      "warp_drive": 100,
+      "impulse_drive": 100,
+      "communications": 100,
+      "transporters": 100,
+      "tractor_beam": 100
+    },
+    "power": {
+      "total_available": 100,
+      "engines": 0,
+      "weapons": 0,
+      "shields": 0,
+      "auxiliary": 0,
+      "life_support": 0
+    },
+    "engineering": {
+      "reactor_output": 100,
+      "reactor_efficiency": 100,
+      "coolant_level": 100,
+      "coolant_pressure": 0,
+      "repair_teams": [],
+      "damage_control_teams": []
+    },
+    "navigation": {
+      "position": {
+        "X": 84953.93,
+        "Y": 47456.81,
+        "Z": 3042.78
+      },
+      "heading": 0,
+      "pitch": 0,
+      "roll": 0,
+      "speed": 0,
+      "warp_speed": 0,
+      "impulse_speed": 0
+    },
+    "combat": {
+      "weapons_armed": false,
+      "weapons_locked": false,
+      "current_target": null,
+      "torpedo_count": {},
+      "phaser_charge": 100
+    },
+    "science_target": 11,
+    "hull_integrity": 800,
+    "hull_max": 800,
+    "hull_heal": 800,
+    "energy": 2000,
+    "energy_max": 4000,
+    "energy_percentage": 50.0,
+    "vessel_name": "Wraith",
+    "vessel_class": "Sentinel",
+    "vessel_id": 18,
+    "faction": "Daichi",
+    "location": "Borderlands",
+    "maneuver": "Cruise",
+    "state": "Alive",
+    "contacts": [
+      {
+        "ID": 4,
+        "BaseType": "Station",
+        "SubType": "Station",
+        "Class": "Outpost Station (Class B)",
+        "Name": "Outpost A-2",
+        "Faction": "Alliance",
+        "Integrity": 1400,
+        "Shields": 0,
+        "Radius": 511.6373,
+        "Planet": "Borderlands",
+        "StarPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Position": {
+          "X": -90000,
+          "Y": -50000,
+          "Z": 0
+        },
+        "Orientation": {
+          "X": 0,
+          "Y": -0.7071,
+          "Z": 0,
+          "W": 0.7071
+        },
+        "Relative": {
+          "X": 0.22,
+          "Y": -0.18,
+          "Z": -0.96
+        },
+        "Maneuver": "Cruise",
+        "Scanning": 0,
+        "Scanned": true,
+        "IFF": 2,
+        "Identified": true,
+        "Model": "Station-Outpost-B",
+        "Scale": "1",
+        "Parent": 0,
+        "Tags": "4, outpost, outpost-alliance",
+        "Children": [],
+        "Properties": {}
+      }
+    ],
+    "all_vessel_status": {
+      "4": {
+        "name": "Outpost A-2",
+        "faction": "Alliance",
+        "type": "Station",
+        "hull": 140000,
+        "shields": 0
+      }
+    },
+    "var_A-Hack-Offset": "0",
+    "var_A-Hack-Target": "Outpost A-2",
+    "var_D-Hack-Offset": "0",
+    "var_D-Hack-Target": "Outpost D-3",
+    "var_Outposts": "9",
+    "var_Outposts-A": 2.0,
+    "var_Outposts-D": 2.0,
+    "var_Outposts-V": "0",
+    "var_T1-CREDITS": "460",
+    "var_T1-SCORE": "0",
+    "var_T2-CREDITS": "2620",
+    "var_T2-SCORE": "0",
+    "var_V-Hack-Offset": "0",
+    "var_V-Hack-Target": "0",
+    "crew": [
+      {
+        "roles": [],
+        "screens": 1,
+        "vessel": 0
+      },
+      {
+        "roles": [],
+        "screens": 2,
+        "vessel": 18
+      },
+      {
+        "roles": [],
+        "screens": 11,
+        "vessel": 17
+      },
+      {
+        "roles": [],
+        "screens": 2,
+        "vessel": 18
+      },
+      {
+        "roles": [],
+        "screens": 3,
+        "vessel": 17
+      },
+      {
+        "roles": [],
+        "screens": 1,
+        "vessel": 18
+      },
+      {
+        "roles": [],
+        "screens": 3,
+        "vessel": 17
+      },
+      {
+        "roles": [],
+        "screens": 6,
+        "vessel": 18
+      },
+      {
+        "roles": [],
+        "screens": 7,
+        "vessel": 18
+      },
+      {
+        "roles": [],
+        "screens": 2,
+        "vessel": 17
+      }
+    ],
+    "game_roles": [
+      {
+        "Abbr": "CAP",
+        "Name": "Captain",
+        "Screen": "captain",
+        "PediaID": "",
+        "Training": "",
+        "Icon": "",
+        "PlayerID": 0,
+        "Color": {
+          "R": 255,
+          "G": 255,
+          "B": 255,
+          "A": 255
+        },
+        "Commander": false,
+        "InUse": false,
+        "Visible": false,
+        "User": {
+          "ID": null,
+          "UserID": 0,
+          "CharacterID": 0,
+          "VesselNo": 0,
+          "VesselID": 0,
+          "PreVesselID": "",
+          "Roles": [],
+          "Screens": 0,
+          "FirstName": "",
+          "LastName": "",
+          "Faction": "Alliance",
+          "Rank": "Cadet",
+          "Race": "Human",
+          "CallSign": "",
+          "ETS": "",
+          "LastUpdated": "2026-02-01T21:37:26.7030498+00:00",
+          "VisualStyle": "",
+          "VocalAssist": false,
+          "IP": "",
+          "Location": "",
+          "IsRole": false,
+          "IsMainViewer": false,
+          "IsSpectator": false
+        }
+      },
+      {
+        "Abbr": "FLT",
+        "Name": "Flight",
+        "Screen": "flight",
+        "PediaID": "",
+        "Training": "/video/training-flight.mp4",
+        "Icon": "",
+        "PlayerID": 0,
+        "Color": {
+          "R": 255,
+          "G": 255,
+          "B": 255,
+          "A": 255
+        },
+        "Commander": false,
+        "InUse": true,
+        "Visible": true,
+        "User": {
+          "ID": null,
+          "UserID": 0,
+          "CharacterID": 0,
+          "VesselNo": 0,
+          "VesselID": 0,
+          "PreVesselID": "",
+          "Roles": [],
+          "Screens": 0,
+          "FirstName": "",
+          "LastName": "",
+          "Faction": "Alliance",
+          "Rank": "Cadet",
+          "Race": "Human",
+          "CallSign": "",
+          "ETS": "",
+          "LastUpdated": "2026-02-01T21:37:26.7032008+00:00",
+          "VisualStyle": "",
+          "VocalAssist": false,
+          "IP": "",
+          "Location": "",
+          "IsRole": false,
+          "IsMainViewer": false,
+          "IsSpectator": false
+        }
+      },
+      {
+        "Abbr": "TAC",
+        "Name": "Tactical",
+        "Screen": "tactical",
+        "PediaID": "",
+        "Training": "/video/training-tactical.mp4",
+        "Icon": "",
+        "PlayerID": 0,
+        "Color": {
+          "R": 255,
+          "G": 255,
+          "B": 255,
+          "A": 255
+        },
+        "Commander": false,
+        "InUse": true,
+        "Visible": true,
+        "User": {
+          "ID": null,
+          "UserID": 0,
+          "CharacterID": 0,
+          "VesselNo": 0,
+          "VesselID": 0,
+          "PreVesselID": "",
+          "Roles": [],
+          "Screens": 0,
+          "FirstName": "",
+          "LastName": "",
+          "Faction": "Alliance",
+          "Rank": "Cadet",
+          "Race": "Human",
+          "CallSign": "",
+          "ETS": "",
+          "LastUpdated": "2026-02-01T21:37:26.7032014+00:00",
+          "VisualStyle": "",
+          "VocalAssist": false,
+          "IP": "",
+          "Location": "",
+          "IsRole": false,
+          "IsMainViewer": false,
+          "IsSpectator": false
+        }
+      },
+      {
+        "Abbr": "OPR",
+        "Name": "Operations",
+        "Screen": "operations",
+        "PediaID": "",
+        "Training": "/video/training-operations.mp4",
+        "Icon": "",
+        "PlayerID": 0,
+        "Color": {
+          "R": 255,
+          "G": 255,
+          "B": 255,
+          "A": 255
+        },
+        "Commander": false,
+        "InUse": true,
+        "Visible": true,
+        "User": {
+          "ID": null,
+          "UserID": 0,
+          "CharacterID": 0,
+          "VesselNo": 0,
+          "VesselID": 0,
+          "PreVesselID": "",
+          "Roles": [],
+          "Screens": 0,
+          "FirstName": "",
+          "LastName": "",
+          "Faction": "Alliance",
+          "Rank": "Cadet",
+          "Race": "Human",
+          "CallSign": "",
+          "ETS": "",
+          "LastUpdated": "2026-02-01T21:37:26.7032017+00:00",
+          "VisualStyle": "",
+          "VocalAssist": false,
+          "IP": "",
+          "Location": "",
+          "IsRole": false,
+          "IsMainViewer": false,
+          "IsSpectator": false
+        }
+      },
+      {
+        "Abbr": "SCI",
+        "Name": "Sciences",
+        "Screen": "science",
+        "PediaID": "",
+        "Training": "/video/training-science.mp4",
+        "Icon": "",
+        "PlayerID": 0,
+        "Color": {
+          "R": 255,
+          "G": 255,
+          "B": 255,
+          "A": 255
+        },
+        "Commander": false,
+        "InUse": true,
+        "Visible": true,
+        "User": {
+          "ID": null,
+          "UserID": 0,
+          "CharacterID": 0,
+          "VesselNo": 0,
+          "VesselID": 0,
+          "PreVesselID": "",
+          "Roles": [],
+          "Screens": 0,
+          "FirstName": "",
+          "LastName": "",
+          "Faction": "Alliance",
+          "Rank": "Cadet",
+          "Race": "Human",
+          "CallSign": "",
+          "ETS": "",
+          "LastUpdated": "2026-02-01T21:37:26.7032019+00:00",
+          "VisualStyle": "",
+          "VocalAssist": false,
+          "IP": "",
+          "Location": "",
+          "IsRole": false,
+          "IsMainViewer": false,
+          "IsSpectator": false
+        }
+      },
+      {
+        "Abbr": "ENG",
+        "Name": "Engineer",
+        "Screen": "engineer",
+        "PediaID": "",
+        "Training": "/video/training-engineer.mp4",
+        "Icon": "",
+        "PlayerID": 0,
+        "Color": {
+          "R": 255,
+          "G": 255,
+          "B": 255,
+          "A": 255
+        },
+        "Commander": false,
+        "InUse": true,
+        "Visible": true,
+        "User": {
+          "ID": null,
+          "UserID": 0,
+          "CharacterID": 0,
+          "VesselNo": 0,
+          "VesselID": 0,
+          "PreVesselID": "",
+          "Roles": [],
+          "Screens": 0,
+          "FirstName": "",
+          "LastName": "",
+          "Faction": "Alliance",
+          "Rank": "Cadet",
+          "Race": "Human",
+          "CallSign": "",
+          "ETS": "",
+          "LastUpdated": "2026-02-01T21:37:26.7032021+00:00",
+          "VisualStyle": "",
+          "VocalAssist": false,
+          "IP": "",
+          "Location": "",
+          "IsRole": false,
+          "IsMainViewer": false,
+          "IsSpectator": false
+        }
+      }
+    ],
+    "game_screens": {
+      "default": {
+        "Name": "Horizons",
+        "ModuleID": "Horizons",
+        "Group": "  Main",
+        "Base": "console.htm",
+        "Url": "default",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "default",
+        "Source": "default.htm",
+        "Icon": "Monitor",
+        "Description": "Console Selection Screen",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [],
+        "Tags": []
+      },
+      "flight": {
+        "Name": "Flight",
+        "ModuleID": "Horizons",
+        "Group": "  Main",
+        "Base": "console.htm",
+        "Url": "flight",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "flight",
+        "Source": "flight.htm",
+        "Icon": "roles/badge-flight.webp",
+        "Description": "Flight Control, including Helm and Navigation.",
+        "Role": "Flight",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": true,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": [
+          "role-primary",
+          "flight"
+        ]
+      },
+      "tactical": {
+        "Name": "Tactical",
+        "ModuleID": "Horizons",
+        "Group": "  Main",
+        "Base": "console.htm",
+        "Url": "tactical",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "tactical",
+        "Source": "tactical.htm",
+        "Icon": "roles/badge-tactical.webp",
+        "Description": "",
+        "Role": "Tactical",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": true,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": [
+          "role-primary",
+          "tactical"
+        ]
+      },
+      "operations": {
+        "Name": "Operations",
+        "ModuleID": "Horizons",
+        "Group": "  Main",
+        "Base": "console.htm",
+        "Url": "operations",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "operations",
+        "Source": "operations.htm",
+        "Icon": "roles/badge-operations.webp",
+        "Description": "",
+        "Role": "Operations",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": true,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": [
+          "role-primary",
+          "operations"
+        ]
+      },
+      "science": {
+        "Name": "Sciences",
+        "ModuleID": "Horizons",
+        "Group": "  Main",
+        "Base": "console.htm",
+        "Url": "science",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "science",
+        "Source": "science.htm",
+        "Icon": "roles/badge-sciences.webp",
+        "Description": "",
+        "Role": "Science",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": true,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": [
+          "role-primary",
+          "science"
+        ]
+      },
+      "engineer": {
+        "Name": "Engineer",
+        "ModuleID": "Horizons",
+        "Group": "  Main",
+        "Base": "console.htm",
+        "Url": "engineer",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "engineer",
+        "Source": "engineer.htm",
+        "Icon": "roles/badge-engineer.webp",
+        "Description": "",
+        "Role": "Engineer",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": true,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": [
+          "role-primary",
+          "engineer"
+        ]
+      },
+      "captain": {
+        "Name": "Captain",
+        "ModuleID": "Horizons",
+        "Group": "  Main",
+        "Base": "console.htm",
+        "Url": "captain",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "captain",
+        "Source": "captain.htm",
+        "Icon": "roles/badge-captain.webp",
+        "Description": "Captains panel. Used for the arm of the Captain's chair.",
+        "Role": "Captain",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": [
+          "role-primary",
+          "captain"
+        ]
+      },
+      "pilot": {
+        "Name": "Pilot",
+        "ModuleID": "Horizons",
+        "Group": "  Main",
+        "Base": "console.htm",
+        "Url": "pilot",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "pilot",
+        "Source": "pilot.htm",
+        "Icon": "roles/badge-pilot.webp",
+        "Description": "Pilot's Cockpit.",
+        "Role": "Pilot",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": true,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [],
+        "Tags": []
+      },
+      "main-viewer": {
+        "Name": "Main Viewer",
+        "ModuleID": "Horizons",
+        "Group": "  Main",
+        "Base": "console.htm",
+        "Url": "main-viewer",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "main-viewer",
+        "Source": "main-viewer.htm",
+        "Icon": "badge-viewer.webp",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": true,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": [
+          "main-viewer"
+        ]
+      },
+      "viewport": {
+        "Name": "Viewport",
+        "ModuleID": "Horizons",
+        "Group": "  Main",
+        "Base": "console.htm",
+        "Url": "viewport",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "viewport",
+        "Source": "viewport.htm",
+        "Icon": "badge-viewer.webp",
+        "Description": "Viewport for all camera views for this vessel.",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "center": {
+        "Name": "Center",
+        "ModuleID": "Horizons",
+        "Group": "  Secondary",
+        "Base": "console.htm",
+        "Url": "center",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "center",
+        "Source": "center.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "stellarnav": {
+        "Name": "Stellar Navigation",
+        "ModuleID": "Horizons",
+        "Group": "  Secondary",
+        "Base": "console.htm",
+        "Url": "stellarnav",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "stellarnav",
+        "Source": "stellar-nav.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "stellarbody": {
+        "Name": "Stellar Body",
+        "ModuleID": "Horizons",
+        "Group": "  Secondary",
+        "Base": "console.htm",
+        "Url": "stellarbody",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "stellarbody",
+        "Source": "stellar-body.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "starsystem": {
+        "Name": "Star System",
+        "ModuleID": "Horizons",
+        "Group": "  Secondary",
+        "Base": "console.htm",
+        "Url": "starsystem",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "starsystem",
+        "Source": "star-system.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "alertstatus": {
+        "Name": "Alert Status",
+        "ModuleID": "Horizons",
+        "Group": "  Secondary",
+        "Base": "console.htm",
+        "Url": "alertstatus",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "alertstatus",
+        "Source": "alert-status.htm",
+        "Icon": "",
+        "Description": "Screen showing the current Alert Condition for the Ship",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "shieldstatus": {
+        "Name": "Shield Status",
+        "ModuleID": "Horizons",
+        "Group": "  Secondary",
+        "Base": "console.htm",
+        "Url": "shieldstatus",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "shieldstatus",
+        "Source": "shield-status.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "cargo-hold": {
+        "Name": "Cargo Hold",
+        "ModuleID": "Horizons",
+        "Group": "  Secondary",
+        "Base": "console.htm",
+        "Url": "cargo-hold",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "cargo-hold",
+        "Source": "cargo-hold.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "radar": {
+        "Name": "Radar",
+        "ModuleID": "Horizons",
+        "Group": "  Secondary",
+        "Base": "console.htm",
+        "Url": "radar",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "radar",
+        "Source": "radar.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "mfd": {
+        "Name": "MFD",
+        "ModuleID": "Horizons",
+        "Group": "  Secondary",
+        "Base": "console.htm",
+        "Url": "mfd",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "mfd",
+        "Source": "mfd.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": true,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [],
+        "Tags": []
+      },
+      "iris": {
+        "Name": "IRIS",
+        "ModuleID": "Horizons",
+        "Group": "  Secondary",
+        "Base": "console.htm",
+        "Url": "iris",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "iris",
+        "Source": "iris.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "media": {
+        "Name": "Media",
+        "ModuleID": "Horizons",
+        "Group": "  Secondary",
+        "Base": "console.htm",
+        "Url": "media",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "media",
+        "Source": "media-player.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [],
+        "Tags": []
+      },
+      "comm-link": {
+        "Name": "Comm Link",
+        "ModuleID": "Horizons",
+        "Group": "  Secondary",
+        "Base": "console.htm",
+        "Url": "comm-link",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "comm-link",
+        "Source": "comm-link.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [],
+        "Tags": []
+      },
+      "mission-status": {
+        "Name": "Mission Status",
+        "ModuleID": "Horizons",
+        "Group": "  Secondary",
+        "Base": "console-admin.htm",
+        "Url": "mission-status",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "mission-status",
+        "Source": "mission-status.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": true,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [
+          "MSG",
+          "DBG"
+        ],
+        "Tags": []
+      },
+      "crew": {
+        "Name": "Crew Roster",
+        "ModuleID": "Horizons",
+        "Group": " In Progress (Incomplete)",
+        "Base": "console.htm",
+        "Url": "crew",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "crew",
+        "Source": "crew.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "collision-alarm": {
+        "Name": "Collision Alarm",
+        "ModuleID": "Horizons",
+        "Group": " In Progress (Incomplete)",
+        "Base": "console.htm",
+        "Url": "collision-alarm",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "collision-alarm",
+        "Source": "collision-alarm.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "bridgemonitor": {
+        "Name": "Dashboard",
+        "ModuleID": "Horizons",
+        "Group": " In Progress (Incomplete)",
+        "Base": "console.htm",
+        "Url": "bridgemonitor",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "bridgemonitor",
+        "Source": "bridge-monitor.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "target": {
+        "Name": "Target",
+        "ModuleID": "Horizons",
+        "Group": " In Progress (Incomplete)",
+        "Base": "console.htm",
+        "Url": "target",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "target",
+        "Source": "tactical-target.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "Tactical",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [],
+        "Tags": []
+      },
+      "scans": {
+        "Name": "Scan",
+        "ModuleID": "Horizons",
+        "Group": " In Progress (Incomplete)",
+        "Base": "console.htm",
+        "Url": "scans",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "scans",
+        "Source": "science-target.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "Science",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [],
+        "Tags": []
+      },
+      "vessel-status": {
+        "Name": "Vessel Status",
+        "ModuleID": "Horizons",
+        "Group": " In Progress (Incomplete)",
+        "Base": "console.htm",
+        "Url": "vessel-status",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "vessel-status",
+        "Source": "vessel-status.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "gamemaster": {
+        "Name": "Game Master",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "console-admin.htm",
+        "Url": "gamemaster",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "gamemaster",
+        "Source": "gamemaster.htm",
+        "Icon": "roles/badge-game-master.webp",
+        "Description": "",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "gallery": {
+        "Name": "Gallery",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "console-admin.htm",
+        "Url": "gallery",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "gallery",
+        "Source": "system/gallery.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "events": {
+        "Name": "Events",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "console-admin.htm",
+        "Url": "events",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "events",
+        "Source": "gamemaster-events.htm",
+        "Icon": "roles/badge-game-master.webp",
+        "Description": "Game Master's Event Panel",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [],
+        "Tags": []
+      },
+      "events-monitor": {
+        "Name": "Events Monitor",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "console-admin.htm",
+        "Url": "events-monitor",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "events-monitor",
+        "Source": "gamemaster-events-monitor.htm",
+        "Icon": "roles/badge-game-master.webp",
+        "Description": "Game Master's Event Monitor",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [],
+        "Tags": []
+      },
+      "designer": {
+        "Name": "Designer",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "console-admin.htm",
+        "Url": "designer",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "designer",
+        "Source": "system/designer.htm",
+        "Icon": "roles/badge-designer.webp",
+        "Description": "",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [
+          "MISSION",
+          "EVENTS",
+          "CONTACTS",
+          "SCREEN",
+          "GVC",
+          "GFC",
+          "ASC",
+          "HUEBL",
+          "MQTT",
+          "DEVICES"
+        ],
+        "Tags": []
+      },
+      "mqtt": {
+        "Name": "MQTT Viewer",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "dialog.htm",
+        "Url": "mqtt",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "mqtt",
+        "Source": "system/mqtt.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [
+          "CNTL",
+          "MQTT"
+        ],
+        "Tags": []
+      },
+      "mqtt-log": {
+        "Name": "MQTT Log",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "dialog.htm",
+        "Url": "mqtt-log",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "mqtt-log",
+        "Source": "system/mqtt-log.htm",
+        "Icon": "",
+        "Description": "",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [
+          "CNTL",
+          "MQTT",
+          "MSG"
+        ],
+        "Tags": []
+      },
+      "module": {
+        "Name": "Module",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "console-admin.htm",
+        "Url": "module",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "module",
+        "Source": "system/module.htm",
+        "Icon": "roles/badge-designer.webp",
+        "Description": "",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [
+          "MISSION",
+          "SCREEN",
+          "GVC",
+          "GFC",
+          "SCREENS"
+        ],
+        "Tags": []
+      },
+      "campaign": {
+        "Name": "Campaign",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "console-admin.htm",
+        "Url": "campaign",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "campaign",
+        "Source": "system/campaign.htm",
+        "Icon": "roles/badge-designer.webp",
+        "Description": "",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [
+          "SCREEN",
+          "GVC",
+          "GFC"
+        ],
+        "Tags": []
+      },
+      "map": {
+        "Name": "Map",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "console-admin.htm",
+        "Url": "map",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "map",
+        "Source": "system/map.htm",
+        "Icon": "roles/badge-designer.webp",
+        "Description": "",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [],
+        "Tags": []
+      },
+      "mission": {
+        "Name": "Mission",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "console-admin.htm",
+        "Url": "mission",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "mission",
+        "Source": "system/mission.htm",
+        "Icon": "roles/badge-designer.webp",
+        "Description": "",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [
+          "MISSION",
+          "SCREEN",
+          "GVC",
+          "GFC"
+        ],
+        "Tags": []
+      },
+      "models": {
+        "Name": "Models",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "console-admin.htm",
+        "Url": "models",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "models",
+        "Source": "system/models.htm",
+        "Icon": "roles/badge-designer.webp",
+        "Description": "",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [],
+        "Tags": []
+      },
+      "vesselclass": {
+        "Name": "Vessel Class",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "console-admin.htm",
+        "Url": "vesselclass",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "vesselclass",
+        "Source": "system/vessel.htm",
+        "Icon": "roles/badge-designer.webp",
+        "Description": "",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [
+          "MISSION",
+          "SCREEN",
+          "GVC",
+          "GFC"
+        ],
+        "Tags": []
+      },
+      "gamepads": {
+        "Name": "GamePads",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "console-admin.htm",
+        "Url": "gamepads",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "gamepads",
+        "Source": "gamepad-monitor.htm",
+        "Icon": "Monitor",
+        "Description": "",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [],
+        "Tags": []
+      },
+      "portal": {
+        "Name": "Portal",
+        "ModuleID": "Horizons",
+        "Group": "Admin",
+        "Base": "console-admin.htm",
+        "Url": "portal",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons\\Html\\",
+        "OriginalUrl": "portal",
+        "Source": "system/portal.htm",
+        "Icon": "Monitor",
+        "Description": "Classic Portal Screen",
+        "Role": "",
+        "Admin": true,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": false,
+        "Packets": [],
+        "Tags": []
+      },
+      "test": {
+        "Name": "Test",
+        "ModuleID": "Custom",
+        "Group": "My Test Screen",
+        "Base": "console.htm",
+        "Url": "test",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Custom\\Html\\",
+        "OriginalUrl": "test",
+        "Source": "test.htm",
+        "Icon": "Monitor",
+        "Description": "",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "rts-scoreboard": {
+        "Name": "Scoreboard",
+        "ModuleID": "Herzog",
+        "Group": "Conquest",
+        "Base": "console.htm",
+        "Url": "rts-scoreboard",
+        "Path": "C:\\My Projects\\HorizonsModules\\Herzog\\Html\\",
+        "OriginalUrl": "rts-scoreboard",
+        "Source": "rts-scoreboard.htm",
+        "Icon": "Monitor",
+        "Description": "Scoreboard",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "rts-cic": {
+        "Name": "CIC",
+        "ModuleID": "Herzog",
+        "Group": "Conquest",
+        "Base": "console.htm",
+        "Url": "rts-cic",
+        "Path": "C:\\My Projects\\HorizonsModules\\Herzog\\Html\\",
+        "OriginalUrl": "rts-cic",
+        "Source": "rts-cic.htm",
+        "Icon": "Monitor",
+        "Description": "CIC",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "gm-panel": {
+        "Name": "GM Panel",
+        "ModuleID": "HORIZONS-LARP",
+        "Group": "LARP Screens",
+        "Base": "console-admin.htm",
+        "Url": "gm-panel",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons-LARP\\Html\\",
+        "OriginalUrl": "gm-panel",
+        "Source": "gm-panel.htm",
+        "Icon": "Monitor",
+        "Description": "GM Panel",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "drone": {
+        "Name": "Drone",
+        "ModuleID": "HORIZONS-LARP",
+        "Group": "LARP Screens",
+        "Base": "console.htm",
+        "Url": "drone",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons-LARP\\Html\\",
+        "OriginalUrl": "drone",
+        "Source": "drone.htm",
+        "Icon": "Monitor",
+        "Description": "Drone Control Interface",
+        "Role": "Pilot",
+        "Admin": false,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "flight-deck": {
+        "Name": "Flight Deck",
+        "ModuleID": "HORIZONS-LARP",
+        "Group": "LARP Screens",
+        "Base": "console.htm",
+        "Url": "flight-deck",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons-LARP\\Html\\",
+        "OriginalUrl": "flight-deck",
+        "Source": "flight-deck.htm",
+        "Icon": "Monitor",
+        "Description": "Flight Deck Control",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "lobby": {
+        "Name": "Lobby",
+        "ModuleID": "HORIZONS-LARP",
+        "Group": "LARP Screens",
+        "Base": "console-admin.htm",
+        "Url": "lobby",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons-LARP\\Html\\",
+        "OriginalUrl": "lobby",
+        "Source": "lobby.htm",
+        "Icon": "Monitor",
+        "Description": "Pre-Flight Lobby",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": false,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "pre-flight": {
+        "Name": "Pre-Flight",
+        "ModuleID": "HORIZONS-LARP",
+        "Group": "LARP Screens",
+        "Base": "console-admin.htm",
+        "Url": "pre-flight",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons-LARP\\Html\\",
+        "OriginalUrl": "pre-flight",
+        "Source": "pre-flight.htm",
+        "Icon": "Monitor",
+        "Description": "Pre-Flight Briefing and Loadout Screen",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "quartermaster": {
+        "Name": "Quartermaster",
+        "ModuleID": "HORIZONS-LARP",
+        "Group": "LARP Screens",
+        "Base": "console-admin.htm",
+        "Url": "quartermaster",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons-LARP\\Html\\",
+        "OriginalUrl": "quartermaster",
+        "Source": "quartermaster.htm",
+        "Icon": "Monitor",
+        "Description": "Quartermaster Loadout Screen",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "chief": {
+        "Name": "Chief",
+        "ModuleID": "HORIZONS-LARP",
+        "Group": "LARP Screens",
+        "Base": "console-admin.htm",
+        "Url": "chief",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons-LARP\\Html\\",
+        "OriginalUrl": "chief",
+        "Source": "chief.htm",
+        "Icon": "Monitor",
+        "Description": "Chief of the Boat",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "keypad": {
+        "Name": "Access Panel",
+        "ModuleID": "HORIZONS-LARP",
+        "Group": "LARP Screens",
+        "Base": "console-admin.htm",
+        "Url": "keypad",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons-LARP\\Html\\",
+        "OriginalUrl": "keypad",
+        "Source": "keypad.htm",
+        "Icon": "Monitor",
+        "Description": "Door Controller",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "keypad-b": {
+        "Name": "Access Panel B",
+        "ModuleID": "HORIZONS-LARP",
+        "Group": "LARP Screens",
+        "Base": "console-admin.htm",
+        "Url": "keypad-b",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons-LARP\\Html\\",
+        "OriginalUrl": "keypad-b",
+        "Source": "keypad-b.htm",
+        "Icon": "Monitor",
+        "Description": "Door Controller (Internal)",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "npc-dashboard": {
+        "Name": "NPC Dashboard",
+        "ModuleID": "HORIZONS-LARP",
+        "Group": "LARP Screens",
+        "Base": "console.htm",
+        "Url": "npc-dashboard",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons-LARP\\Html\\",
+        "OriginalUrl": "npc-dashboard",
+        "Source": "npc-dashboard.htm",
+        "Icon": "Monitor",
+        "Description": "NPC Dashboard for Live Actors",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "npc-prompter": {
+        "Name": "NPC Prompter",
+        "ModuleID": "HORIZONS-LARP",
+        "Group": "LARP Screens",
+        "Base": "console-admin.htm",
+        "Url": "npc-prompter",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons-LARP\\Html\\",
+        "OriginalUrl": "npc-prompter",
+        "Source": "npc-prompter.htm",
+        "Icon": "Monitor",
+        "Description": "NPC Prompter for Live Actors",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "npc-backdrop": {
+        "Name": "NPC Backdrop",
+        "ModuleID": "HORIZONS-LARP",
+        "Group": "LARP Screens",
+        "Base": "console-admin.htm",
+        "Url": "npc-backdrop",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons-LARP\\Html\\",
+        "OriginalUrl": "npc-backdrop",
+        "Source": "npc-backdrop.htm",
+        "Icon": "Monitor",
+        "Description": "NPC Backrop for Live Actors",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "vox": {
+        "Name": "VOX",
+        "ModuleID": "HORIZONS-LARP",
+        "Group": "LARP Screens",
+        "Base": "console-admin.htm",
+        "Url": "vox",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons-LARP\\Html\\",
+        "OriginalUrl": "vox",
+        "Source": "vox.htm",
+        "Icon": "Monitor",
+        "Description": "IRIS VOX",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "printouts": {
+        "Name": "Printouts",
+        "ModuleID": "HORIZONS-LARP",
+        "Group": "LARP Printouts",
+        "Base": "console-admin.htm",
+        "Url": "printouts",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons-LARP\\Html\\",
+        "OriginalUrl": "printouts",
+        "Source": "mission-printout.htm",
+        "Icon": "Monitor",
+        "Description": "Mission Results and Printable Sheets",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      },
+      "vessel-sheets": {
+        "Name": "Vessel Sheets",
+        "ModuleID": "HORIZONS-LARP",
+        "Group": "LARP Printouts",
+        "Base": "console-admin.htm",
+        "Url": "vessel-sheets",
+        "Path": "C:\\My Projects\\HorizonsRoot\\Modules\\Horizons-LARP\\Html\\",
+        "OriginalUrl": "vessel-sheets",
+        "Source": "vessel-sheets.htm",
+        "Icon": "Monitor",
+        "Description": "Printable Vessel Specification Sheets",
+        "Role": "",
+        "Admin": false,
+        "AssignVesselID": true,
+        "HasChannels": false,
+        "Locked": false,
+        "MissionSummary": false,
+        "Toolbar": true,
+        "Visible": true,
+        "Packets": [],
+        "Tags": []
+      }
+    },
+    "waypoints": [
+      {
+        "Name": "Outpost D-2",
+        "Type": "Destination",
+        "Target": "",
+        "Speed": -1,
+        "Visited": false
+      }
+    ],
+    "var_SECTION C": "Won",
+    "var_SECTION D": "Won",
+    "var_SECTION E": "Won",
+    "var_SECTION B": "Won",
+    "var_SECTION A": "Won"
+  },
+  "mission_data": {
+    "current_mission": null,
+    "mission_briefing": {},
+    "mission_summary": {},
+    "objectives": [],
+    "player_objectives": [
+      {
+        "Name": "Eliminate Alliance Base",
+        "PediaID": "",
+        "Group": "",
+        "Description": "",
+        "Type": "Open",
+        "Rank": "Primary",
+        "TriggerEvent": "",
+        "Tags": [
+          "daichi"
+        ],
+        "Required": false,
+        "Visible": true,
+        "Value": "",
+        "Count": 0,
+        "CurrentCount": 0,
+        "Complete": false,
+        "Started": "2026-02-01T21:17:03.5130551+00:00"
+      }
+    ],
+    "gm_objectives": {
+      "Eliminate Daichi Base": {
+        "Name": "Eliminate Daichi Base",
+        "PediaID": "",
+        "Group": "",
+        "Description": "",
+        "Type": "Open",
+        "Rank": "Primary",
+        "TriggerEvent": "",
+        "Tags": [
+          "alliance"
+        ],
+        "Required": false,
+        "Visible": true,
+        "Value": "",
+        "Count": 0,
+        "CurrentCount": 0,
+        "Complete": false,
+        "Started": "2026-02-01T21:17:03.5112255+00:00"
+      },
+      "Eliminate Alliance Base": {
+        "Name": "Eliminate Alliance Base",
+        "PediaID": "",
+        "Group": "",
+        "Description": "",
+        "Type": "Open",
+        "Rank": "Primary",
+        "TriggerEvent": "",
+        "Tags": [
+          "daichi"
+        ],
+        "Required": false,
+        "Visible": true,
+        "Value": "",
+        "Count": 0,
+        "CurrentCount": 0,
+        "Complete": false,
+        "Started": "2026-02-01T21:17:03.5130551+00:00"
+      }
+    },
+    "encounters": {
+      "ID": "Container Drop - Light",
+      "LastRoll": 0,
+      "LastGroupRoll": 0.78,
+      "LastGroup": "Drop 1"
+    },
+    "scenario": {},
+    "npcs": {},
+    "available_missions": [
+      {
+        "ID": "AA-Long Patrol",
+        "Name": "The Long Patrol",
+        "ModuleID": "Horizons",
+        "Description": "Patrol several key star systems during a routine patrol and check in on various Comm Stations to ensure they are safe.\n\nA good starter mission for beginners.\n  ",
+        "Category": " Academy",
+        "Tags": [
+          "live-mission"
+        ],
+        "Rating": 2,
+        "Players": 6,
+        "Complete": false,
+        "Active": true
+      },
+      {
+        "ID": "Art of Detente",
+        "Name": "The Art of Detente",
+        "ModuleID": "Horizons",
+        "Description": "A operations ship has become disabled and is stranded in enemy territory. Can the Horizons get them out safely?",
+        "Category": "General",
+        "Tags": [],
+        "Rating": 3,
+        "Players": 4,
+        "Complete": false,
+        "Active": true
+      },
+      {
+        "ID": "conquest-borderlands",
+        "Name": "The Borderlands",
+        "ModuleID": "Herzog",
+        "Description": "Tensions are at the breaking point near the Alliance-Daichi border. Two stations stand opposed with many outposts in-between. The first to control all eight outposts or destroy the enemy base wins.\n\nWho will be victorious?",
+        "Category": "Domination",
+        "Tags": [],
+        "Rating": 2,
+        "Players": 6,
+        "Complete": false,
+        "Active": true
+      },
+      {
+        "ID": "conquest-borderlands-3p",
+        "Name": "The Borderlands (3 Team)",
+        "ModuleID": "Herzog",
+        "Description": "Tensions are at the breaking point near the Alliance-Daichi border. Three stations stand opposed with many outposts in-between. The first to control all eight outposts or destroy all other enemy bases wins.\n\nWho will be victorious?",
+        "Category": "Domination",
+        "Tags": [],
+        "Rating": 2,
+        "Players": 6,
+        "Complete": false,
+        "Active": true
+      },
+      {
+        "ID": "Fighter: Skirmish",
+        "Name": "Fighter: Skirmish",
+        "ModuleID": "Horizons",
+        "Description": "",
+        "Category": "",
+        "Tags": [],
+        "Rating": 2,
+        "Players": 4,
+        "Complete": false,
+        "Active": false
+      },
+      {
+        "ID": "Homestead Company",
+        "Name": "The Homestead Company",
+        "ModuleID": "Horizons",
+        "Description": "The Homestead Company has requested an escort to help them get to Chara Proxima. Lead their convoy to the safety of their new home.\r\n\r\nA great mix of action and deduction.\r\n  ",
+        "Category": "General",
+        "Tags": [],
+        "Rating": 4,
+        "Players": 4,
+        "Complete": false,
+        "Active": true
+      },
+      {
+        "ID": "Hot Pursuit",
+        "Name": "Hot Pursuit",
+        "ModuleID": "Horizons",
+        "Description": "\r\n    A stolen capitol ship and no time to waste. Catch the Daichi criminals before they can complete their mission.\r\n  ",
+        "Category": "General",
+        "Tags": [],
+        "Rating": 2,
+        "Players": 6,
+        "Complete": false,
+        "Active": false
+      },
+      {
+        "ID": "Invasion",
+        "Name": "Daichi Invasion",
+        "ModuleID": "Horizons",
+        "Description": "Survive wave after wave of enemy ships as you defend 4 stations from their assault. Difficulty increases with each wave. \n    \nA great mission for an action hungry crew.\n  ",
+        "Category": "General",
+        "Tags": [],
+        "Rating": 3,
+        "Players": 4,
+        "Complete": false,
+        "Active": true
+      },
+      {
+        "ID": "Last Horizon",
+        "Name": "The Last Horizon",
+        "ModuleID": "Horizons",
+        "Description": "\r\n    I wonder what's happening over at Mars...\r\n  ",
+        "Category": "General",
+        "Tags": [],
+        "Rating": 2,
+        "Players": 4,
+        "Complete": false,
+        "Active": false
+      },
+      {
+        "ID": "Playground",
+        "Name": "Open Playground",
+        "ModuleID": "Horizons",
+        "Description": "First Star To The Right, And Straight On Until Morning...\r\n    \r\nExplore the universe in a fighter with no enemies.\r\n  ",
+        "Category": "Single Player: Fighters",
+        "Tags": [],
+        "Rating": 1,
+        "Players": 4,
+        "Complete": false,
+        "Active": true
+      },
+      {
+        "ID": "Radical Action",
+        "Name": "Radical Action",
+        "ModuleID": "Horizons",
+        "Description": "The new Opal Bay outpost and mining operations are almost complete. Assist Alliance command in getting these facilities finished.",
+        "Category": "General",
+        "Tags": [],
+        "Rating": 2,
+        "Players": 6,
+        "Complete": false,
+        "Active": true
+      },
+      {
+        "ID": "What Lies Beyond Mars",
+        "Name": "What Lies Beyond Mars",
+        "ModuleID": "Horizons",
+        "Description": "Can you withstand the assault from a squadron of Daichi DARTs that never give up? \r\n    \r\n*** This Is A Sample Fighter Mission ***\r\n  ",
+        "Category": "Single Player: Fighters",
+        "Tags": [],
+        "Rating": 2,
+        "Players": 4,
+        "Complete": false,
+        "Active": true
+      },
+      {
+        "ID": "Wrong Place Wrong Time",
+        "Name": "The Wrong Place, The Wrong Time",
+        "ModuleID": "Horizons",
+        "Description": "It might just be a case of the Mondays... \r\n\r\nAt least your last Monday...",
+        "Category": "General",
+        "Tags": [],
+        "Rating": 4,
+        "Players": 4,
+        "Complete": false,
+        "Active": true
+      }
+    ]
+  },
+  "combat_data": {
+    "ordnance": [
+      {
+        "Name": "Silkworm [Evil]",
+        "Count": 7,
+        "Max": 10,
+        "Description": "Packs a real punch against both shields and hull with a decent blast radius.",
+        "Icon": "/images/ordnance/silkworm.jpg",
+        "Image": "/images/ordnance/silkworm.jpg",
+        "PediaID": "",
+        "Damage": 600,
+        "Speed": 3,
+        "Range": 50000
+      }
+    ],
+    "ordnance_selected": null,
+    "projectiles": [
+      {
+        "ID": "19",
+        "BaseType": "Projectile",
+        "ParentID": "7",
+        "SpawnedBy": "Forward A",
+        "Location": "Borderlands",
+        "Name": "PULSE ER",
+        "ModelClass": "PULSE_Proj",
+        "CurrentTargetID": "0",
+        "Range": "30000",
+        "TurnSpeed": "0",
+        "Position": {
+          "X": 299998,
+          "Y": 1.5,
+          "Z": 0
+        },
+        "Orientation": {
+          "X": 0.0016,
+          "Y": -0.6314,
+          "Z": -0.0013,
+          "W": 0.7754
+        },
+        "Velocity": {
+          "X": -7.83,
+          "Y": -0.03,
+          "Z": -1.62
+        },
+        "Speed": 8,
+        "Scale": 1
+      },
+      {
+        "ID": "20",
+        "BaseType": "Projectile",
+        "ParentID": "7",
+        "SpawnedBy": "Forward B",
+        "Location": "Borderlands",
+        "Name": "PULSE ER",
+        "ModelClass": "PULSE_Proj",
+        "CurrentTargetID": "0",
+        "Range": "30000",
+        "TurnSpeed": "0",
+        "Position": {
+          "X": 299998,
+          "Y": 1.5,
+          "Z": 0
+        },
+        "Orientation": {
+          "X": 0.0016,
+          "Y": -0.6314,
+          "Z": -0.0013,
+          "W": 0.7754
+        },
+        "Velocity": {
+          "X": -7.83,
+          "Y": -0.03,
+          "Z": -1.62
+        },
+        "Speed": 8,
+        "Scale": 1
+      }
+    ],
+    "drones": [
+      {
+        "ID": 41,
+        "BaseType": "Drone",
+        "SubType": "Cargo",
+        "Class": "Mark II Shuttle",
+        "Name": "D1-Terrible",
+        "CurrentTargetID": "",
+        "Behavior": "Active",
+        "Maneuver": "Docked",
+        "ControllerID": 18,
+        "DockedAt": "Shuttle Bay Alpha",
+        "Integrity": 1000,
+        "Shields": 0,
+        "CargoSpace": 0,
+        "Map": "",
+        "Location": "",
+        "Planet": "",
+        "MapPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "StarPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Position": {
+          "X": 206228.66,
+          "Y": -31605.47,
+          "Z": 0
+        },
+        "Activity": "Idle",
+        "Immortal": true,
+        "Invincible": false,
+        "State": "Alive",
+        "IsPlayer": false
+      },
+      {
+        "ID": 42,
+        "BaseType": "Drone",
+        "SubType": "Cargo",
+        "Class": "Mark II Shuttle",
+        "Name": "D2-Fervent",
+        "CurrentTargetID": "",
+        "Behavior": "Active",
+        "Maneuver": "Docked",
+        "ControllerID": 18,
+        "DockedAt": "Shuttle Bay Alpha",
+        "Integrity": 1000,
+        "Shields": 0,
+        "CargoSpace": 0,
+        "Map": "",
+        "Location": "",
+        "Planet": "",
+        "MapPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "StarPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Position": {
+          "X": 206228.66,
+          "Y": -31605.47,
+          "Z": 0
+        },
+        "Activity": "Idle",
+        "Immortal": true,
+        "Invincible": false,
+        "State": "Alive",
+        "IsPlayer": false
+      },
+      {
+        "ID": 44,
+        "BaseType": "Drone",
+        "SubType": "Mining",
+        "Class": "WY-79 Mining Drone",
+        "Name": "Minerbot WY-142",
+        "CurrentTargetID": "",
+        "Behavior": "Active",
+        "Maneuver": "Docked",
+        "ControllerID": 18,
+        "DockedAt": "Shuttle Bay Alpha",
+        "Integrity": 100,
+        "Shields": 0,
+        "CargoSpace": 0,
+        "Map": "",
+        "Location": "",
+        "Planet": "",
+        "MapPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "StarPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Position": {
+          "X": 206228.66,
+          "Y": -31605.47,
+          "Z": 0
+        },
+        "Activity": "Idle",
+        "Immortal": false,
+        "Invincible": false,
+        "State": "Alive",
+        "IsPlayer": false
+      },
+      {
+        "ID": 43,
+        "BaseType": "Drone",
+        "SubType": "Repair",
+        "Class": "XR1 Repair Drone",
+        "Name": "XR1-D967",
+        "CurrentTargetID": "",
+        "Behavior": "Active",
+        "Maneuver": "Docked",
+        "ControllerID": 18,
+        "DockedAt": "Shuttle Bay Alpha",
+        "Integrity": 100,
+        "Shields": 0,
+        "CargoSpace": 0,
+        "Map": "",
+        "Location": "",
+        "Planet": "",
+        "MapPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "StarPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Position": {
+          "X": 206228.66,
+          "Y": -31605.47,
+          "Z": 0
+        },
+        "Activity": "Idle",
+        "Immortal": false,
+        "Invincible": false,
+        "State": "Alive",
+        "IsPlayer": false
+      },
+      {
+        "ID": 46,
+        "BaseType": "Vessel",
+        "SubType": "Vechicle",
+        "Class": "Cobra ATX",
+        "Name": "ATX-HUMBERSTONE",
+        "CurrentTargetID": "",
+        "Behavior": "Active",
+        "Maneuver": "Cruise",
+        "ControllerID": 18,
+        "DockedAt": "",
+        "Integrity": 200,
+        "Shields": 1,
+        "CargoSpace": 0,
+        "Map": "Borderlands",
+        "Location": "",
+        "Planet": "Borderlands",
+        "MapPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "StarPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Position": {
+          "X": 288000,
+          "Y": 0,
+          "Z": 0
+        },
+        "Activity": "Idle",
+        "Immortal": false,
+        "Invincible": false,
+        "State": "Alive",
+        "IsPlayer": false
+      }
+    ],
+    "drone_targets": {}
+  },
+  "last_packets": {
+    "DAMAGE": null,
+    "ALERT": 3,
+    "MISSION": {
+      "ID": "conquest-borderlands",
+      "Name": "The Borderlands",
+      "Date": "01/27/2025",
+      "TotalObjectives": 2,
+      "TotalWaypoints": 0,
+      "Started": "02/01/2026 21:37:27",
+      "Timer": "0",
+      "ElapsedTime": "731.2396967",
+      "State": "Running",
+      "PediaID": "",
+      "Complete": false,
+      "Success": false,
+      "Grade": 0,
+      "Groups": [],
+      "Objectives": {
+        "Eliminate Daichi Base": {
+          "Name": "Eliminate Daichi Base",
+          "PediaID": "",
+          "Group": "",
+          "Description": "",
+          "Type": "Open",
+          "Rank": "Primary",
+          "TriggerEvent": "",
+          "Tags": [
+            "alliance"
+          ],
+          "Required": false,
+          "Visible": true,
+          "Value": "",
+          "Count": 0,
+          "CurrentCount": 0,
+          "Complete": false,
+          "Started": "2026-02-01T21:17:03.5112255+00:00"
+        },
+        "Eliminate Alliance Base": {
+          "Name": "Eliminate Alliance Base",
+          "PediaID": "",
+          "Group": "",
+          "Description": "",
+          "Type": "Open",
+          "Rank": "Primary",
+          "TriggerEvent": "",
+          "Tags": [
+            "daichi"
+          ],
+          "Required": false,
+          "Visible": true,
+          "Value": "",
+          "Count": 0,
+          "CurrentCount": 0,
+          "Complete": false,
+          "Started": "2026-02-01T21:17:03.5130551+00:00"
+        }
+      },
+      "Progress": 0,
+      "Readout": "",
+      "Victor": ""
+    },
+    "PLAYER-OBJECTIVES": [
+      {
+        "Name": "Eliminate Alliance Base",
+        "PediaID": "",
+        "Group": "",
+        "Description": "",
+        "Type": "Open",
+        "Rank": "Primary",
+        "TriggerEvent": "",
+        "Tags": [
+          "daichi"
+        ],
+        "Required": false,
+        "Visible": true,
+        "Value": "",
+        "Count": 0,
+        "CurrentCount": 0,
+        "Complete": false,
+        "Started": "2026-02-01T21:17:03.5130551+00:00"
+      }
+    ],
+    "CONTACTS": [
+      {
+        "ID": 4,
+        "BaseType": "Station",
+        "SubType": "Station",
+        "Class": "Outpost Station (Class B)",
+        "Name": "Outpost A-2",
+        "Faction": "Alliance",
+        "Integrity": 1400,
+        "Shields": 0,
+        "Radius": 511.6373,
+        "Planet": "Borderlands",
+        "StarPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Position": {
+          "X": -90000,
+          "Y": -50000,
+          "Z": 0
+        },
+        "Orientation": {
+          "X": 0,
+          "Y": -0.7071,
+          "Z": 0,
+          "W": 0.7071
+        },
+        "Relative": {
+          "X": 0.22,
+          "Y": -0.18,
+          "Z": -0.96
+        },
+        "Maneuver": "Cruise",
+        "Scanning": 0,
+        "Scanned": true,
+        "IFF": 2,
+        "Identified": true,
+        "Model": "Station-Outpost-B",
+        "Scale": "1",
+        "Parent": 0,
+        "Tags": "4, outpost, outpost-alliance",
+        "Children": [],
+        "Properties": {}
+      }
+    ]
+  }
+}

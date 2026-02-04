@@ -93,7 +93,7 @@ variable "git_repo_url" {
 variable "whisper_model" {
   description = "Whisper model size (tiny, base, small, medium, large-v2, large-v3)"
   type        = string
-  default     = "medium"
+  default     = "large-v3"
 
   validation {
     condition     = contains(["tiny", "base", "small", "medium", "large-v2", "large-v3"], var.whisper_model)

@@ -307,6 +307,61 @@ REMEMBER:
     return prompt.strip()
 
 
+def _build_telemetry_prompt_section(telemetry_summary: Dict[str, Any]) -> str:
+    """
+    Build telemetry section for LLM prompts.
+
+    Args:
+        telemetry_summary: Telemetry summary from TelemetryTimelineBuilder
+
+    Returns:
+        Formatted telemetry section string, or empty string if no data
+    """
+    if not telemetry_summary or telemetry_summary.get('total_events', 0) == 0:
+        return ""
+
+    sections = [
+        "## Game Telemetry Data (ACTUAL IN-GAME EVENTS)",
+        f"**Total Game Events:** {telemetry_summary.get('total_events', 0)}",
+        f"**Game Duration:** {telemetry_summary.get('duration_formatted', 'Unknown')}",
+        "",
+    ]
+
+    # Event category distribution
+    event_summ = telemetry_summary.get('event_summary', {})
+    cat_dist = event_summ.get('category_distribution', {})
+    if cat_dist:
+        sections.append("### Activity by Category")
+        for cat, count in cat_dist.items():
+            sections.append(f"- {cat}: {count} events")
+        sections.append("")
+
+    # Mission phases
+    phases = telemetry_summary.get('phases', [])
+    if phases:
+        sections.append("### Mission Phases (from telemetry)")
+        for phase in phases:
+            sections.append(
+                f"- **{phase.get('start_formatted', '?')}-{phase.get('end_formatted', '?')}**: "
+                f"{phase.get('display_name', 'Unknown')} ({phase.get('event_count', 0)} events)"
+            )
+        sections.append("")
+
+    # Key game events
+    key_events = telemetry_summary.get('key_events', [])
+    if key_events:
+        sections.append("### Key Game Events (reference these in the narrative)")
+        for event in key_events[:20]:
+            sections.append(
+                f"- [{event.get('time_formatted', '?')}] {event.get('description', 'Unknown')}"
+            )
+        if len(key_events) > 20:
+            sections.append(f"  ... and {len(key_events) - 20} more events")
+        sections.append("")
+
+    return '\n'.join(sections)
+
+
 def build_enhanced_report_prompt(
     enhanced_data: Dict[str, Any],
     mission_name: str = "Mission Debrief",
@@ -335,6 +390,7 @@ def build_enhanced_report_prompt(
     communication_quality = enhanced_data.get('communication_quality', {})
     speaker_scorecards = enhanced_data.get('speaker_scorecards', {})
     learning_evaluation = enhanced_data.get('learning_evaluation', {})
+    telemetry_summary = enhanced_data.get('telemetry_summary', {})
 
     # Format mission statistics
     stats_text = f"""
@@ -440,6 +496,8 @@ STYLE: {style_instructions.get(style, style_instructions['professional'])}
 
 ## Quality Verification (PRE-COMPUTED)
 {verification_section}
+
+{_build_telemetry_prompt_section(telemetry_summary)}
 
 ---
 

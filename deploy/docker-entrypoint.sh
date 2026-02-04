@@ -14,13 +14,13 @@ log_error() { echo "[ERROR] $1"; }
 
 # Configuration from environment
 OLLAMA_MODEL="${OLLAMA_MODEL:-llama3.2}"
-WHISPER_MODEL="${WHISPER_MODEL:-medium}"
+WHISPER_MODEL_SIZE="${WHISPER_MODEL_SIZE:-${WHISPER_MODEL:-large-v3}}"
 WEB_SERVER_PORT="${WEB_SERVER_PORT:-8000}"
 SKIP_MODEL_DOWNLOAD="${SKIP_MODEL_DOWNLOAD:-false}"
 
 log_info "=== Starship Horizons Learning AI ==="
 log_info "Ollama Model: $OLLAMA_MODEL"
-log_info "Whisper Model: $WHISPER_MODEL"
+log_info "Whisper Model: $WHISPER_MODEL_SIZE"
 log_info "Web Server Port: $WEB_SERVER_PORT"
 
 # ------------------------------------------------------------------------------

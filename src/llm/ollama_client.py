@@ -214,7 +214,8 @@ class OllamaClient:
         max_tokens: Optional[int] = None,
         top_p: Optional[float] = None,
         top_k: Optional[int] = None,
-        repeat_penalty: Optional[float] = None
+        repeat_penalty: Optional[float] = None,
+        metrics_out: Optional[Dict[str, Any]] = None
     ) -> Optional[str]:
         """
         Generate text using Ollama.
@@ -227,6 +228,8 @@ class OllamaClient:
             top_p: Nucleus sampling threshold (0.0-1.0)
             top_k: Top-k sampling limit
             repeat_penalty: Penalty for repeating tokens (1.0 = no penalty)
+            metrics_out: Optional dict to populate with Ollama response metrics
+                (prompt_eval_count, eval_count, total_duration, etc.)
 
         Returns:
             Generated text or None if generation failed
@@ -265,6 +268,15 @@ class OllamaClient:
 
             result = response.json()
             generated_text = result.get('response', '')
+
+            # Populate caller-provided metrics dict with Ollama response stats
+            if metrics_out is not None:
+                metrics_out['model'] = self.model
+                for key in (
+                    'prompt_eval_count', 'eval_count', 'total_duration',
+                    'load_duration', 'prompt_eval_duration', 'eval_duration'
+                ):
+                    metrics_out[key] = result.get(key, 0)
 
             logger.info(f"✓ Generated {len(generated_text)} characters")
             return generated_text

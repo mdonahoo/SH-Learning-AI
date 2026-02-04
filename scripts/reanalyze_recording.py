@@ -141,13 +141,24 @@ def main():
         else:
             logger.warning("No matching telemetry session found")
 
+    telemetry_dir = None
     if telemetry_session_id:
         telemetry_file = Path(f"data/telemetry/telemetry_{telemetry_session_id}.json")
         if telemetry_file.exists():
             logger.info(f"Using telemetry: {telemetry_file}")
+            telemetry_dir = str(telemetry_file.parent)
         else:
-            logger.warning(f"Telemetry file not found: {telemetry_file}")
-            telemetry_session_id = None
+            # Search workspace directories
+            workspace_matches = list(Path("data/workspaces").glob(
+                f"*/telemetry/telemetry_{telemetry_session_id}.json"
+            ))
+            if workspace_matches:
+                telemetry_file = workspace_matches[0]
+                telemetry_dir = str(telemetry_file.parent)
+                logger.info(f"Using telemetry from workspace: {telemetry_file}")
+            else:
+                logger.warning(f"Telemetry file not found: {telemetry_file}")
+                telemetry_session_id = None
 
     # Import audio processor
     try:
@@ -171,7 +182,8 @@ def main():
             include_narrative=not args.no_narrative,
             include_story=not args.no_story,
             progress_callback=progress_callback,
-            telemetry_session_id=telemetry_session_id
+            telemetry_session_id=telemetry_session_id,
+            telemetry_dir=telemetry_dir
         )
     except Exception as e:
         logger.error(f"Analysis failed: {e}", exc_info=True)

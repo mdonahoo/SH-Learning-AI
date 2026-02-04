@@ -1,0 +1,5707 @@
+[
+  {
+    "timestamp": 5.730560779571533,
+    "text": "Sergeant, head up, please.",
+    "confidence": 0.5648520654831373,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 1.5,
+    "transcription_time": 16.88661003112793,
+    "words": [
+      {
+        "word": " Sergeant,",
+        "start": 0.0,
+        "end": 0.28,
+        "probability": 0.00021233812731225044
+      },
+      {
+        "word": " head",
+        "start": 0.28,
+        "end": 0.5,
+        "probability": 0.39785927534103394
+      },
+      {
+        "word": " up,",
+        "start": 0.5,
+        "end": 0.66,
+        "probability": 0.8832197785377502
+      },
+      {
+        "word": " please.",
+        "start": 0.68,
+        "end": 0.82,
+        "probability": 0.9781168699264526
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 7.98806357383728,
+    "text": "So that's the first thing I want to say.",
+    "confidence": 0.6282675663630167,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 2.8,
+    "transcription_time": 15.008506536483765,
+    "words": [
+      {
+        "word": " So",
+        "start": 0.0,
+        "end": 0.12,
+        "probability": 0.8566564917564392
+      },
+      {
+        "word": " that's",
+        "start": 0.12,
+        "end": 0.44,
+        "probability": 0.9388481080532074
+      },
+      {
+        "word": " the",
+        "start": 0.44,
+        "end": 0.44,
+        "probability": 0.434845507144928
+      },
+      {
+        "word": " first",
+        "start": 0.44,
+        "end": 0.62,
+        "probability": 0.4080989360809326
+      },
+      {
+        "word": " thing",
+        "start": 0.62,
+        "end": 0.8,
+        "probability": 0.9589691162109375
+      },
+      {
+        "word": " I",
+        "start": 0.8,
+        "end": 0.9,
+        "probability": 0.35447293519973755
+      },
+      {
+        "word": " want",
+        "start": 0.9,
+        "end": 1.12,
+        "probability": 0.2758849561214447
+      },
+      {
+        "word": " to",
+        "start": 1.12,
+        "end": 1.18,
+        "probability": 0.8691577315330505
+      },
+      {
+        "word": " say.",
+        "start": 1.18,
+        "end": 1.58,
+        "probability": 0.5574743151664734
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 17.765984535217285,
+    "text": "All right.",
+    "confidence": 0.7161058038473129,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 1.6,
+    "transcription_time": 18.366145372390747,
+    "words": [
+      {
+        "word": " All",
+        "start": 0.0,
+        "end": 0.12,
+        "probability": 0.4384351670742035
+      },
+      {
+        "word": " right.",
+        "start": 0.12,
+        "end": 0.26,
+        "probability": 0.9937764406204224
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 19.37220525741577,
+    "text": "This is some walk in the park, club shit, but it's the first time out together, things are going to get weird, don't worry too much about it, say it out loud, speak clearly, speak from diaphragms, and speak to me and each other, we're going to be okay.  The deal with this mission, we're going out to look around to see defense drones. The first thing we're going to be doing is undocking, on which ops we're going to have to contact the station, request permission to undock.  I believe we can then undock from, I forget if it's in Canary or elsewhere, there's going to be a pipe on. Once we get permission to undock, undock, stride on to hit anything as we go.  So, a flight that might come down to you. We're going to then navigate to Parrot Arrow.",
+    "confidence": 0.8792106054879568,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 38.5,
+    "transcription_time": 54.54751753807068,
+    "words": [
+      {
+        "word": " This",
+        "start": 0.0,
+        "end": 0.08,
+        "probability": 0.5249274969100952
+      },
+      {
+        "word": " is",
+        "start": 0.08,
+        "end": 0.32,
+        "probability": 0.877406656742096
+      },
+      {
+        "word": " some",
+        "start": 0.32,
+        "end": 1.02,
+        "probability": 0.5269267559051514
+      },
+      {
+        "word": " walk",
+        "start": 1.02,
+        "end": 1.52,
+        "probability": 0.7802166938781738
+      },
+      {
+        "word": " in",
+        "start": 1.52,
+        "end": 1.68,
+        "probability": 0.8688878417015076
+      },
+      {
+        "word": " the",
+        "start": 1.68,
+        "end": 1.76,
+        "probability": 0.995945394039154
+      },
+      {
+        "word": " park,",
+        "start": 1.76,
+        "end": 2.06,
+        "probability": 0.9840431809425354
+      },
+      {
+        "word": " club",
+        "start": 2.14,
+        "end": 2.32,
+        "probability": 0.39015090465545654
+      },
+      {
+        "word": " shit,",
+        "start": 2.32,
+        "end": 2.58,
+        "probability": 0.6294942498207092
+      },
+      {
+        "word": " but",
+        "start": 2.82,
+        "end": 3.14,
+        "probability": 0.9844663143157959
+      },
+      {
+        "word": " it's",
+        "start": 3.14,
+        "end": 3.84,
+        "probability": 0.9513010680675507
+      },
+      {
+        "word": " the",
+        "start": 3.84,
+        "end": 3.9,
+        "probability": 0.5032656192779541
+      },
+      {
+        "word": " first",
+        "start": 3.9,
+        "end": 4.06,
+        "probability": 0.998259961605072
+      },
+      {
+        "word": " time",
+        "start": 4.06,
+        "end": 4.24,
+        "probability": 0.9971080422401428
+      },
+      {
+        "word": " out",
+        "start": 4.24,
+        "end": 4.4,
+        "probability": 0.7041985988616943
+      },
+      {
+        "word": " together,",
+        "start": 4.4,
+        "end": 4.74,
+        "probability": 0.9974147081375122
+      },
+      {
+        "word": " things",
+        "start": 4.9,
+        "end": 5.06,
+        "probability": 0.905701756477356
+      },
+      {
+        "word": " are",
+        "start": 5.06,
+        "end": 5.28,
+        "probability": 0.9965594410896301
+      },
+      {
+        "word": " going",
+        "start": 5.28,
+        "end": 5.38,
+        "probability": 0.5433202385902405
+      },
+      {
+        "word": " to",
+        "start": 5.38,
+        "end": 5.48,
+        "probability": 0.9981162548065186
+      },
+      {
+        "word": " get",
+        "start": 5.48,
+        "end": 5.58,
+        "probability": 0.9878222346305847
+      },
+      {
+        "word": " weird,",
+        "start": 5.58,
+        "end": 5.82,
+        "probability": 0.9901902675628662
+      },
+      {
+        "word": " don't",
+        "start": 5.86,
+        "end": 6.06,
+        "probability": 0.9562273323535919
+      },
+      {
+        "word": " worry",
+        "start": 6.06,
+        "end": 6.24,
+        "probability": 0.9984581470489502
+      },
+      {
+        "word": " too",
+        "start": 6.24,
+        "end": 6.4,
+        "probability": 0.9870725274085999
+      },
+      {
+        "word": " much",
+        "start": 6.4,
+        "end": 6.56,
+        "probability": 0.9996028542518616
+      },
+      {
+        "word": " about",
+        "start": 6.56,
+        "end": 6.86,
+        "probability": 0.9960402250289917
+      },
+      {
+        "word": " it,",
+        "start": 6.86,
+        "end": 7.04,
+        "probability": 0.9943789839744568
+      },
+      {
+        "word": " say",
+        "start": 7.14,
+        "end": 7.62,
+        "probability": 0.6282272934913635
+      },
+      {
+        "word": " it",
+        "start": 7.62,
+        "end": 7.84,
+        "probability": 0.5007675290107727
+      },
+      {
+        "word": " out",
+        "start": 7.84,
+        "end": 8.06,
+        "probability": 0.9959917664527893
+      },
+      {
+        "word": " loud,",
+        "start": 8.06,
+        "end": 8.32,
+        "probability": 0.993614912033081
+      },
+      {
+        "word": " speak",
+        "start": 8.66,
+        "end": 8.98,
+        "probability": 0.9874101281166077
+      },
+      {
+        "word": " clearly,",
+        "start": 8.98,
+        "end": 9.46,
+        "probability": 0.9900925755500793
+      },
+      {
+        "word": " speak",
+        "start": 9.6,
+        "end": 9.84,
+        "probability": 0.9659078121185303
+      },
+      {
+        "word": " from",
+        "start": 9.84,
+        "end": 10.12,
+        "probability": 0.4557163715362549
+      },
+      {
+        "word": " diaphragms,",
+        "start": 10.12,
+        "end": 10.72,
+        "probability": 0.6881750524044037
+      },
+      {
+        "word": " and",
+        "start": 10.72,
+        "end": 10.84,
+        "probability": 0.8940945863723755
+      },
+      {
+        "word": " speak",
+        "start": 10.84,
+        "end": 11.06,
+        "probability": 0.9685937762260437
+      },
+      {
+        "word": " to",
+        "start": 11.06,
+        "end": 11.32,
+        "probability": 0.9950746893882751
+      },
+      {
+        "word": " me",
+        "start": 11.32,
+        "end": 11.58,
+        "probability": 0.9975162744522095
+      },
+      {
+        "word": " and",
+        "start": 11.58,
+        "end": 11.94,
+        "probability": 0.8019351959228516
+      },
+      {
+        "word": " each",
+        "start": 11.94,
+        "end": 12.24,
+        "probability": 0.8492798209190369
+      },
+      {
+        "word": " other,",
+        "start": 12.24,
+        "end": 12.56,
+        "probability": 0.9886766672134399
+      },
+      {
+        "word": " we're",
+        "start": 12.64,
+        "end": 12.92,
+        "probability": 0.8737474977970123
+      },
+      {
+        "word": " going",
+        "start": 12.92,
+        "end": 12.96,
+        "probability": 0.8725079298019409
+      },
+      {
+        "word": " to",
+        "start": 12.96,
+        "end": 13.04,
+        "probability": 0.9989562034606934
+      },
+      {
+        "word": " be",
+        "start": 13.04,
+        "end": 13.16,
+        "probability": 0.9965184926986694
+      },
+      {
+        "word": " okay.",
+        "start": 13.16,
+        "end": 13.34,
+        "probability": 0.880237877368927
+      },
+      {
+        "word": " The",
+        "start": 13.76,
+        "end": 14.16,
+        "probability": 0.9877862930297852
+      },
+      {
+        "word": " deal",
+        "start": 14.16,
+        "end": 14.3,
+        "probability": 0.983247697353363
+      },
+      {
+        "word": " with",
+        "start": 14.3,
+        "end": 14.46,
+        "probability": 0.9329007267951965
+      },
+      {
+        "word": " this",
+        "start": 14.46,
+        "end": 14.6,
+        "probability": 0.9924595952033997
+      },
+      {
+        "word": " mission,",
+        "start": 14.6,
+        "end": 14.82,
+        "probability": 0.9957900643348694
+      },
+      {
+        "word": " we're",
+        "start": 14.96,
+        "end": 15.1,
+        "probability": 0.988870769739151
+      },
+      {
+        "word": " going",
+        "start": 15.1,
+        "end": 15.26,
+        "probability": 0.9970520734786987
+      },
+      {
+        "word": " out",
+        "start": 15.26,
+        "end": 15.6,
+        "probability": 0.974002480506897
+      },
+      {
+        "word": " to",
+        "start": 15.6,
+        "end": 15.82,
+        "probability": 0.8867385387420654
+      },
+      {
+        "word": " look",
+        "start": 15.82,
+        "end": 16.02,
+        "probability": 0.36743730306625366
+      },
+      {
+        "word": " around",
+        "start": 16.02,
+        "end": 16.36,
+        "probability": 0.996597945690155
+      },
+      {
+        "word": " to",
+        "start": 16.36,
+        "end": 16.54,
+        "probability": 0.3382740914821625
+      },
+      {
+        "word": " see",
+        "start": 16.54,
+        "end": 16.7,
+        "probability": 0.9875161647796631
+      },
+      {
+        "word": " defense",
+        "start": 16.7,
+        "end": 16.86,
+        "probability": 0.5993155241012573
+      },
+      {
+        "word": " drones.",
+        "start": 16.86,
+        "end": 17.28,
+        "probability": 0.5644077658653259
+      },
+      {
+        "word": " The",
+        "start": 17.6,
+        "end": 18.0,
+        "probability": 0.997225821018219
+      },
+      {
+        "word": " first",
+        "start": 18.0,
+        "end": 18.18,
+        "probability": 0.9995768666267395
+      },
+      {
+        "word": " thing",
+        "start": 18.18,
+        "end": 18.34,
+        "probability": 0.9974128603935242
+      },
+      {
+        "word": " we're",
+        "start": 18.34,
+        "end": 18.52,
+        "probability": 0.9890464544296265
+      },
+      {
+        "word": " going",
+        "start": 18.52,
+        "end": 18.56,
+        "probability": 0.9713695049285889
+      },
+      {
+        "word": " to",
+        "start": 18.56,
+        "end": 18.64,
+        "probability": 0.9985001087188721
+      },
+      {
+        "word": " be",
+        "start": 18.64,
+        "end": 18.74,
+        "probability": 0.8676550388336182
+      },
+      {
+        "word": " doing",
+        "start": 18.74,
+        "end": 18.88,
+        "probability": 0.9954032897949219
+      },
+      {
+        "word": " is",
+        "start": 18.88,
+        "end": 19.04,
+        "probability": 0.9927799105644226
+      },
+      {
+        "word": " undocking,",
+        "start": 19.04,
+        "end": 19.58,
+        "probability": 0.9789331555366516
+      },
+      {
+        "word": " on",
+        "start": 19.62,
+        "end": 19.8,
+        "probability": 0.8092111945152283
+      },
+      {
+        "word": " which",
+        "start": 19.8,
+        "end": 20.08,
+        "probability": 0.9950414299964905
+      },
+      {
+        "word": " ops",
+        "start": 20.08,
+        "end": 20.5,
+        "probability": 0.9012587070465088
+      },
+      {
+        "word": " we're",
+        "start": 20.5,
+        "end": 20.76,
+        "probability": 0.756994366645813
+      },
+      {
+        "word": " going",
+        "start": 20.76,
+        "end": 20.76,
+        "probability": 0.9868865609169006
+      },
+      {
+        "word": " to",
+        "start": 20.76,
+        "end": 20.84,
+        "probability": 0.999347984790802
+      },
+      {
+        "word": " have",
+        "start": 20.84,
+        "end": 20.98,
+        "probability": 0.9870381355285645
+      },
+      {
+        "word": " to",
+        "start": 20.98,
+        "end": 21.06,
+        "probability": 0.9944952130317688
+      },
+      {
+        "word": " contact",
+        "start": 21.06,
+        "end": 21.26,
+        "probability": 0.869897723197937
+      },
+      {
+        "word": " the",
+        "start": 21.26,
+        "end": 21.64,
+        "probability": 0.9211075901985168
+      },
+      {
+        "word": " station,",
+        "start": 21.64,
+        "end": 21.96,
+        "probability": 0.9930879473686218
+      },
+      {
+        "word": " request",
+        "start": 22.16,
+        "end": 22.64,
+        "probability": 0.7244784235954285
+      },
+      {
+        "word": " permission",
+        "start": 22.64,
+        "end": 22.86,
+        "probability": 0.9899997115135193
+      },
+      {
+        "word": " to",
+        "start": 22.86,
+        "end": 23.12,
+        "probability": 0.9956427812576294
+      },
+      {
+        "word": " undock.",
+        "start": 23.12,
+        "end": 23.54,
+        "probability": 0.9966343343257904
+      },
+      {
+        "word": " I",
+        "start": 23.54,
+        "end": 24.22,
+        "probability": 0.530389130115509
+      },
+      {
+        "word": " believe",
+        "start": 24.22,
+        "end": 24.5,
+        "probability": 0.8847137689590454
+      },
+      {
+        "word": " we",
+        "start": 24.5,
+        "end": 25.04,
+        "probability": 0.7704102396965027
+      },
+      {
+        "word": " can",
+        "start": 25.04,
+        "end": 25.18,
+        "probability": 0.9759790301322937
+      },
+      {
+        "word": " then",
+        "start": 25.18,
+        "end": 25.36,
+        "probability": 0.973726749420166
+      },
+      {
+        "word": " undock",
+        "start": 25.36,
+        "end": 25.84,
+        "probability": 0.7775076031684875
+      },
+      {
+        "word": " from,",
+        "start": 25.84,
+        "end": 26.06,
+        "probability": 0.8942908048629761
+      },
+      {
+        "word": " I",
+        "start": 26.12,
+        "end": 26.62,
+        "probability": 0.9497596621513367
+      },
+      {
+        "word": " forget",
+        "start": 26.62,
+        "end": 26.84,
+        "probability": 0.9724728465080261
+      },
+      {
+        "word": " if",
+        "start": 26.84,
+        "end": 27.02,
+        "probability": 0.936448335647583
+      },
+      {
+        "word": " it's",
+        "start": 27.02,
+        "end": 27.12,
+        "probability": 0.9570270776748657
+      },
+      {
+        "word": " in",
+        "start": 27.12,
+        "end": 27.12,
+        "probability": 0.7511511445045471
+      },
+      {
+        "word": " Canary",
+        "start": 27.12,
+        "end": 27.46,
+        "probability": 0.8505013287067413
+      },
+      {
+        "word": " or",
+        "start": 27.46,
+        "end": 27.62,
+        "probability": 0.969481348991394
+      },
+      {
+        "word": " elsewhere,",
+        "start": 27.62,
+        "end": 27.86,
+        "probability": 0.9706786870956421
+      },
+      {
+        "word": " there's",
+        "start": 28.1,
+        "end": 28.32,
+        "probability": 0.9661357700824738
+      },
+      {
+        "word": " going",
+        "start": 28.32,
+        "end": 28.38,
+        "probability": 0.46610701084136963
+      },
+      {
+        "word": " to",
+        "start": 28.38,
+        "end": 28.46,
+        "probability": 0.9986756443977356
+      },
+      {
+        "word": " be",
+        "start": 28.46,
+        "end": 28.58,
+        "probability": 0.9973949193954468
+      },
+      {
+        "word": " a",
+        "start": 28.58,
+        "end": 28.62,
+        "probability": 0.7845929265022278
+      },
+      {
+        "word": " pipe",
+        "start": 28.62,
+        "end": 28.86,
+        "probability": 0.5999877452850342
+      },
+      {
+        "word": " on.",
+        "start": 28.86,
+        "end": 29.02,
+        "probability": 0.9814448356628418
+      },
+      {
+        "word": " Once",
+        "start": 29.44,
+        "end": 29.8,
+        "probability": 0.9899306297302246
+      },
+      {
+        "word": " we",
+        "start": 29.8,
+        "end": 29.92,
+        "probability": 0.9973424077033997
+      },
+      {
+        "word": " get",
+        "start": 29.92,
+        "end": 30.12,
+        "probability": 0.9898545145988464
+      },
+      {
+        "word": " permission",
+        "start": 30.12,
+        "end": 30.42,
+        "probability": 0.5005356073379517
+      },
+      {
+        "word": " to",
+        "start": 30.42,
+        "end": 30.7,
+        "probability": 0.9956510663032532
+      },
+      {
+        "word": " undock,",
+        "start": 30.7,
+        "end": 31.1,
+        "probability": 0.9930888712406158
+      },
+      {
+        "word": " undock,",
+        "start": 31.14,
+        "end": 31.84,
+        "probability": 0.8669147491455078
+      },
+      {
+        "word": " stride",
+        "start": 31.86,
+        "end": 32.3,
+        "probability": 0.6798539757728577
+      },
+      {
+        "word": " on",
+        "start": 32.3,
+        "end": 32.38,
+        "probability": 0.6130074262619019
+      },
+      {
+        "word": " to",
+        "start": 32.38,
+        "end": 32.5,
+        "probability": 0.10446041822433472
+      },
+      {
+        "word": " hit",
+        "start": 32.5,
+        "end": 32.62,
+        "probability": 0.7737410664558411
+      },
+      {
+        "word": " anything",
+        "start": 32.62,
+        "end": 32.9,
+        "probability": 0.9788604378700256
+      },
+      {
+        "word": " as",
+        "start": 32.9,
+        "end": 33.2,
+        "probability": 0.9927688837051392
+      },
+      {
+        "word": " we",
+        "start": 33.2,
+        "end": 33.32,
+        "probability": 0.9967377781867981
+      },
+      {
+        "word": " go.",
+        "start": 33.32,
+        "end": 33.5,
+        "probability": 0.9994010925292969
+      },
+      {
+        "word": " So,",
+        "start": 33.66,
+        "end": 33.94,
+        "probability": 0.890455961227417
+      },
+      {
+        "word": " a",
+        "start": 34.0,
+        "end": 34.14,
+        "probability": 0.7361856698989868
+      },
+      {
+        "word": " flight",
+        "start": 34.14,
+        "end": 34.22,
+        "probability": 0.949252188205719
+      },
+      {
+        "word": " that",
+        "start": 34.22,
+        "end": 34.4,
+        "probability": 0.9868357181549072
+      },
+      {
+        "word": " might",
+        "start": 34.4,
+        "end": 34.54,
+        "probability": 0.9938324689865112
+      },
+      {
+        "word": " come",
+        "start": 34.54,
+        "end": 34.7,
+        "probability": 0.9977644681930542
+      },
+      {
+        "word": " down",
+        "start": 34.7,
+        "end": 34.86,
+        "probability": 0.9970656037330627
+      },
+      {
+        "word": " to",
+        "start": 34.86,
+        "end": 34.92,
+        "probability": 0.9936850666999817
+      },
+      {
+        "word": " you.",
+        "start": 34.92,
+        "end": 35.08,
+        "probability": 0.9690810441970825
+      },
+      {
+        "word": " We're",
+        "start": 35.68,
+        "end": 36.04,
+        "probability": 0.9598925709724426
+      },
+      {
+        "word": " going",
+        "start": 36.04,
+        "end": 36.22,
+        "probability": 0.9924617409706116
+      },
+      {
+        "word": " to",
+        "start": 36.22,
+        "end": 36.42,
+        "probability": 0.9908101558685303
+      },
+      {
+        "word": " then",
+        "start": 36.42,
+        "end": 36.58,
+        "probability": 0.993411123752594
+      },
+      {
+        "word": " navigate",
+        "start": 36.58,
+        "end": 36.9,
+        "probability": 0.9991899132728577
+      },
+      {
+        "word": " to",
+        "start": 36.9,
+        "end": 37.18,
+        "probability": 0.9960381984710693
+      },
+      {
+        "word": " Parrot",
+        "start": 37.18,
+        "end": 37.56,
+        "probability": 0.5450705289840698
+      },
+      {
+        "word": " Arrow.",
+        "start": 37.56,
+        "end": 37.7,
+        "probability": 0.6130902767181396
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 59.93846106529236,
+    "text": "Uh, science is going to have a big-ass galaxy view, Karaveris is on there, probably close to us, you might need to zoom in to see it, but you set the course there, tap the system, tap set course, it's going to lay into flight control, flight control will then say, hey, ready to go to warp, you do it, we warp there, we are then going to scan the planets, tap the thing, scan it!  Captions by GetTranscribed.com",
+    "confidence": 0.8508475735591902,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 21.7,
+    "transcription_time": 49.68033456802368,
+    "words": [
+      {
+        "word": " Uh,",
+        "start": 0.0,
+        "end": 0.4,
+        "probability": 0.024340447038412094
+      },
+      {
+        "word": " science",
+        "start": 0.54,
+        "end": 0.9,
+        "probability": 0.623445451259613
+      },
+      {
+        "word": " is",
+        "start": 0.9,
+        "end": 1.14,
+        "probability": 0.9677113890647888
+      },
+      {
+        "word": " going",
+        "start": 1.14,
+        "end": 1.28,
+        "probability": 0.44950351119041443
+      },
+      {
+        "word": " to",
+        "start": 1.28,
+        "end": 1.44,
+        "probability": 0.993715226650238
+      },
+      {
+        "word": " have",
+        "start": 1.44,
+        "end": 1.7,
+        "probability": 0.9940345883369446
+      },
+      {
+        "word": " a",
+        "start": 1.7,
+        "end": 1.9,
+        "probability": 0.984906017780304
+      },
+      {
+        "word": " big",
+        "start": 1.9,
+        "end": 2.28,
+        "probability": 0.9810885190963745
+      },
+      {
+        "word": "-ass",
+        "start": 2.28,
+        "end": 2.48,
+        "probability": 0.8519823849201202
+      },
+      {
+        "word": " galaxy",
+        "start": 2.48,
+        "end": 2.94,
+        "probability": 0.8023744821548462
+      },
+      {
+        "word": " view,",
+        "start": 2.94,
+        "end": 3.28,
+        "probability": 0.6960627436637878
+      },
+      {
+        "word": " Karaveris",
+        "start": 3.36,
+        "end": 3.98,
+        "probability": 0.38354701300462085
+      },
+      {
+        "word": " is",
+        "start": 3.98,
+        "end": 4.04,
+        "probability": 0.6178086996078491
+      },
+      {
+        "word": " on",
+        "start": 4.04,
+        "end": 4.38,
+        "probability": 0.965288519859314
+      },
+      {
+        "word": " there,",
+        "start": 4.38,
+        "end": 4.66,
+        "probability": 0.9968909621238708
+      },
+      {
+        "word": " probably",
+        "start": 4.72,
+        "end": 5.04,
+        "probability": 0.9280015826225281
+      },
+      {
+        "word": " close",
+        "start": 5.04,
+        "end": 5.36,
+        "probability": 0.9699936509132385
+      },
+      {
+        "word": " to",
+        "start": 5.36,
+        "end": 5.58,
+        "probability": 0.9983090162277222
+      },
+      {
+        "word": " us,",
+        "start": 5.58,
+        "end": 5.88,
+        "probability": 0.9986799359321594
+      },
+      {
+        "word": " you",
+        "start": 6.02,
+        "end": 6.36,
+        "probability": 0.812424898147583
+      },
+      {
+        "word": " might",
+        "start": 6.36,
+        "end": 6.5,
+        "probability": 0.9675296545028687
+      },
+      {
+        "word": " need",
+        "start": 6.5,
+        "end": 6.6,
+        "probability": 0.910627543926239
+      },
+      {
+        "word": " to",
+        "start": 6.6,
+        "end": 6.68,
+        "probability": 0.9911468625068665
+      },
+      {
+        "word": " zoom",
+        "start": 6.68,
+        "end": 6.88,
+        "probability": 0.9920344948768616
+      },
+      {
+        "word": " in",
+        "start": 6.88,
+        "end": 7.0,
+        "probability": 0.9760035276412964
+      },
+      {
+        "word": " to",
+        "start": 7.0,
+        "end": 7.1,
+        "probability": 0.9940172433853149
+      },
+      {
+        "word": " see",
+        "start": 7.1,
+        "end": 7.24,
+        "probability": 0.9978320002555847
+      },
+      {
+        "word": " it,",
+        "start": 7.24,
+        "end": 7.42,
+        "probability": 0.9961215853691101
+      },
+      {
+        "word": " but",
+        "start": 7.48,
+        "end": 7.72,
+        "probability": 0.9356585144996643
+      },
+      {
+        "word": " you",
+        "start": 7.72,
+        "end": 7.84,
+        "probability": 0.9820702075958252
+      },
+      {
+        "word": " set",
+        "start": 7.84,
+        "end": 8.06,
+        "probability": 0.9879898428916931
+      },
+      {
+        "word": " the",
+        "start": 8.06,
+        "end": 8.22,
+        "probability": 0.9892676472663879
+      },
+      {
+        "word": " course",
+        "start": 8.22,
+        "end": 8.4,
+        "probability": 0.994834303855896
+      },
+      {
+        "word": " there,",
+        "start": 8.4,
+        "end": 8.66,
+        "probability": 0.9903104901313782
+      },
+      {
+        "word": " tap",
+        "start": 8.82,
+        "end": 9.24,
+        "probability": 0.8253058195114136
+      },
+      {
+        "word": " the",
+        "start": 9.24,
+        "end": 9.42,
+        "probability": 0.8803017139434814
+      },
+      {
+        "word": " system,",
+        "start": 9.42,
+        "end": 9.66,
+        "probability": 0.9871225357055664
+      },
+      {
+        "word": " tap",
+        "start": 9.86,
+        "end": 10.3,
+        "probability": 0.9222937226295471
+      },
+      {
+        "word": " set",
+        "start": 10.3,
+        "end": 10.56,
+        "probability": 0.46959781646728516
+      },
+      {
+        "word": " course,",
+        "start": 10.56,
+        "end": 10.9,
+        "probability": 0.9879090189933777
+      },
+      {
+        "word": " it's",
+        "start": 11.12,
+        "end": 11.44,
+        "probability": 0.8994081020355225
+      },
+      {
+        "word": " going",
+        "start": 11.44,
+        "end": 11.48,
+        "probability": 0.7863501906394958
+      },
+      {
+        "word": " to",
+        "start": 11.48,
+        "end": 11.64,
+        "probability": 0.9940337538719177
+      },
+      {
+        "word": " lay",
+        "start": 11.64,
+        "end": 11.8,
+        "probability": 0.46472495794296265
+      },
+      {
+        "word": " into",
+        "start": 11.8,
+        "end": 11.98,
+        "probability": 0.7137663960456848
+      },
+      {
+        "word": " flight",
+        "start": 11.98,
+        "end": 12.34,
+        "probability": 0.6819156408309937
+      },
+      {
+        "word": " control,",
+        "start": 12.34,
+        "end": 12.8,
+        "probability": 0.9884025454521179
+      },
+      {
+        "word": " flight",
+        "start": 12.96,
+        "end": 13.18,
+        "probability": 0.6738191843032837
+      },
+      {
+        "word": " control",
+        "start": 13.18,
+        "end": 13.66,
+        "probability": 0.9923871755599976
+      },
+      {
+        "word": " will",
+        "start": 13.66,
+        "end": 13.96,
+        "probability": 0.9801510572433472
+      },
+      {
+        "word": " then",
+        "start": 13.96,
+        "end": 14.18,
+        "probability": 0.9943075776100159
+      },
+      {
+        "word": " say,",
+        "start": 14.18,
+        "end": 14.62,
+        "probability": 0.9793574810028076
+      },
+      {
+        "word": " hey,",
+        "start": 14.72,
+        "end": 14.92,
+        "probability": 0.48770272731781006
+      },
+      {
+        "word": " ready",
+        "start": 14.96,
+        "end": 15.2,
+        "probability": 0.9390724897384644
+      },
+      {
+        "word": " to",
+        "start": 15.2,
+        "end": 15.34,
+        "probability": 0.9935929179191589
+      },
+      {
+        "word": " go",
+        "start": 15.34,
+        "end": 15.42,
+        "probability": 0.9942723512649536
+      },
+      {
+        "word": " to",
+        "start": 15.42,
+        "end": 15.52,
+        "probability": 0.44072359800338745
+      },
+      {
+        "word": " warp,",
+        "start": 15.52,
+        "end": 15.72,
+        "probability": 0.900239109992981
+      },
+      {
+        "word": " you",
+        "start": 15.86,
+        "end": 16.12,
+        "probability": 0.6140575408935547
+      },
+      {
+        "word": " do",
+        "start": 16.12,
+        "end": 16.26,
+        "probability": 0.9546505808830261
+      },
+      {
+        "word": " it,",
+        "start": 16.26,
+        "end": 16.4,
+        "probability": 0.9288703799247742
+      },
+      {
+        "word": " we",
+        "start": 16.48,
+        "end": 16.92,
+        "probability": 0.7212920188903809
+      },
+      {
+        "word": " warp",
+        "start": 16.92,
+        "end": 17.16,
+        "probability": 0.9959244728088379
+      },
+      {
+        "word": " there,",
+        "start": 17.16,
+        "end": 17.36,
+        "probability": 0.9912230968475342
+      },
+      {
+        "word": " we",
+        "start": 17.5,
+        "end": 17.86,
+        "probability": 0.9797161817550659
+      },
+      {
+        "word": " are",
+        "start": 17.86,
+        "end": 18.04,
+        "probability": 0.9883373379707336
+      },
+      {
+        "word": " then",
+        "start": 18.04,
+        "end": 18.26,
+        "probability": 0.9929551482200623
+      },
+      {
+        "word": " going",
+        "start": 18.26,
+        "end": 18.38,
+        "probability": 0.9273173213005066
+      },
+      {
+        "word": " to",
+        "start": 18.38,
+        "end": 18.46,
+        "probability": 0.9957215785980225
+      },
+      {
+        "word": " scan",
+        "start": 18.46,
+        "end": 18.7,
+        "probability": 0.9986733198165894
+      },
+      {
+        "word": " the",
+        "start": 18.7,
+        "end": 18.86,
+        "probability": 0.9964290261268616
+      },
+      {
+        "word": " planets,",
+        "start": 18.86,
+        "end": 19.16,
+        "probability": 0.9901477694511414
+      },
+      {
+        "word": " tap",
+        "start": 19.32,
+        "end": 19.64,
+        "probability": 0.6652649641036987
+      },
+      {
+        "word": " the",
+        "start": 19.64,
+        "end": 19.84,
+        "probability": 0.26239022612571716
+      },
+      {
+        "word": " thing,",
+        "start": 19.84,
+        "end": 20.04,
+        "probability": 0.8982738852500916
+      },
+      {
+        "word": " scan",
+        "start": 20.16,
+        "end": 20.68,
+        "probability": 0.9569159150123596
+      },
+      {
+        "word": " it!",
+        "start": 20.68,
+        "end": 20.92,
+        "probability": 0.781745433807373
+      },
+      {
+        "word": " Captions",
+        "start": 20.92,
+        "end": 21.24,
+        "probability": 0.08912497628443816
+      },
+      {
+        "word": " by",
+        "start": 21.24,
+        "end": 21.68,
+        "probability": 0.7135652899742126
+      },
+      {
+        "word": " GetTranscribed",
+        "start": 21.68,
+        "end": 21.68,
+        "probability": 0.7546343803405762
+      },
+      {
+        "word": ".com",
+        "start": 21.68,
+        "end": 21.68,
+        "probability": 0.9991117715835571
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 79.951016664505,
+    "text": "Go on. There's rooms, we interact with them, and then we go to Faraday to do the next thing.",
+    "confidence": 0.8917963426364096,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 5.2,
+    "transcription_time": 18.360337257385254,
+    "words": [
+      {
+        "word": " Go",
+        "start": 0.0,
+        "end": 0.1,
+        "probability": 0.3313361704349518
+      },
+      {
+        "word": " on.",
+        "start": 0.1,
+        "end": 0.24,
+        "probability": 0.870548665523529
+      },
+      {
+        "word": " There's",
+        "start": 0.66,
+        "end": 1.02,
+        "probability": 0.9155943393707275
+      },
+      {
+        "word": " rooms,",
+        "start": 1.02,
+        "end": 1.26,
+        "probability": 0.7726085782051086
+      },
+      {
+        "word": " we",
+        "start": 1.46,
+        "end": 1.7,
+        "probability": 0.8778355717658997
+      },
+      {
+        "word": " interact",
+        "start": 1.7,
+        "end": 2.02,
+        "probability": 0.9917033910751343
+      },
+      {
+        "word": " with",
+        "start": 2.02,
+        "end": 2.3,
+        "probability": 0.9947555065155029
+      },
+      {
+        "word": " them,",
+        "start": 2.3,
+        "end": 2.48,
+        "probability": 0.9986709356307983
+      },
+      {
+        "word": " and",
+        "start": 2.58,
+        "end": 2.96,
+        "probability": 0.9872963428497314
+      },
+      {
+        "word": " then",
+        "start": 2.96,
+        "end": 3.16,
+        "probability": 0.9981731176376343
+      },
+      {
+        "word": " we",
+        "start": 3.16,
+        "end": 3.28,
+        "probability": 0.994235098361969
+      },
+      {
+        "word": " go",
+        "start": 3.28,
+        "end": 3.4,
+        "probability": 0.9359003901481628
+      },
+      {
+        "word": " to",
+        "start": 3.4,
+        "end": 3.48,
+        "probability": 0.9237244725227356
+      },
+      {
+        "word": " Faraday",
+        "start": 3.48,
+        "end": 3.9,
+        "probability": 0.792193591594696
+      },
+      {
+        "word": " to",
+        "start": 3.9,
+        "end": 3.94,
+        "probability": 0.9009121060371399
+      },
+      {
+        "word": " do",
+        "start": 3.94,
+        "end": 4.12,
+        "probability": 0.6792511343955994
+      },
+      {
+        "word": " the",
+        "start": 4.12,
+        "end": 4.16,
+        "probability": 0.9940721392631531
+      },
+      {
+        "word": " next",
+        "start": 4.16,
+        "end": 4.34,
+        "probability": 0.9996138215065002
+      },
+      {
+        "word": " thing.",
+        "start": 4.34,
+        "end": 4.52,
+        "probability": 0.9857051372528076
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 86.73293805122375,
+    "text": "We're clear so far, we're going to move, we see any stuff and we're going to react from there.",
+    "confidence": 0.7198499087244272,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 3.8,
+    "transcription_time": 19.2242591381073,
+    "words": [
+      {
+        "word": " We're",
+        "start": 0.0,
+        "end": 0.12,
+        "probability": 0.4262196943163872
+      },
+      {
+        "word": " clear",
+        "start": 0.12,
+        "end": 0.12,
+        "probability": 0.02658252976834774
+      },
+      {
+        "word": " so",
+        "start": 0.12,
+        "end": 0.18,
+        "probability": 0.9563382267951965
+      },
+      {
+        "word": " far,",
+        "start": 0.18,
+        "end": 0.46,
+        "probability": 0.9948577880859375
+      },
+      {
+        "word": " we're",
+        "start": 0.52,
+        "end": 0.62,
+        "probability": 0.858645886182785
+      },
+      {
+        "word": " going",
+        "start": 0.62,
+        "end": 0.74,
+        "probability": 0.7276642918586731
+      },
+      {
+        "word": " to",
+        "start": 0.74,
+        "end": 0.82,
+        "probability": 0.9249035716056824
+      },
+      {
+        "word": " move,",
+        "start": 0.82,
+        "end": 0.96,
+        "probability": 0.05895574390888214
+      },
+      {
+        "word": " we",
+        "start": 0.98,
+        "end": 1.34,
+        "probability": 0.5036590695381165
+      },
+      {
+        "word": " see",
+        "start": 1.34,
+        "end": 1.46,
+        "probability": 0.19599048793315887
+      },
+      {
+        "word": " any",
+        "start": 1.46,
+        "end": 1.6,
+        "probability": 0.9097238183021545
+      },
+      {
+        "word": " stuff",
+        "start": 1.6,
+        "end": 1.84,
+        "probability": 0.9475743770599365
+      },
+      {
+        "word": " and",
+        "start": 1.84,
+        "end": 2.04,
+        "probability": 0.5995072722434998
+      },
+      {
+        "word": " we're",
+        "start": 2.04,
+        "end": 2.2,
+        "probability": 0.9401889741420746
+      },
+      {
+        "word": " going",
+        "start": 2.2,
+        "end": 2.22,
+        "probability": 0.6383268237113953
+      },
+      {
+        "word": " to",
+        "start": 2.22,
+        "end": 2.36,
+        "probability": 0.9973477125167847
+      },
+      {
+        "word": " react",
+        "start": 2.36,
+        "end": 2.54,
+        "probability": 0.9899250268936157
+      },
+      {
+        "word": " from",
+        "start": 2.54,
+        "end": 2.74,
+        "probability": 0.9817845821380615
+      },
+      {
+        "word": " there.",
+        "start": 2.74,
+        "end": 2.92,
+        "probability": 0.9989523887634277
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 90.51239466667175,
+    "text": "On the galaxy next to our solar ion. Um, not very healthy. Uh, try the, uh...",
+    "confidence": 0.5156786887673661,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 5.8,
+    "transcription_time": 19.249531030654907,
+    "words": [
+      {
+        "word": " On",
+        "start": 0.0,
+        "end": 0.22,
+        "probability": 0.2833062410354614
+      },
+      {
+        "word": " the",
+        "start": 0.22,
+        "end": 0.3,
+        "probability": 0.9706189036369324
+      },
+      {
+        "word": " galaxy",
+        "start": 0.3,
+        "end": 0.58,
+        "probability": 0.3437221050262451
+      },
+      {
+        "word": " next",
+        "start": 0.58,
+        "end": 0.86,
+        "probability": 0.27647581696510315
+      },
+      {
+        "word": " to",
+        "start": 0.86,
+        "end": 1.02,
+        "probability": 0.8994444012641907
+      },
+      {
+        "word": " our",
+        "start": 1.02,
+        "end": 1.2,
+        "probability": 0.02803662233054638
+      },
+      {
+        "word": " solar",
+        "start": 1.2,
+        "end": 1.44,
+        "probability": 0.22382141649723053
+      },
+      {
+        "word": " ion.",
+        "start": 1.44,
+        "end": 1.8,
+        "probability": 0.46255427598953247
+      },
+      {
+        "word": " Um,",
+        "start": 2.32,
+        "end": 2.76,
+        "probability": 0.40975284576416016
+      },
+      {
+        "word": " not",
+        "start": 2.78,
+        "end": 3.4,
+        "probability": 0.9128021597862244
+      },
+      {
+        "word": " very",
+        "start": 3.4,
+        "end": 3.6,
+        "probability": 0.9042055606842041
+      },
+      {
+        "word": " healthy.",
+        "start": 3.6,
+        "end": 3.94,
+        "probability": 0.23018096387386322
+      },
+      {
+        "word": " Uh,",
+        "start": 4.16,
+        "end": 4.32,
+        "probability": 0.36096853017807007
+      },
+      {
+        "word": " try",
+        "start": 4.38,
+        "end": 4.58,
+        "probability": 0.5733242630958557
+      },
+      {
+        "word": " the,",
+        "start": 4.58,
+        "end": 4.82,
+        "probability": 0.5289769172668457
+      },
+      {
+        "word": " uh...",
+        "start": 4.94,
+        "end": 5.36,
+        "probability": 0.8426679968833923
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 101.40994429588318,
+    "text": "How can you come out of this?  I'm sorry.  How can you come out of this?  I'm sorry.  I'll be over here.",
+    "confidence": 0.6142643707042391,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 4.2,
+    "transcription_time": 25.21291971206665,
+    "words": [
+      {
+        "word": " How",
+        "start": 0.0,
+        "end": 0.14,
+        "probability": 0.1139395460486412
+      },
+      {
+        "word": " can",
+        "start": 0.14,
+        "end": 0.22,
+        "probability": 0.2730062007904053
+      },
+      {
+        "word": " you",
+        "start": 0.22,
+        "end": 0.26,
+        "probability": 0.768784761428833
+      },
+      {
+        "word": " come",
+        "start": 0.26,
+        "end": 0.42,
+        "probability": 0.3832223117351532
+      },
+      {
+        "word": " out",
+        "start": 0.42,
+        "end": 0.62,
+        "probability": 0.5039071440696716
+      },
+      {
+        "word": " of",
+        "start": 0.62,
+        "end": 0.74,
+        "probability": 0.12564855813980103
+      },
+      {
+        "word": " this?",
+        "start": 0.74,
+        "end": 0.84,
+        "probability": 0.1500655710697174
+      },
+      {
+        "word": " I'm",
+        "start": 1.0,
+        "end": 1.24,
+        "probability": 0.28665852546691895
+      },
+      {
+        "word": " sorry.",
+        "start": 1.24,
+        "end": 1.24,
+        "probability": 0.8381433486938477
+      },
+      {
+        "word": " How",
+        "start": 1.32,
+        "end": 1.36,
+        "probability": 0.26082777976989746
+      },
+      {
+        "word": " can",
+        "start": 1.36,
+        "end": 1.44,
+        "probability": 0.7965728044509888
+      },
+      {
+        "word": " you",
+        "start": 1.44,
+        "end": 1.56,
+        "probability": 0.9932938814163208
+      },
+      {
+        "word": " come",
+        "start": 1.56,
+        "end": 1.74,
+        "probability": 0.9670743346214294
+      },
+      {
+        "word": " out",
+        "start": 1.74,
+        "end": 1.82,
+        "probability": 0.8735681772232056
+      },
+      {
+        "word": " of",
+        "start": 1.82,
+        "end": 1.82,
+        "probability": 0.7996523976325989
+      },
+      {
+        "word": " this?",
+        "start": 1.82,
+        "end": 1.94,
+        "probability": 0.9098591804504395
+      },
+      {
+        "word": " I'm",
+        "start": 1.94,
+        "end": 2.0,
+        "probability": 0.6680226475000381
+      },
+      {
+        "word": " sorry.",
+        "start": 2.0,
+        "end": 2.1,
+        "probability": 0.9223699569702148
+      },
+      {
+        "word": " I'll",
+        "start": 2.78,
+        "end": 3.02,
+        "probability": 0.8061486482620239
+      },
+      {
+        "word": " be",
+        "start": 3.02,
+        "end": 3.1,
+        "probability": 0.8777627944946289
+      },
+      {
+        "word": " over",
+        "start": 3.1,
+        "end": 3.28,
+        "probability": 0.6131753325462341
+      },
+      {
+        "word": " here.",
+        "start": 3.28,
+        "end": 3.44,
+        "probability": 0.5821122527122498
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 107.5096263885498,
+    "text": "Okay, so I was that one, that's a great sample of what that is. Other than that, yeah, that thought was really deep.  Where am I here? Where am I in the system? Shall we go there?",
+    "confidence": 0.5963106074848691,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 9.6,
+    "transcription_time": 29.347456693649292,
+    "words": [
+      {
+        "word": " Okay,",
+        "start": 0.0,
+        "end": 0.08,
+        "probability": 0.30421996116638184
+      },
+      {
+        "word": " so",
+        "start": 0.08,
+        "end": 0.18,
+        "probability": 0.9128617644309998
+      },
+      {
+        "word": " I",
+        "start": 0.18,
+        "end": 0.38,
+        "probability": 0.8863933086395264
+      },
+      {
+        "word": " was",
+        "start": 0.38,
+        "end": 0.5,
+        "probability": 0.7522575855255127
+      },
+      {
+        "word": " that",
+        "start": 0.5,
+        "end": 0.68,
+        "probability": 0.09539523720741272
+      },
+      {
+        "word": " one,",
+        "start": 0.68,
+        "end": 0.78,
+        "probability": 0.16363783180713654
+      },
+      {
+        "word": " that's",
+        "start": 0.84,
+        "end": 1.2,
+        "probability": 0.5413950383663177
+      },
+      {
+        "word": " a",
+        "start": 1.2,
+        "end": 1.2,
+        "probability": 0.41267457604408264
+      },
+      {
+        "word": " great",
+        "start": 1.2,
+        "end": 1.3,
+        "probability": 0.8100009560585022
+      },
+      {
+        "word": " sample",
+        "start": 1.3,
+        "end": 1.62,
+        "probability": 0.2556880712509155
+      },
+      {
+        "word": " of",
+        "start": 1.62,
+        "end": 1.76,
+        "probability": 0.7151132225990295
+      },
+      {
+        "word": " what",
+        "start": 1.76,
+        "end": 1.86,
+        "probability": 0.08131677657365799
+      },
+      {
+        "word": " that",
+        "start": 1.86,
+        "end": 1.92,
+        "probability": 0.9299412965774536
+      },
+      {
+        "word": " is.",
+        "start": 1.92,
+        "end": 2.12,
+        "probability": 0.9876922965049744
+      },
+      {
+        "word": " Other",
+        "start": 2.16,
+        "end": 2.38,
+        "probability": 0.44076836109161377
+      },
+      {
+        "word": " than",
+        "start": 2.38,
+        "end": 2.54,
+        "probability": 0.9771084785461426
+      },
+      {
+        "word": " that,",
+        "start": 2.54,
+        "end": 2.74,
+        "probability": 0.9597157835960388
+      },
+      {
+        "word": " yeah,",
+        "start": 2.74,
+        "end": 2.94,
+        "probability": 0.27161717414855957
+      },
+      {
+        "word": " that",
+        "start": 3.02,
+        "end": 3.14,
+        "probability": 0.6114258766174316
+      },
+      {
+        "word": " thought",
+        "start": 3.14,
+        "end": 3.38,
+        "probability": 0.25986891984939575
+      },
+      {
+        "word": " was",
+        "start": 3.38,
+        "end": 3.52,
+        "probability": 0.6736859679222107
+      },
+      {
+        "word": " really",
+        "start": 3.52,
+        "end": 3.62,
+        "probability": 0.10170011967420578
+      },
+      {
+        "word": " deep.",
+        "start": 3.62,
+        "end": 3.8,
+        "probability": 0.5487979650497437
+      },
+      {
+        "word": " Where",
+        "start": 3.8,
+        "end": 4.06,
+        "probability": 0.4015689492225647
+      },
+      {
+        "word": " am",
+        "start": 4.06,
+        "end": 4.32,
+        "probability": 0.8255170583724976
+      },
+      {
+        "word": " I",
+        "start": 4.32,
+        "end": 4.56,
+        "probability": 0.9986273050308228
+      },
+      {
+        "word": " here?",
+        "start": 4.56,
+        "end": 4.78,
+        "probability": 0.9082937836647034
+      },
+      {
+        "word": " Where",
+        "start": 4.94,
+        "end": 5.22,
+        "probability": 0.7318528890609741
+      },
+      {
+        "word": " am",
+        "start": 5.22,
+        "end": 5.3,
+        "probability": 0.4347333610057831
+      },
+      {
+        "word": " I",
+        "start": 5.3,
+        "end": 5.94,
+        "probability": 0.9760837554931641
+      },
+      {
+        "word": " in",
+        "start": 5.94,
+        "end": 5.98,
+        "probability": 0.35833653807640076
+      },
+      {
+        "word": " the",
+        "start": 5.98,
+        "end": 6.04,
+        "probability": 0.9524826407432556
+      },
+      {
+        "word": " system?",
+        "start": 6.04,
+        "end": 6.18,
+        "probability": 0.9973457455635071
+      },
+      {
+        "word": " Shall",
+        "start": 6.56,
+        "end": 6.86,
+        "probability": 0.22966443002223969
+      },
+      {
+        "word": " we",
+        "start": 6.86,
+        "end": 6.98,
+        "probability": 0.7279036045074463
+      },
+      {
+        "word": " go",
+        "start": 6.98,
+        "end": 7.14,
+        "probability": 0.44433265924453735
+      },
+      {
+        "word": " there?",
+        "start": 7.14,
+        "end": 7.18,
+        "probability": 0.3834731876850128
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 118.9181010723114,
+    "text": "That's about it. So that's what we need to help you with.  We have some signals. There are some signals that we need to help you with.  Systematic knowledge, new characters.  Okay, you want to attack the character?",
+    "confidence": 0.6095243931846007,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 9.6,
+    "transcription_time": 23.45581293106079,
+    "words": [
+      {
+        "word": " That's",
+        "start": 0.0,
+        "end": 0.3,
+        "probability": 0.27365318685770035
+      },
+      {
+        "word": " about",
+        "start": 0.3,
+        "end": 0.3,
+        "probability": 0.5162274837493896
+      },
+      {
+        "word": " it.",
+        "start": 0.3,
+        "end": 0.3,
+        "probability": 0.18179216980934143
+      },
+      {
+        "word": " So",
+        "start": 0.98,
+        "end": 1.34,
+        "probability": 0.38950785994529724
+      },
+      {
+        "word": " that's",
+        "start": 1.34,
+        "end": 1.68,
+        "probability": 0.7545190751552582
+      },
+      {
+        "word": " what",
+        "start": 1.68,
+        "end": 1.68,
+        "probability": 0.7410291433334351
+      },
+      {
+        "word": " we",
+        "start": 1.68,
+        "end": 1.82,
+        "probability": 0.6809785962104797
+      },
+      {
+        "word": " need",
+        "start": 1.82,
+        "end": 1.94,
+        "probability": 0.7838374376296997
+      },
+      {
+        "word": " to",
+        "start": 1.94,
+        "end": 2.02,
+        "probability": 0.8458060622215271
+      },
+      {
+        "word": " help",
+        "start": 2.02,
+        "end": 2.18,
+        "probability": 0.6632236838340759
+      },
+      {
+        "word": " you",
+        "start": 2.18,
+        "end": 2.38,
+        "probability": 0.8329436779022217
+      },
+      {
+        "word": " with.",
+        "start": 2.38,
+        "end": 2.44,
+        "probability": 0.9227832555770874
+      },
+      {
+        "word": " We",
+        "start": 2.66,
+        "end": 2.9,
+        "probability": 0.3734624683856964
+      },
+      {
+        "word": " have",
+        "start": 2.9,
+        "end": 3.12,
+        "probability": 0.33965522050857544
+      },
+      {
+        "word": " some",
+        "start": 3.12,
+        "end": 3.36,
+        "probability": 0.9850817918777466
+      },
+      {
+        "word": " signals.",
+        "start": 3.36,
+        "end": 3.72,
+        "probability": 0.06322520226240158
+      },
+      {
+        "word": " There",
+        "start": 3.82,
+        "end": 3.98,
+        "probability": 0.544644832611084
+      },
+      {
+        "word": " are",
+        "start": 3.98,
+        "end": 4.08,
+        "probability": 0.8769715428352356
+      },
+      {
+        "word": " some",
+        "start": 4.08,
+        "end": 4.16,
+        "probability": 0.8281182646751404
+      },
+      {
+        "word": " signals",
+        "start": 4.16,
+        "end": 4.48,
+        "probability": 0.922855794429779
+      },
+      {
+        "word": " that",
+        "start": 4.48,
+        "end": 4.76,
+        "probability": 0.10728880017995834
+      },
+      {
+        "word": " we",
+        "start": 4.76,
+        "end": 4.9,
+        "probability": 0.40816789865493774
+      },
+      {
+        "word": " need",
+        "start": 4.9,
+        "end": 4.96,
+        "probability": 0.5357871055603027
+      },
+      {
+        "word": " to",
+        "start": 4.96,
+        "end": 4.96,
+        "probability": 0.9590740203857422
+      },
+      {
+        "word": " help",
+        "start": 4.96,
+        "end": 4.96,
+        "probability": 0.6708186864852905
+      },
+      {
+        "word": " you",
+        "start": 4.96,
+        "end": 4.96,
+        "probability": 0.9562267065048218
+      },
+      {
+        "word": " with.",
+        "start": 4.96,
+        "end": 4.98,
+        "probability": 0.945151150226593
+      },
+      {
+        "word": " Systematic",
+        "start": 5.16,
+        "end": 5.52,
+        "probability": 0.4772592158988118
+      },
+      {
+        "word": " knowledge,",
+        "start": 5.52,
+        "end": 5.84,
+        "probability": 0.6338059902191162
+      },
+      {
+        "word": " new",
+        "start": 5.98,
+        "end": 6.1,
+        "probability": 0.7016977071762085
+      },
+      {
+        "word": " characters.",
+        "start": 6.1,
+        "end": 6.44,
+        "probability": 0.7901384234428406
+      },
+      {
+        "word": " Okay,",
+        "start": 6.82,
+        "end": 7.18,
+        "probability": 0.7274217009544373
+      },
+      {
+        "word": " you",
+        "start": 7.28,
+        "end": 7.42,
+        "probability": 0.2001418024301529
+      },
+      {
+        "word": " want",
+        "start": 7.42,
+        "end": 7.6,
+        "probability": 0.9535861015319824
+      },
+      {
+        "word": " to",
+        "start": 7.6,
+        "end": 7.64,
+        "probability": 0.9261670708656311
+      },
+      {
+        "word": " attack",
+        "start": 7.64,
+        "end": 7.82,
+        "probability": 0.03139517828822136
+      },
+      {
+        "word": " the",
+        "start": 7.82,
+        "end": 7.9,
+        "probability": 0.31619739532470703
+      },
+      {
+        "word": " character?",
+        "start": 7.9,
+        "end": 8.08,
+        "probability": 0.3012852370738983
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 133.35454416275024,
+    "text": "There's no Dock on the station.  I don't have a transpiration L Dock.  I can't, I can't do anything.  Okay, undock us, back us out of the quarter-amputee, can we get a few hundred meters cleared?  Ops, can we get a full encambering again?",
+    "confidence": 0.7112522081265019,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 14.7,
+    "transcription_time": 24.617228984832764,
+    "words": [
+      {
+        "word": " There's",
+        "start": 0.0,
+        "end": 0.18,
+        "probability": 0.4844552353024483
+      },
+      {
+        "word": " no",
+        "start": 0.18,
+        "end": 0.22,
+        "probability": 0.9117515087127686
+      },
+      {
+        "word": " Dock",
+        "start": 0.22,
+        "end": 0.64,
+        "probability": 0.4279934479855001
+      },
+      {
+        "word": " on",
+        "start": 0.64,
+        "end": 0.72,
+        "probability": 0.286211222410202
+      },
+      {
+        "word": " the",
+        "start": 0.72,
+        "end": 0.8,
+        "probability": 0.3696805238723755
+      },
+      {
+        "word": " station.",
+        "start": 0.8,
+        "end": 0.98,
+        "probability": 0.8629584908485413
+      },
+      {
+        "word": " I",
+        "start": 1.68,
+        "end": 2.08,
+        "probability": 0.16917279362678528
+      },
+      {
+        "word": " don't",
+        "start": 2.08,
+        "end": 2.36,
+        "probability": 0.686133474111557
+      },
+      {
+        "word": " have",
+        "start": 2.36,
+        "end": 2.4,
+        "probability": 0.11106577515602112
+      },
+      {
+        "word": " a",
+        "start": 2.4,
+        "end": 2.5,
+        "probability": 0.7166740298271179
+      },
+      {
+        "word": " transpiration",
+        "start": 2.5,
+        "end": 2.94,
+        "probability": 0.42965753749012947
+      },
+      {
+        "word": " L",
+        "start": 2.94,
+        "end": 3.14,
+        "probability": 0.6663080453872681
+      },
+      {
+        "word": " Dock.",
+        "start": 3.14,
+        "end": 3.52,
+        "probability": 0.8478007018566132
+      },
+      {
+        "word": " I",
+        "start": 3.78,
+        "end": 4.18,
+        "probability": 0.7037338614463806
+      },
+      {
+        "word": " can't,",
+        "start": 4.18,
+        "end": 4.44,
+        "probability": 0.9951950311660767
+      },
+      {
+        "word": " I",
+        "start": 4.44,
+        "end": 4.6,
+        "probability": 0.9791247248649597
+      },
+      {
+        "word": " can't",
+        "start": 4.6,
+        "end": 4.92,
+        "probability": 0.9980750977993011
+      },
+      {
+        "word": " do",
+        "start": 4.92,
+        "end": 4.92,
+        "probability": 0.9753817915916443
+      },
+      {
+        "word": " anything.",
+        "start": 4.92,
+        "end": 5.16,
+        "probability": 0.986748456954956
+      },
+      {
+        "word": " Okay,",
+        "start": 6.44,
+        "end": 6.84,
+        "probability": 0.6377367377281189
+      },
+      {
+        "word": " undock",
+        "start": 6.84,
+        "end": 7.24,
+        "probability": 0.6279301643371582
+      },
+      {
+        "word": " us,",
+        "start": 7.24,
+        "end": 7.42,
+        "probability": 0.922062873840332
+      },
+      {
+        "word": " back",
+        "start": 7.52,
+        "end": 8.34,
+        "probability": 0.8723980784416199
+      },
+      {
+        "word": " us",
+        "start": 8.34,
+        "end": 8.58,
+        "probability": 0.9898313879966736
+      },
+      {
+        "word": " out",
+        "start": 8.58,
+        "end": 8.78,
+        "probability": 0.9935085773468018
+      },
+      {
+        "word": " of",
+        "start": 8.78,
+        "end": 8.92,
+        "probability": 0.6379187107086182
+      },
+      {
+        "word": " the",
+        "start": 8.92,
+        "end": 8.94,
+        "probability": 0.8003140687942505
+      },
+      {
+        "word": " quarter",
+        "start": 8.94,
+        "end": 9.14,
+        "probability": 0.2886946499347687
+      },
+      {
+        "word": "-amputee,",
+        "start": 9.14,
+        "end": 9.62,
+        "probability": 0.47870750166475773
+      },
+      {
+        "word": " can",
+        "start": 9.74,
+        "end": 9.8,
+        "probability": 0.21914394199848175
+      },
+      {
+        "word": " we",
+        "start": 9.8,
+        "end": 9.84,
+        "probability": 0.810991644859314
+      },
+      {
+        "word": " get",
+        "start": 9.84,
+        "end": 9.94,
+        "probability": 0.9916245341300964
+      },
+      {
+        "word": " a",
+        "start": 9.94,
+        "end": 10.02,
+        "probability": 0.9919140338897705
+      },
+      {
+        "word": " few",
+        "start": 10.02,
+        "end": 10.12,
+        "probability": 0.9979363679885864
+      },
+      {
+        "word": " hundred",
+        "start": 10.12,
+        "end": 10.3,
+        "probability": 0.504034698009491
+      },
+      {
+        "word": " meters",
+        "start": 10.3,
+        "end": 10.58,
+        "probability": 0.9668573141098022
+      },
+      {
+        "word": " cleared?",
+        "start": 10.58,
+        "end": 10.92,
+        "probability": 0.77277010679245
+      },
+      {
+        "word": " Ops,",
+        "start": 11.28,
+        "end": 11.68,
+        "probability": 0.5396958887577057
+      },
+      {
+        "word": " can",
+        "start": 11.68,
+        "end": 11.76,
+        "probability": 0.5172392129898071
+      },
+      {
+        "word": " we",
+        "start": 11.76,
+        "end": 11.88,
+        "probability": 0.7239847183227539
+      },
+      {
+        "word": " get",
+        "start": 11.88,
+        "end": 11.94,
+        "probability": 0.9928598999977112
+      },
+      {
+        "word": " a",
+        "start": 11.94,
+        "end": 12.04,
+        "probability": 0.981481671333313
+      },
+      {
+        "word": " full",
+        "start": 12.04,
+        "end": 12.16,
+        "probability": 0.6604223251342773
+      },
+      {
+        "word": " encambering",
+        "start": 12.16,
+        "end": 12.64,
+        "probability": 0.6608593054115772
+      },
+      {
+        "word": " again?",
+        "start": 12.64,
+        "end": 12.86,
+        "probability": 0.8173092007637024
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 156.76103019714355,
+    "text": "Captions by GetTranscribed.com",
+    "confidence": 0.6903477134231556,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 0.7,
+    "transcription_time": 16.89514136314392,
+    "words": [
+      {
+        "word": " Captions",
+        "start": 0.0,
+        "end": 0.66,
+        "probability": 0.1563611912424676
+      },
+      {
+        "word": " by",
+        "start": 0.66,
+        "end": 0.66,
+        "probability": 0.8064130544662476
+      },
+      {
+        "word": " GetTranscribed",
+        "start": 0.66,
+        "end": 0.68,
+        "probability": 0.7991538544495901
+      },
+      {
+        "word": ".com",
+        "start": 0.68,
+        "end": 0.68,
+        "probability": 0.999462753534317
+      }
+    ],
+    "speaker_id": "speaker_3",
+    "metadata": {}
+  },
+  {
+    "timestamp": 159.06361627578735,
+    "text": "All right, fall back one quarter, all head one quarter.",
+    "confidence": 0.6582819752395153,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 5.3,
+    "transcription_time": 14.694253206253052,
+    "words": [
+      {
+        "word": " All",
+        "start": 0.11,
+        "end": 0.21,
+        "probability": 0.4646824896335602
+      },
+      {
+        "word": " right,",
+        "start": 0.21,
+        "end": 0.21,
+        "probability": 0.8974761366844177
+      },
+      {
+        "word": " fall",
+        "start": 0.27,
+        "end": 0.55,
+        "probability": 0.07721056044101715
+      },
+      {
+        "word": " back",
+        "start": 0.55,
+        "end": 0.71,
+        "probability": 0.9862155914306641
+      },
+      {
+        "word": " one",
+        "start": 0.71,
+        "end": 0.97,
+        "probability": 0.9152712225914001
+      },
+      {
+        "word": " quarter,",
+        "start": 0.97,
+        "end": 1.35,
+        "probability": 0.9503784775733948
+      },
+      {
+        "word": " all",
+        "start": 1.49,
+        "end": 2.19,
+        "probability": 0.07489810138940811
+      },
+      {
+        "word": " head",
+        "start": 2.19,
+        "end": 3.55,
+        "probability": 0.29422125220298767
+      },
+      {
+        "word": " one",
+        "start": 3.55,
+        "end": 3.79,
+        "probability": 0.9280898571014404
+      },
+      {
+        "word": " quarter.",
+        "start": 3.79,
+        "end": 4.15,
+        "probability": 0.9943760633468628
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 151.18764567375183,
+    "text": "Captioning provided by the Amara.org community  Amara.org community  Captioning provided by the Amara.org community",
+    "confidence": 0.572349062094266,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 5.9,
+    "transcription_time": 50.29508686065674,
+    "words": [
+      {
+        "word": " Captioning",
+        "start": 0.0,
+        "end": 1.26,
+        "probability": 0.5182146783869636
+      },
+      {
+        "word": " provided",
+        "start": 1.26,
+        "end": 2.92,
+        "probability": 0.334511399269104
+      },
+      {
+        "word": " by",
+        "start": 2.92,
+        "end": 3.0,
+        "probability": 0.9927383065223694
+      },
+      {
+        "word": " the",
+        "start": 3.0,
+        "end": 3.0,
+        "probability": 0.014453877694904804
+      },
+      {
+        "word": " Amara",
+        "start": 3.0,
+        "end": 3.64,
+        "probability": 0.5284851603209972
+      },
+      {
+        "word": ".org",
+        "start": 3.64,
+        "end": 3.9,
+        "probability": 0.9999163746833801
+      },
+      {
+        "word": " community",
+        "start": 3.9,
+        "end": 3.9,
+        "probability": 0.9994291663169861
+      },
+      {
+        "word": " Amara",
+        "start": 3.9,
+        "end": 4.32,
+        "probability": 0.0009569964895490557
+      },
+      {
+        "word": ".org",
+        "start": 4.32,
+        "end": 4.48,
+        "probability": 0.7240233868360519
+      },
+      {
+        "word": " community",
+        "start": 4.48,
+        "end": 4.66,
+        "probability": 0.2947755455970764
+      },
+      {
+        "word": " Captioning",
+        "start": 4.66,
+        "end": 4.9,
+        "probability": 0.5143206940138043
+      },
+      {
+        "word": " provided",
+        "start": 4.9,
+        "end": 4.9,
+        "probability": 0.2941056191921234
+      },
+      {
+        "word": " by",
+        "start": 4.9,
+        "end": 4.9,
+        "probability": 0.9957277774810791
+      },
+      {
+        "word": " the",
+        "start": 4.9,
+        "end": 4.9,
+        "probability": 0.009971610270440578
+      },
+      {
+        "word": " Amara",
+        "start": 4.9,
+        "end": 5.1,
+        "probability": 0.5091090789064765
+      },
+      {
+        "word": ".org",
+        "start": 5.1,
+        "end": 5.1,
+        "probability": 0.9999499320983887
+      },
+      {
+        "word": " community",
+        "start": 5.1,
+        "end": 5.18,
+        "probability": 0.9992444515228271
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 164.30409216880798,
+    "text": "All right, give us a few marks vertical, get us away from that structure, we're going to buzz in close. This is not the Roger Yalwin, you are not Carmen Rodriguez Ramirez.",
+    "confidence": 0.8202743774357562,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 10.7,
+    "transcription_time": 20.044408082962036,
+    "words": [
+      {
+        "word": " All",
+        "start": 0.0,
+        "end": 0.42,
+        "probability": 0.04969560727477074
+      },
+      {
+        "word": " right,",
+        "start": 0.42,
+        "end": 0.64,
+        "probability": 0.9945348501205444
+      },
+      {
+        "word": " give",
+        "start": 1.0,
+        "end": 1.2,
+        "probability": 0.819351315498352
+      },
+      {
+        "word": " us",
+        "start": 1.2,
+        "end": 1.4,
+        "probability": 0.9931240677833557
+      },
+      {
+        "word": " a",
+        "start": 1.4,
+        "end": 1.42,
+        "probability": 0.98868727684021
+      },
+      {
+        "word": " few",
+        "start": 1.42,
+        "end": 1.56,
+        "probability": 0.9973279237747192
+      },
+      {
+        "word": " marks",
+        "start": 1.56,
+        "end": 1.78,
+        "probability": 0.6940488815307617
+      },
+      {
+        "word": " vertical,",
+        "start": 1.78,
+        "end": 2.14,
+        "probability": 0.5825284123420715
+      },
+      {
+        "word": " get",
+        "start": 2.3,
+        "end": 2.4,
+        "probability": 0.8525028228759766
+      },
+      {
+        "word": " us",
+        "start": 2.4,
+        "end": 2.58,
+        "probability": 0.9951346516609192
+      },
+      {
+        "word": " away",
+        "start": 2.58,
+        "end": 2.72,
+        "probability": 0.744368851184845
+      },
+      {
+        "word": " from",
+        "start": 2.72,
+        "end": 2.9,
+        "probability": 0.9740575551986694
+      },
+      {
+        "word": " that",
+        "start": 2.9,
+        "end": 3.06,
+        "probability": 0.7485342621803284
+      },
+      {
+        "word": " structure,",
+        "start": 3.06,
+        "end": 3.38,
+        "probability": 0.9961928129196167
+      },
+      {
+        "word": " we're",
+        "start": 3.6,
+        "end": 3.8,
+        "probability": 0.9610414803028107
+      },
+      {
+        "word": " going",
+        "start": 3.8,
+        "end": 3.84,
+        "probability": 0.38786354660987854
+      },
+      {
+        "word": " to",
+        "start": 3.84,
+        "end": 3.94,
+        "probability": 0.9966639876365662
+      },
+      {
+        "word": " buzz",
+        "start": 3.94,
+        "end": 4.06,
+        "probability": 0.9800410270690918
+      },
+      {
+        "word": " in",
+        "start": 4.06,
+        "end": 4.2,
+        "probability": 0.876387894153595
+      },
+      {
+        "word": " close.",
+        "start": 4.2,
+        "end": 4.5,
+        "probability": 0.9863631129264832
+      },
+      {
+        "word": " This",
+        "start": 5.16,
+        "end": 5.58,
+        "probability": 0.8619101047515869
+      },
+      {
+        "word": " is",
+        "start": 5.58,
+        "end": 5.8,
+        "probability": 0.9954982995986938
+      },
+      {
+        "word": " not",
+        "start": 5.8,
+        "end": 6.02,
+        "probability": 0.9941444993019104
+      },
+      {
+        "word": " the",
+        "start": 6.02,
+        "end": 6.18,
+        "probability": 0.9727559685707092
+      },
+      {
+        "word": " Roger",
+        "start": 6.18,
+        "end": 6.4,
+        "probability": 0.7451992034912109
+      },
+      {
+        "word": " Yalwin,",
+        "start": 6.4,
+        "end": 6.92,
+        "probability": 0.47130505243937176
+      },
+      {
+        "word": " you",
+        "start": 7.02,
+        "end": 7.14,
+        "probability": 0.42876875400543213
+      },
+      {
+        "word": " are",
+        "start": 7.14,
+        "end": 7.2,
+        "probability": 0.9149742126464844
+      },
+      {
+        "word": " not",
+        "start": 7.2,
+        "end": 7.46,
+        "probability": 0.9978051781654358
+      },
+      {
+        "word": " Carmen",
+        "start": 7.46,
+        "end": 7.84,
+        "probability": 0.9493150115013123
+      },
+      {
+        "word": " Rodriguez",
+        "start": 7.84,
+        "end": 8.18,
+        "probability": 0.38241812586784363
+      },
+      {
+        "word": " Ramirez.",
+        "start": 8.18,
+        "end": 8.82,
+        "probability": 0.9162353277206421
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 183.066725730896,
+    "text": "So, so what, they're kind of engaged. That means yes. All right. Locking course, set para para, engage.  Engineering, once we drop out of warp, take down warp engines to 20% of rated power, let's free that up, put it to TAMS.  20% of FPL. Once we're out.",
+    "confidence": 0.741474338285625,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 16.4,
+    "transcription_time": 61.4909987449646,
+    "words": [
+      {
+        "word": " So,",
+        "start": 0.0,
+        "end": 0.16,
+        "probability": 0.1664975881576538
+      },
+      {
+        "word": " so",
+        "start": 0.16,
+        "end": 0.36,
+        "probability": 0.17240406572818756
+      },
+      {
+        "word": " what,",
+        "start": 0.36,
+        "end": 0.5,
+        "probability": 0.4241443872451782
+      },
+      {
+        "word": " they're",
+        "start": 0.58,
+        "end": 0.78,
+        "probability": 0.2996221110224724
+      },
+      {
+        "word": " kind",
+        "start": 0.78,
+        "end": 0.98,
+        "probability": 0.49727755784988403
+      },
+      {
+        "word": " of",
+        "start": 0.98,
+        "end": 1.14,
+        "probability": 0.992297351360321
+      },
+      {
+        "word": " engaged.",
+        "start": 1.14,
+        "end": 1.4,
+        "probability": 0.9926081895828247
+      },
+      {
+        "word": " That",
+        "start": 1.72,
+        "end": 2.0,
+        "probability": 0.5435894131660461
+      },
+      {
+        "word": " means",
+        "start": 2.0,
+        "end": 2.28,
+        "probability": 0.9089876413345337
+      },
+      {
+        "word": " yes.",
+        "start": 2.28,
+        "end": 2.5,
+        "probability": 0.5600888729095459
+      },
+      {
+        "word": " All",
+        "start": 2.8,
+        "end": 3.22,
+        "probability": 0.5174984335899353
+      },
+      {
+        "word": " right.",
+        "start": 3.22,
+        "end": 3.38,
+        "probability": 0.9981145858764648
+      },
+      {
+        "word": " Locking",
+        "start": 4.4,
+        "end": 4.82,
+        "probability": 0.8266215920448303
+      },
+      {
+        "word": " course,",
+        "start": 4.82,
+        "end": 5.0,
+        "probability": 0.04386725649237633
+      },
+      {
+        "word": " set",
+        "start": 5.06,
+        "end": 5.22,
+        "probability": 0.08431939035654068
+      },
+      {
+        "word": " para",
+        "start": 5.22,
+        "end": 5.46,
+        "probability": 0.08428849279880524
+      },
+      {
+        "word": " para,",
+        "start": 5.46,
+        "end": 5.64,
+        "probability": 0.4063839316368103
+      },
+      {
+        "word": " engage.",
+        "start": 5.78,
+        "end": 5.96,
+        "probability": 0.41175520420074463
+      },
+      {
+        "word": " Engineering,",
+        "start": 6.64,
+        "end": 7.06,
+        "probability": 0.5691308379173279
+      },
+      {
+        "word": " once",
+        "start": 7.2,
+        "end": 7.46,
+        "probability": 0.9990155696868896
+      },
+      {
+        "word": " we",
+        "start": 7.46,
+        "end": 7.64,
+        "probability": 0.9982267022132874
+      },
+      {
+        "word": " drop",
+        "start": 7.64,
+        "end": 7.92,
+        "probability": 0.9984691739082336
+      },
+      {
+        "word": " out",
+        "start": 7.92,
+        "end": 8.16,
+        "probability": 0.9749401211738586
+      },
+      {
+        "word": " of",
+        "start": 8.16,
+        "end": 8.24,
+        "probability": 0.8083211183547974
+      },
+      {
+        "word": " warp,",
+        "start": 8.24,
+        "end": 8.48,
+        "probability": 0.9869344234466553
+      },
+      {
+        "word": " take",
+        "start": 8.7,
+        "end": 9.26,
+        "probability": 0.9311275482177734
+      },
+      {
+        "word": " down",
+        "start": 9.26,
+        "end": 9.58,
+        "probability": 0.9997841715812683
+      },
+      {
+        "word": " warp",
+        "start": 9.58,
+        "end": 9.9,
+        "probability": 0.9960457682609558
+      },
+      {
+        "word": " engines",
+        "start": 9.9,
+        "end": 10.3,
+        "probability": 0.999204695224762
+      },
+      {
+        "word": " to",
+        "start": 10.3,
+        "end": 10.58,
+        "probability": 0.9988176226615906
+      },
+      {
+        "word": " 20",
+        "start": 10.58,
+        "end": 10.88,
+        "probability": 0.9789407849311829
+      },
+      {
+        "word": "%",
+        "start": 10.88,
+        "end": 11.2,
+        "probability": 0.9777726531028748
+      },
+      {
+        "word": " of",
+        "start": 11.2,
+        "end": 11.34,
+        "probability": 0.7713440656661987
+      },
+      {
+        "word": " rated",
+        "start": 11.34,
+        "end": 11.52,
+        "probability": 0.9128096103668213
+      },
+      {
+        "word": " power,",
+        "start": 11.52,
+        "end": 11.82,
+        "probability": 0.9998087286949158
+      },
+      {
+        "word": " let's",
+        "start": 11.94,
+        "end": 12.2,
+        "probability": 0.995268315076828
+      },
+      {
+        "word": " free",
+        "start": 12.2,
+        "end": 12.34,
+        "probability": 0.583972156047821
+      },
+      {
+        "word": " that",
+        "start": 12.34,
+        "end": 12.5,
+        "probability": 0.9970142841339111
+      },
+      {
+        "word": " up,",
+        "start": 12.5,
+        "end": 12.76,
+        "probability": 0.9990507960319519
+      },
+      {
+        "word": " put",
+        "start": 12.78,
+        "end": 13.0,
+        "probability": 0.9901429414749146
+      },
+      {
+        "word": " it",
+        "start": 13.0,
+        "end": 13.12,
+        "probability": 0.9966621398925781
+      },
+      {
+        "word": " to",
+        "start": 13.12,
+        "end": 13.24,
+        "probability": 0.975755512714386
+      },
+      {
+        "word": " TAMS.",
+        "start": 13.24,
+        "end": 13.68,
+        "probability": 0.6176639795303345
+      },
+      {
+        "word": " 20",
+        "start": 13.74,
+        "end": 13.92,
+        "probability": 0.013238603249192238
+      },
+      {
+        "word": "%",
+        "start": 13.92,
+        "end": 14.22,
+        "probability": 0.9921308159828186
+      },
+      {
+        "word": " of",
+        "start": 14.22,
+        "end": 14.34,
+        "probability": 0.5525525212287903
+      },
+      {
+        "word": " FPL.",
+        "start": 14.34,
+        "end": 14.6,
+        "probability": 0.5411185175180435
+      },
+      {
+        "word": " Once",
+        "start": 14.82,
+        "end": 15.14,
+        "probability": 0.994200587272644
+      },
+      {
+        "word": " we're",
+        "start": 15.14,
+        "end": 15.32,
+        "probability": 0.99390909075737
+      },
+      {
+        "word": " out.",
+        "start": 15.32,
+        "end": 15.44,
+        "probability": 0.9999769926071167
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 174.57682752609253,
+    "text": "You want to find out? Sign up on somebody else's bridge.  Alright.  Okay, we've got a course laid in on...",
+    "confidence": 0.7783458659425377,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 6.6,
+    "transcription_time": 102.87554550170898,
+    "words": [
+      {
+        "word": " You",
+        "start": 0.0,
+        "end": 0.0,
+        "probability": 0.053041573613882065
+      },
+      {
+        "word": " want",
+        "start": 0.0,
+        "end": 0.12,
+        "probability": 0.8687267303466797
+      },
+      {
+        "word": " to",
+        "start": 0.12,
+        "end": 0.16,
+        "probability": 0.9961332082748413
+      },
+      {
+        "word": " find",
+        "start": 0.16,
+        "end": 0.36,
+        "probability": 0.9947267174720764
+      },
+      {
+        "word": " out?",
+        "start": 0.36,
+        "end": 0.54,
+        "probability": 0.9989078044891357
+      },
+      {
+        "word": " Sign",
+        "start": 1.0,
+        "end": 1.36,
+        "probability": 0.9794508814811707
+      },
+      {
+        "word": " up",
+        "start": 1.36,
+        "end": 1.52,
+        "probability": 0.9952351450920105
+      },
+      {
+        "word": " on",
+        "start": 1.52,
+        "end": 1.64,
+        "probability": 0.9914647936820984
+      },
+      {
+        "word": " somebody",
+        "start": 1.64,
+        "end": 1.82,
+        "probability": 0.9602711200714111
+      },
+      {
+        "word": " else's",
+        "start": 1.82,
+        "end": 2.22,
+        "probability": 0.9960347414016724
+      },
+      {
+        "word": " bridge.",
+        "start": 2.22,
+        "end": 2.38,
+        "probability": 0.8995665311813354
+      },
+      {
+        "word": " Alright.",
+        "start": 2.6,
+        "end": 2.8,
+        "probability": 0.10552012920379639
+      },
+      {
+        "word": " Okay,",
+        "start": 2.96,
+        "end": 3.32,
+        "probability": 0.8294207453727722
+      },
+      {
+        "word": " we've",
+        "start": 3.48,
+        "end": 3.72,
+        "probability": 0.9761684834957123
+      },
+      {
+        "word": " got",
+        "start": 3.72,
+        "end": 3.86,
+        "probability": 0.9951750040054321
+      },
+      {
+        "word": " a",
+        "start": 3.86,
+        "end": 3.94,
+        "probability": 0.9298059344291687
+      },
+      {
+        "word": " course",
+        "start": 3.94,
+        "end": 4.12,
+        "probability": 0.44172561168670654
+      },
+      {
+        "word": " laid",
+        "start": 4.12,
+        "end": 4.34,
+        "probability": 0.25910723209381104
+      },
+      {
+        "word": " in",
+        "start": 4.34,
+        "end": 4.52,
+        "probability": 0.9539967775344849
+      },
+      {
+        "word": " on...",
+        "start": 4.52,
+        "end": 4.82,
+        "probability": 0.34243815392255783
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 199.87208938598633,
+    "text": "Oh yeah, right, sorry. Move up, sir.  Bill Dyes is still here.  This is the fact of the matter.",
+    "confidence": 0.6376516168054781,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 8.5,
+    "transcription_time": 31.285685062408447,
+    "words": [
+      {
+        "word": " Oh",
+        "start": 0.0,
+        "end": 0.34,
+        "probability": 0.16754312813282013
+      },
+      {
+        "word": " yeah,",
+        "start": 0.34,
+        "end": 0.42,
+        "probability": 0.6409927010536194
+      },
+      {
+        "word": " right,",
+        "start": 0.42,
+        "end": 0.64,
+        "probability": 0.2544894814491272
+      },
+      {
+        "word": " sorry.",
+        "start": 0.78,
+        "end": 1.1,
+        "probability": 0.9469555616378784
+      },
+      {
+        "word": " Move",
+        "start": 1.42,
+        "end": 1.82,
+        "probability": 0.43692004680633545
+      },
+      {
+        "word": " up,",
+        "start": 1.82,
+        "end": 1.98,
+        "probability": 0.9299932718276978
+      },
+      {
+        "word": " sir.",
+        "start": 2.02,
+        "end": 2.22,
+        "probability": 0.41402488946914673
+      },
+      {
+        "word": " Bill",
+        "start": 3.12,
+        "end": 3.52,
+        "probability": 0.15791325271129608
+      },
+      {
+        "word": " Dyes",
+        "start": 3.52,
+        "end": 3.9,
+        "probability": 0.3884304612874985
+      },
+      {
+        "word": " is",
+        "start": 3.9,
+        "end": 4.06,
+        "probability": 0.8082865476608276
+      },
+      {
+        "word": " still",
+        "start": 4.06,
+        "end": 4.24,
+        "probability": 0.7511398196220398
+      },
+      {
+        "word": " here.",
+        "start": 4.24,
+        "end": 4.4,
+        "probability": 0.9751178026199341
+      },
+      {
+        "word": " This",
+        "start": 4.46,
+        "end": 4.72,
+        "probability": 0.9026668667793274
+      },
+      {
+        "word": " is",
+        "start": 4.72,
+        "end": 4.8,
+        "probability": 0.9937596917152405
+      },
+      {
+        "word": " the",
+        "start": 4.8,
+        "end": 4.9,
+        "probability": 0.8949031233787537
+      },
+      {
+        "word": " fact",
+        "start": 4.9,
+        "end": 5.24,
+        "probability": 0.12123873829841614
+      },
+      {
+        "word": " of",
+        "start": 5.24,
+        "end": 5.44,
+        "probability": 0.7049299478530884
+      },
+      {
+        "word": " the",
+        "start": 5.44,
+        "end": 5.58,
+        "probability": 0.6396699547767639
+      },
+      {
+        "word": " matter.",
+        "start": 5.58,
+        "end": 5.9,
+        "probability": 0.9864054322242737
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 208.15383410453796,
+    "text": "Did you ask about warp transit?",
+    "confidence": 0.6578557789325714,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 3.6,
+    "transcription_time": 14.567553043365479,
+    "words": [
+      {
+        "word": " Did",
+        "start": 0.0,
+        "end": 0.24,
+        "probability": 0.18357235193252563
+      },
+      {
+        "word": " you",
+        "start": 0.24,
+        "end": 0.34,
+        "probability": 0.992095410823822
+      },
+      {
+        "word": " ask",
+        "start": 0.34,
+        "end": 0.52,
+        "probability": 0.9295197129249573
+      },
+      {
+        "word": " about",
+        "start": 0.52,
+        "end": 0.72,
+        "probability": 0.5582652688026428
+      },
+      {
+        "word": " warp",
+        "start": 0.72,
+        "end": 1.46,
+        "probability": 0.3825979232788086
+      },
+      {
+        "word": " transit?",
+        "start": 1.46,
+        "end": 2.06,
+        "probability": 0.9010840058326721
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 213.87039160728455,
+    "text": "Captain, not a psychic.",
+    "confidence": 0.5042111383518204,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 1.5,
+    "transcription_time": 14.472036838531494,
+    "words": [
+      {
+        "word": " Captain,",
+        "start": 0.0,
+        "end": 0.26,
+        "probability": 0.006446389015763998
+      },
+      {
+        "word": " not",
+        "start": 0.28,
+        "end": 0.4,
+        "probability": 0.21890594065189362
+      },
+      {
+        "word": " a",
+        "start": 0.4,
+        "end": 0.46,
+        "probability": 0.8088164329528809
+      },
+      {
+        "word": " psychic.",
+        "start": 0.46,
+        "end": 0.7,
+        "probability": 0.9826757907867432
+      }
+    ],
+    "speaker_id": "speaker_2",
+    "metadata": {}
+  },
+  {
+    "timestamp": 215.9490270614624,
+    "text": "Captions by GetTranscribed.com",
+    "confidence": 0.6923916762801431,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 0.7,
+    "transcription_time": 19.66943597793579,
+    "words": [
+      {
+        "word": " Captions",
+        "start": 0.0,
+        "end": 0.26,
+        "probability": 0.2267635169555433
+      },
+      {
+        "word": " by",
+        "start": 0.26,
+        "end": 0.68,
+        "probability": 0.7591642141342163
+      },
+      {
+        "word": " GetTranscribed",
+        "start": 0.68,
+        "end": 0.68,
+        "probability": 0.7843872209390005
+      },
+      {
+        "word": ".com",
+        "start": 0.68,
+        "end": 0.68,
+        "probability": 0.9992517530918121
+      }
+    ],
+    "speaker_id": "speaker_5",
+    "metadata": {}
+  },
+  {
+    "timestamp": 217.36646175384521,
+    "text": "All right, we're going to de-warp eventually.  Okay, engineering, drop that warp.  Science, what have we got for interesting planets?",
+    "confidence": 0.8278153033128807,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 11.5,
+    "transcription_time": 19.70892095565796,
+    "words": [
+      {
+        "word": " All",
+        "start": 0.0,
+        "end": 0.66,
+        "probability": 0.044467635452747345
+      },
+      {
+        "word": " right,",
+        "start": 0.66,
+        "end": 1.72,
+        "probability": 0.9901543259620667
+      },
+      {
+        "word": " we're",
+        "start": 1.78,
+        "end": 1.9,
+        "probability": 0.954434871673584
+      },
+      {
+        "word": " going",
+        "start": 1.9,
+        "end": 1.96,
+        "probability": 0.7666624784469604
+      },
+      {
+        "word": " to",
+        "start": 1.96,
+        "end": 2.08,
+        "probability": 0.9967959523200989
+      },
+      {
+        "word": " de",
+        "start": 2.08,
+        "end": 2.28,
+        "probability": 0.8706580996513367
+      },
+      {
+        "word": "-warp",
+        "start": 2.28,
+        "end": 2.5,
+        "probability": 0.6035418547689915
+      },
+      {
+        "word": " eventually.",
+        "start": 2.5,
+        "end": 2.84,
+        "probability": 0.980660617351532
+      },
+      {
+        "word": " Okay,",
+        "start": 3.8,
+        "end": 4.28,
+        "probability": 0.662609338760376
+      },
+      {
+        "word": " engineering,",
+        "start": 4.68,
+        "end": 5.14,
+        "probability": 0.47438591718673706
+      },
+      {
+        "word": " drop",
+        "start": 5.14,
+        "end": 5.42,
+        "probability": 0.9661741256713867
+      },
+      {
+        "word": " that",
+        "start": 5.42,
+        "end": 5.66,
+        "probability": 0.9965550899505615
+      },
+      {
+        "word": " warp.",
+        "start": 5.66,
+        "end": 5.88,
+        "probability": 0.6782246232032776
+      },
+      {
+        "word": " Science,",
+        "start": 6.68,
+        "end": 7.16,
+        "probability": 0.8978779315948486
+      },
+      {
+        "word": " what",
+        "start": 7.48,
+        "end": 7.62,
+        "probability": 0.999072790145874
+      },
+      {
+        "word": " have",
+        "start": 7.62,
+        "end": 7.7,
+        "probability": 0.8931278586387634
+      },
+      {
+        "word": " we",
+        "start": 7.7,
+        "end": 7.8,
+        "probability": 0.997266411781311
+      },
+      {
+        "word": " got",
+        "start": 7.8,
+        "end": 7.9,
+        "probability": 0.9978768825531006
+      },
+      {
+        "word": " for",
+        "start": 7.9,
+        "end": 8.04,
+        "probability": 0.9971952438354492
+      },
+      {
+        "word": " interesting",
+        "start": 8.04,
+        "end": 8.34,
+        "probability": 0.9759584665298462
+      },
+      {
+        "word": " planets?",
+        "start": 8.34,
+        "end": 8.74,
+        "probability": 0.6404208540916443
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 229.06386256217957,
+    "text": "We have carrier 1, 2, 3, 4, and 5.",
+    "confidence": 0.7806975914993219,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 4.6,
+    "transcription_time": 16.653965950012207,
+    "words": [
+      {
+        "word": " We",
+        "start": 0.0,
+        "end": 0.86,
+        "probability": 0.4265851378440857
+      },
+      {
+        "word": " have",
+        "start": 0.86,
+        "end": 1.04,
+        "probability": 0.9897822141647339
+      },
+      {
+        "word": " carrier",
+        "start": 1.04,
+        "end": 1.32,
+        "probability": 0.005001968704164028
+      },
+      {
+        "word": " 1,",
+        "start": 1.32,
+        "end": 1.72,
+        "probability": 0.627534031867981
+      },
+      {
+        "word": " 2,",
+        "start": 1.86,
+        "end": 2.08,
+        "probability": 0.9928146600723267
+      },
+      {
+        "word": " 3,",
+        "start": 2.08,
+        "end": 2.42,
+        "probability": 0.9994582533836365
+      },
+      {
+        "word": " 4,",
+        "start": 2.52,
+        "end": 2.9,
+        "probability": 0.997687578201294
+      },
+      {
+        "word": " and",
+        "start": 3.06,
+        "end": 3.26,
+        "probability": 0.9896280765533447
+      },
+      {
+        "word": " 5.",
+        "start": 3.26,
+        "end": 3.5,
+        "probability": 0.9977864027023315
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 233.38423585891724,
+    "text": "Uh, one, two, three, and five have paintings around them.  Okay.  Color has changed inside itself.  Alright, we can ask a lot of questions.  Lastly, paragraph three.",
+    "confidence": 0.6644936195678182,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 11.1,
+    "transcription_time": 20.590811014175415,
+    "words": [
+      {
+        "word": " Uh,",
+        "start": 0.0,
+        "end": 0.0,
+        "probability": 0.06315618008375168
+      },
+      {
+        "word": " one,",
+        "start": 0.94,
+        "end": 1.2,
+        "probability": 0.4899195432662964
+      },
+      {
+        "word": " two,",
+        "start": 1.38,
+        "end": 1.66,
+        "probability": 0.8387526869773865
+      },
+      {
+        "word": " three,",
+        "start": 1.72,
+        "end": 1.92,
+        "probability": 0.5771105289459229
+      },
+      {
+        "word": " and",
+        "start": 2.04,
+        "end": 2.14,
+        "probability": 0.9680561423301697
+      },
+      {
+        "word": " five",
+        "start": 2.14,
+        "end": 2.52,
+        "probability": 0.9835663437843323
+      },
+      {
+        "word": " have",
+        "start": 2.52,
+        "end": 2.76,
+        "probability": 0.9193944334983826
+      },
+      {
+        "word": " paintings",
+        "start": 2.76,
+        "end": 3.08,
+        "probability": 0.17729635536670685
+      },
+      {
+        "word": " around",
+        "start": 3.08,
+        "end": 3.52,
+        "probability": 0.9965423941612244
+      },
+      {
+        "word": " them.",
+        "start": 3.52,
+        "end": 3.86,
+        "probability": 0.9753310680389404
+      },
+      {
+        "word": " Okay.",
+        "start": 3.98,
+        "end": 4.32,
+        "probability": 0.41107177734375
+      },
+      {
+        "word": " Color",
+        "start": 4.54,
+        "end": 5.02,
+        "probability": 0.6961444020271301
+      },
+      {
+        "word": " has",
+        "start": 5.02,
+        "end": 5.26,
+        "probability": 0.6181218028068542
+      },
+      {
+        "word": " changed",
+        "start": 5.26,
+        "end": 5.48,
+        "probability": 0.31830769777297974
+      },
+      {
+        "word": " inside",
+        "start": 5.48,
+        "end": 5.96,
+        "probability": 0.4617874324321747
+      },
+      {
+        "word": " itself.",
+        "start": 5.96,
+        "end": 6.26,
+        "probability": 0.9963188171386719
+      },
+      {
+        "word": " Alright,",
+        "start": 6.6,
+        "end": 6.84,
+        "probability": 0.4543054699897766
+      },
+      {
+        "word": " we",
+        "start": 6.96,
+        "end": 7.02,
+        "probability": 0.37806710600852966
+      },
+      {
+        "word": " can",
+        "start": 7.02,
+        "end": 7.18,
+        "probability": 0.5377231240272522
+      },
+      {
+        "word": " ask",
+        "start": 7.18,
+        "end": 7.38,
+        "probability": 0.7366939187049866
+      },
+      {
+        "word": " a",
+        "start": 7.38,
+        "end": 7.46,
+        "probability": 0.47641274333000183
+      },
+      {
+        "word": " lot",
+        "start": 7.46,
+        "end": 7.64,
+        "probability": 0.6468850374221802
+      },
+      {
+        "word": " of",
+        "start": 7.64,
+        "end": 7.66,
+        "probability": 0.9802188277244568
+      },
+      {
+        "word": " questions.",
+        "start": 7.66,
+        "end": 8.24,
+        "probability": 0.9919182658195496
+      },
+      {
+        "word": " Lastly,",
+        "start": 8.6,
+        "end": 9.08,
+        "probability": 0.7538912892341614
+      },
+      {
+        "word": " paragraph",
+        "start": 9.3,
+        "end": 9.8,
+        "probability": 0.521545946598053
+      },
+      {
+        "word": " three.",
+        "start": 9.8,
+        "end": 10.26,
+        "probability": 0.972788393497467
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 245.86146688461304,
+    "text": "So, we have on top of our rocket, on top of the 10, the first, once again, ranking, next, first, and final.",
+    "confidence": 0.5135810355105522,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 7.0,
+    "transcription_time": 20.602195978164673,
+    "words": [
+      {
+        "word": " So,",
+        "start": 0.0,
+        "end": 0.1,
+        "probability": 0.339850515127182
+      },
+      {
+        "word": " we",
+        "start": 0.1,
+        "end": 0.16,
+        "probability": 0.7108269333839417
+      },
+      {
+        "word": " have",
+        "start": 0.16,
+        "end": 0.32,
+        "probability": 0.937743067741394
+      },
+      {
+        "word": " on",
+        "start": 0.32,
+        "end": 0.5,
+        "probability": 0.14048179984092712
+      },
+      {
+        "word": " top",
+        "start": 0.5,
+        "end": 0.66,
+        "probability": 0.32432305812835693
+      },
+      {
+        "word": " of",
+        "start": 0.66,
+        "end": 0.72,
+        "probability": 0.8705422878265381
+      },
+      {
+        "word": " our",
+        "start": 0.72,
+        "end": 0.9,
+        "probability": 0.5950579643249512
+      },
+      {
+        "word": " rocket,",
+        "start": 0.9,
+        "end": 1.16,
+        "probability": 0.004471559543162584
+      },
+      {
+        "word": " on",
+        "start": 1.24,
+        "end": 1.4,
+        "probability": 0.3621302545070648
+      },
+      {
+        "word": " top",
+        "start": 1.4,
+        "end": 1.7,
+        "probability": 0.9786310195922852
+      },
+      {
+        "word": " of",
+        "start": 1.7,
+        "end": 1.78,
+        "probability": 0.8726096153259277
+      },
+      {
+        "word": " the",
+        "start": 1.78,
+        "end": 1.88,
+        "probability": 0.6789730191230774
+      },
+      {
+        "word": " 10,",
+        "start": 1.88,
+        "end": 2.1,
+        "probability": 0.3833963871002197
+      },
+      {
+        "word": " the",
+        "start": 2.3,
+        "end": 2.64,
+        "probability": 0.5079618692398071
+      },
+      {
+        "word": " first,",
+        "start": 2.64,
+        "end": 3.02,
+        "probability": 0.7280421257019043
+      },
+      {
+        "word": " once",
+        "start": 3.2,
+        "end": 3.7,
+        "probability": 0.9164240956306458
+      },
+      {
+        "word": " again,",
+        "start": 3.7,
+        "end": 3.92,
+        "probability": 0.8552842140197754
+      },
+      {
+        "word": " ranking,",
+        "start": 4.0,
+        "end": 4.36,
+        "probability": 0.061155613511800766
+      },
+      {
+        "word": " next,",
+        "start": 4.44,
+        "end": 4.72,
+        "probability": 0.17134042084217072
+      },
+      {
+        "word": " first,",
+        "start": 4.74,
+        "end": 4.88,
+        "probability": 0.1892392784357071
+      },
+      {
+        "word": " and",
+        "start": 4.88,
+        "end": 4.98,
+        "probability": 0.3331855535507202
+      },
+      {
+        "word": " final.",
+        "start": 4.98,
+        "end": 5.24,
+        "probability": 0.3371121287345886
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 257.0081076622009,
+    "text": "Captions by GetTranscribed.com",
+    "confidence": 0.6674040487108263,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 0.7,
+    "transcription_time": 17.61052179336548,
+    "words": [
+      {
+        "word": " Captions",
+        "start": 0.0,
+        "end": 0.52,
+        "probability": 0.13423765925472253
+      },
+      {
+        "word": " by",
+        "start": 0.52,
+        "end": 0.52,
+        "probability": 0.8112136721611023
+      },
+      {
+        "word": " GetTranscribed",
+        "start": 0.52,
+        "end": 0.68,
+        "probability": 0.7247490485509237
+      },
+      {
+        "word": ".com",
+        "start": 0.68,
+        "end": 0.68,
+        "probability": 0.9994158148765564
+      }
+    ],
+    "speaker_id": "speaker_7",
+    "metadata": {}
+  },
+  {
+    "timestamp": 261.15392684936523,
+    "text": "Thank you.",
+    "confidence": 0.6925222873687744,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 0.8,
+    "transcription_time": 14.059452533721924,
+    "words": [
+      {
+        "word": " Thank",
+        "start": 0.0,
+        "end": 0.18,
+        "probability": 0.39526063203811646
+      },
+      {
+        "word": " you.",
+        "start": 0.18,
+        "end": 0.4,
+        "probability": 0.9897839426994324
+      }
+    ],
+    "speaker_id": "speaker_8",
+    "metadata": {}
+  },
+  {
+    "timestamp": 263.32093620300293,
+    "text": "Oh, yeah, what's the matter with that?",
+    "confidence": 0.6084995791316032,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 3.5,
+    "transcription_time": 17.184190273284912,
+    "words": [
+      {
+        "word": " Oh,",
+        "start": 0.0,
+        "end": 0.14,
+        "probability": 0.10629873722791672
+      },
+      {
+        "word": " yeah,",
+        "start": 0.14,
+        "end": 0.44,
+        "probability": 0.8911466002464294
+      },
+      {
+        "word": " what's",
+        "start": 0.5,
+        "end": 0.84,
+        "probability": 0.66923788189888
+      },
+      {
+        "word": " the",
+        "start": 0.84,
+        "end": 0.84,
+        "probability": 0.6674150824546814
+      },
+      {
+        "word": " matter",
+        "start": 0.84,
+        "end": 1.0,
+        "probability": 0.025692924857139587
+      },
+      {
+        "word": " with",
+        "start": 1.0,
+        "end": 1.18,
+        "probability": 0.9018635153770447
+      },
+      {
+        "word": " that?",
+        "start": 1.18,
+        "end": 1.26,
+        "probability": 0.9978423118591309
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 267.3661525249481,
+    "text": "Captions by GetTranscribed.com",
+    "confidence": 0.6946772234235444,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 0.8,
+    "transcription_time": 17.158573865890503,
+    "words": [
+      {
+        "word": " Captions",
+        "start": 0.0,
+        "end": 0.4,
+        "probability": 0.20165353878110182
+      },
+      {
+        "word": " by",
+        "start": 0.4,
+        "end": 0.4,
+        "probability": 0.8135495781898499
+      },
+      {
+        "word": " GetTranscribed",
+        "start": 0.4,
+        "end": 0.48,
+        "probability": 0.7642290790875753
+      },
+      {
+        "word": ".com",
+        "start": 0.48,
+        "end": 0.78,
+        "probability": 0.9992766976356506
+      }
+    ],
+    "speaker_id": "speaker_9",
+    "metadata": {}
+  },
+  {
+    "timestamp": 271.8785095214844,
+    "text": "That's like, waypointing, that's a good thing right now.  I would say, I could, I could go on screen, maybe on routine.  Yeah, well, if it helps.  But yeah, it's a good smart watch if you want to ask great questions.",
+    "confidence": 0.647189382698358,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 10.9,
+    "transcription_time": 22.138469219207764,
+    "words": [
+      {
+        "word": " That's",
+        "start": 0.62,
+        "end": 0.92,
+        "probability": 0.45349587965756655
+      },
+      {
+        "word": " like,",
+        "start": 0.92,
+        "end": 0.92,
+        "probability": 0.04750252142548561
+      },
+      {
+        "word": " waypointing,",
+        "start": 0.96,
+        "end": 1.72,
+        "probability": 0.407340494292536
+      },
+      {
+        "word": " that's",
+        "start": 1.72,
+        "end": 1.98,
+        "probability": 0.8887239098548889
+      },
+      {
+        "word": " a",
+        "start": 1.98,
+        "end": 1.98,
+        "probability": 0.6456069350242615
+      },
+      {
+        "word": " good",
+        "start": 1.98,
+        "end": 2.1,
+        "probability": 0.28441905975341797
+      },
+      {
+        "word": " thing",
+        "start": 2.1,
+        "end": 2.24,
+        "probability": 0.9720380902290344
+      },
+      {
+        "word": " right",
+        "start": 2.24,
+        "end": 2.38,
+        "probability": 0.11673025041818619
+      },
+      {
+        "word": " now.",
+        "start": 2.38,
+        "end": 2.52,
+        "probability": 0.8333179950714111
+      },
+      {
+        "word": " I",
+        "start": 2.66,
+        "end": 2.88,
+        "probability": 0.07444405555725098
+      },
+      {
+        "word": " would",
+        "start": 2.88,
+        "end": 2.96,
+        "probability": 0.25764721632003784
+      },
+      {
+        "word": " say,",
+        "start": 2.96,
+        "end": 3.14,
+        "probability": 0.9803186058998108
+      },
+      {
+        "word": " I",
+        "start": 3.14,
+        "end": 3.3,
+        "probability": 0.9011650085449219
+      },
+      {
+        "word": " could,",
+        "start": 3.3,
+        "end": 3.46,
+        "probability": 0.1871509999036789
+      },
+      {
+        "word": " I",
+        "start": 3.48,
+        "end": 3.64,
+        "probability": 0.9576729536056519
+      },
+      {
+        "word": " could",
+        "start": 3.64,
+        "end": 3.78,
+        "probability": 0.9738284349441528
+      },
+      {
+        "word": " go",
+        "start": 3.78,
+        "end": 3.94,
+        "probability": 0.2625589370727539
+      },
+      {
+        "word": " on",
+        "start": 3.94,
+        "end": 4.08,
+        "probability": 0.30312493443489075
+      },
+      {
+        "word": " screen,",
+        "start": 4.08,
+        "end": 4.3,
+        "probability": 0.2280125617980957
+      },
+      {
+        "word": " maybe",
+        "start": 4.44,
+        "end": 5.04,
+        "probability": 0.273025780916214
+      },
+      {
+        "word": " on",
+        "start": 5.04,
+        "end": 5.18,
+        "probability": 0.7013816237449646
+      },
+      {
+        "word": " routine.",
+        "start": 5.18,
+        "end": 5.78,
+        "probability": 0.2234959602355957
+      },
+      {
+        "word": " Yeah,",
+        "start": 6.28,
+        "end": 6.58,
+        "probability": 0.9416324496269226
+      },
+      {
+        "word": " well,",
+        "start": 6.58,
+        "end": 6.82,
+        "probability": 0.4440632164478302
+      },
+      {
+        "word": " if",
+        "start": 6.88,
+        "end": 6.94,
+        "probability": 0.9204145669937134
+      },
+      {
+        "word": " it",
+        "start": 6.94,
+        "end": 7.06,
+        "probability": 0.9990600943565369
+      },
+      {
+        "word": " helps.",
+        "start": 7.06,
+        "end": 7.3,
+        "probability": 0.9982771873474121
+      },
+      {
+        "word": " But",
+        "start": 7.72,
+        "end": 8.02,
+        "probability": 0.7671347856521606
+      },
+      {
+        "word": " yeah,",
+        "start": 8.02,
+        "end": 8.18,
+        "probability": 0.9422929883003235
+      },
+      {
+        "word": " it's",
+        "start": 8.32,
+        "end": 8.44,
+        "probability": 0.7269789576530457
+      },
+      {
+        "word": " a",
+        "start": 8.44,
+        "end": 8.48,
+        "probability": 0.7843518853187561
+      },
+      {
+        "word": " good",
+        "start": 8.48,
+        "end": 8.62,
+        "probability": 0.7512752413749695
+      },
+      {
+        "word": " smart",
+        "start": 8.62,
+        "end": 8.82,
+        "probability": 0.5714344382286072
+      },
+      {
+        "word": " watch",
+        "start": 8.82,
+        "end": 9.16,
+        "probability": 0.7018386721611023
+      },
+      {
+        "word": " if",
+        "start": 9.16,
+        "end": 9.28,
+        "probability": 0.9714092016220093
+      },
+      {
+        "word": " you",
+        "start": 9.28,
+        "end": 9.36,
+        "probability": 0.9998478889465332
+      },
+      {
+        "word": " want",
+        "start": 9.36,
+        "end": 9.48,
+        "probability": 0.9676192998886108
+      },
+      {
+        "word": " to",
+        "start": 9.48,
+        "end": 9.6,
+        "probability": 0.9891993999481201
+      },
+      {
+        "word": " ask",
+        "start": 9.6,
+        "end": 9.7,
+        "probability": 0.5101408958435059
+      },
+      {
+        "word": " great",
+        "start": 9.7,
+        "end": 9.94,
+        "probability": 0.6907406449317932
+      },
+      {
+        "word": " questions.",
+        "start": 9.94,
+        "end": 10.16,
+        "probability": 0.8840506672859192
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 284.3592884540558,
+    "text": "Well, that kind of works, huh?",
+    "confidence": 0.6283183880150318,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 1.8,
+    "transcription_time": 20.297321319580078,
+    "words": [
+      {
+        "word": " Well,",
+        "start": 0.0,
+        "end": 0.1,
+        "probability": 0.06835340708494186
+      },
+      {
+        "word": " that",
+        "start": 0.1,
+        "end": 0.32,
+        "probability": 0.4014800786972046
+      },
+      {
+        "word": " kind",
+        "start": 0.32,
+        "end": 0.44,
+        "probability": 0.5821881294250488
+      },
+      {
+        "word": " of",
+        "start": 0.44,
+        "end": 0.54,
+        "probability": 0.9919191598892212
+      },
+      {
+        "word": " works,",
+        "start": 0.54,
+        "end": 0.68,
+        "probability": 0.932217001914978
+      },
+      {
+        "word": " huh?",
+        "start": 0.78,
+        "end": 0.96,
+        "probability": 0.7937525510787964
+      }
+    ],
+    "speaker_id": "speaker_2",
+    "metadata": {}
+  },
+  {
+    "timestamp": 286.15240263938904,
+    "text": "Oh, that's right, I asked for that one. Yeah, balance out the power again, let's get it back to even across the board.",
+    "confidence": 0.9007424129092175,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 5.1,
+    "transcription_time": 20.23786473274231,
+    "words": [
+      {
+        "word": " Oh,",
+        "start": 0.0,
+        "end": 0.3,
+        "probability": 0.542820930480957
+      },
+      {
+        "word": " that's",
+        "start": 0.32,
+        "end": 0.66,
+        "probability": 0.9754688739776611
+      },
+      {
+        "word": " right,",
+        "start": 0.66,
+        "end": 0.82,
+        "probability": 0.9059417247772217
+      },
+      {
+        "word": " I",
+        "start": 0.9,
+        "end": 0.9,
+        "probability": 0.8688523769378662
+      },
+      {
+        "word": " asked",
+        "start": 0.9,
+        "end": 1.08,
+        "probability": 0.9879365563392639
+      },
+      {
+        "word": " for",
+        "start": 1.08,
+        "end": 1.18,
+        "probability": 0.7318581342697144
+      },
+      {
+        "word": " that",
+        "start": 1.18,
+        "end": 1.28,
+        "probability": 0.7903405427932739
+      },
+      {
+        "word": " one.",
+        "start": 1.28,
+        "end": 1.32,
+        "probability": 0.5945501327514648
+      },
+      {
+        "word": " Yeah,",
+        "start": 1.42,
+        "end": 1.6,
+        "probability": 0.820971667766571
+      },
+      {
+        "word": " balance",
+        "start": 1.62,
+        "end": 1.88,
+        "probability": 0.8799357414245605
+      },
+      {
+        "word": " out",
+        "start": 1.88,
+        "end": 2.06,
+        "probability": 0.8645837306976318
+      },
+      {
+        "word": " the",
+        "start": 2.06,
+        "end": 2.14,
+        "probability": 0.9949455857276917
+      },
+      {
+        "word": " power",
+        "start": 2.14,
+        "end": 2.32,
+        "probability": 0.9952554106712341
+      },
+      {
+        "word": " again,",
+        "start": 2.32,
+        "end": 2.6,
+        "probability": 0.9802778363227844
+      },
+      {
+        "word": " let's",
+        "start": 2.7,
+        "end": 2.92,
+        "probability": 0.9846848547458649
+      },
+      {
+        "word": " get",
+        "start": 2.92,
+        "end": 3.0,
+        "probability": 0.99964439868927
+      },
+      {
+        "word": " it",
+        "start": 3.0,
+        "end": 3.1,
+        "probability": 0.9971466660499573
+      },
+      {
+        "word": " back",
+        "start": 3.1,
+        "end": 3.24,
+        "probability": 0.9991769194602966
+      },
+      {
+        "word": " to",
+        "start": 3.24,
+        "end": 3.42,
+        "probability": 0.9930071830749512
+      },
+      {
+        "word": " even",
+        "start": 3.42,
+        "end": 3.64,
+        "probability": 0.8317553400993347
+      },
+      {
+        "word": " across",
+        "start": 3.64,
+        "end": 3.96,
+        "probability": 0.9787893891334534
+      },
+      {
+        "word": " the",
+        "start": 3.96,
+        "end": 4.14,
+        "probability": 0.9992732405662537
+      },
+      {
+        "word": " board.",
+        "start": 4.14,
+        "end": 4.28,
+        "probability": 0.9998582601547241
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 297.37117290496826,
+    "text": "No! I don't want to, you know, I have to be fast.",
+    "confidence": 0.7970035473505656,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 4.8,
+    "transcription_time": 20.957785844802856,
+    "words": [
+      {
+        "word": " No!",
+        "start": 0.0,
+        "end": 0.24,
+        "probability": 0.6669548749923706
+      },
+      {
+        "word": " I",
+        "start": 0.86,
+        "end": 1.18,
+        "probability": 0.9202094078063965
+      },
+      {
+        "word": " don't",
+        "start": 1.18,
+        "end": 1.46,
+        "probability": 0.9703511595726013
+      },
+      {
+        "word": " want",
+        "start": 1.46,
+        "end": 1.6,
+        "probability": 0.42474278807640076
+      },
+      {
+        "word": " to,",
+        "start": 1.6,
+        "end": 1.7,
+        "probability": 0.8504517674446106
+      },
+      {
+        "word": " you",
+        "start": 1.78,
+        "end": 2.08,
+        "probability": 0.7459157705307007
+      },
+      {
+        "word": " know,",
+        "start": 2.08,
+        "end": 2.18,
+        "probability": 0.9966995120048523
+      },
+      {
+        "word": " I",
+        "start": 2.18,
+        "end": 2.3,
+        "probability": 0.9898402690887451
+      },
+      {
+        "word": " have",
+        "start": 2.3,
+        "end": 2.46,
+        "probability": 0.7556797862052917
+      },
+      {
+        "word": " to",
+        "start": 2.46,
+        "end": 2.56,
+        "probability": 0.9910739064216614
+      },
+      {
+        "word": " be",
+        "start": 2.56,
+        "end": 2.72,
+        "probability": 0.9039961695671082
+      },
+      {
+        "word": " fast.",
+        "start": 2.72,
+        "end": 3.04,
+        "probability": 0.348127156496048
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 303.11853647232056,
+    "text": "All right, so we should start, um, let's see, we're gonna see if she can reach up and tackle the planet.",
+    "confidence": 0.6962643499885287,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 7.2,
+    "transcription_time": 18.979532957077026,
+    "words": [
+      {
+        "word": " All",
+        "start": 0.0,
+        "end": 0.72,
+        "probability": 0.11190148442983627
+      },
+      {
+        "word": " right,",
+        "start": 0.72,
+        "end": 2.0,
+        "probability": 0.9969322681427002
+      },
+      {
+        "word": " so",
+        "start": 2.0,
+        "end": 2.24,
+        "probability": 0.9652210474014282
+      },
+      {
+        "word": " we",
+        "start": 2.24,
+        "end": 2.54,
+        "probability": 0.7711958885192871
+      },
+      {
+        "word": " should",
+        "start": 2.54,
+        "end": 2.76,
+        "probability": 0.9399431347846985
+      },
+      {
+        "word": " start,",
+        "start": 2.76,
+        "end": 3.06,
+        "probability": 0.9842886328697205
+      },
+      {
+        "word": " um,",
+        "start": 3.12,
+        "end": 3.5,
+        "probability": 0.26067838072776794
+      },
+      {
+        "word": " let's",
+        "start": 3.62,
+        "end": 4.1,
+        "probability": 0.683349221944809
+      },
+      {
+        "word": " see,",
+        "start": 4.1,
+        "end": 4.2,
+        "probability": 0.9964357614517212
+      },
+      {
+        "word": " we're",
+        "start": 4.24,
+        "end": 4.42,
+        "probability": 0.992368757724762
+      },
+      {
+        "word": " gonna",
+        "start": 4.42,
+        "end": 4.5,
+        "probability": 0.3448958098888397
+      },
+      {
+        "word": " see",
+        "start": 4.5,
+        "end": 4.7,
+        "probability": 0.13958019018173218
+      },
+      {
+        "word": " if",
+        "start": 4.7,
+        "end": 4.74,
+        "probability": 0.9339632987976074
+      },
+      {
+        "word": " she",
+        "start": 4.74,
+        "end": 4.92,
+        "probability": 0.7060574889183044
+      },
+      {
+        "word": " can",
+        "start": 4.92,
+        "end": 4.96,
+        "probability": 0.985725998878479
+      },
+      {
+        "word": " reach",
+        "start": 4.96,
+        "end": 5.2,
+        "probability": 0.6162952780723572
+      },
+      {
+        "word": " up",
+        "start": 5.2,
+        "end": 5.62,
+        "probability": 0.8517282009124756
+      },
+      {
+        "word": " and",
+        "start": 5.62,
+        "end": 5.76,
+        "probability": 0.9041851758956909
+      },
+      {
+        "word": " tackle",
+        "start": 5.76,
+        "end": 6.0,
+        "probability": 0.06107216328382492
+      },
+      {
+        "word": " the",
+        "start": 6.0,
+        "end": 6.14,
+        "probability": 0.38731256127357483
+      },
+      {
+        "word": " planet.",
+        "start": 6.14,
+        "end": 6.34,
+        "probability": 0.9884206056594849
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 313.00488233566284,
+    "text": "Actually, I'll hang up.",
+    "confidence": 0.5467170886695385,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 5.8,
+    "transcription_time": 18.895836353302002,
+    "words": [
+      {
+        "word": " Actually,",
+        "start": 1.0,
+        "end": 1.36,
+        "probability": 0.2963383197784424
+      },
+      {
+        "word": " I'll",
+        "start": 1.4,
+        "end": 1.6,
+        "probability": 0.7183249294757843
+      },
+      {
+        "word": " hang",
+        "start": 1.6,
+        "end": 1.7,
+        "probability": 0.23635347187519073
+      },
+      {
+        "word": " up.",
+        "start": 1.7,
+        "end": 1.94,
+        "probability": 0.9358516335487366
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 319.22407960891724,
+    "text": "Okay, all right, captain, captain, 10-7-8 radio, we can go in and out, in progress, right to where we're at.  We're at five hours, you know that, right?  Double, can I move?",
+    "confidence": 0.5919083175184128,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 9.9,
+    "transcription_time": 25.852903127670288,
+    "words": [
+      {
+        "word": " Okay,",
+        "start": 0.3,
+        "end": 0.84,
+        "probability": 0.45590370893478394
+      },
+      {
+        "word": " all",
+        "start": 0.92,
+        "end": 1.16,
+        "probability": 0.520848274230957
+      },
+      {
+        "word": " right,",
+        "start": 1.16,
+        "end": 1.34,
+        "probability": 0.9852485060691833
+      },
+      {
+        "word": " captain,",
+        "start": 1.34,
+        "end": 1.68,
+        "probability": 5.792152296635322e-05
+      },
+      {
+        "word": " captain,",
+        "start": 1.82,
+        "end": 2.02,
+        "probability": 0.25784987211227417
+      },
+      {
+        "word": " 10",
+        "start": 2.06,
+        "end": 2.32,
+        "probability": 0.32508009672164917
+      },
+      {
+        "word": "-7",
+        "start": 2.32,
+        "end": 2.62,
+        "probability": 0.9472760260105133
+      },
+      {
+        "word": "-8",
+        "start": 2.62,
+        "end": 2.78,
+        "probability": 0.7355621755123138
+      },
+      {
+        "word": " radio,",
+        "start": 2.78,
+        "end": 3.1,
+        "probability": 0.5901315808296204
+      },
+      {
+        "word": " we",
+        "start": 3.2,
+        "end": 3.38,
+        "probability": 0.7901860475540161
+      },
+      {
+        "word": " can",
+        "start": 3.38,
+        "end": 3.38,
+        "probability": 0.634153425693512
+      },
+      {
+        "word": " go",
+        "start": 3.38,
+        "end": 3.6,
+        "probability": 0.649139404296875
+      },
+      {
+        "word": " in",
+        "start": 3.6,
+        "end": 3.7,
+        "probability": 0.3012426197528839
+      },
+      {
+        "word": " and",
+        "start": 3.7,
+        "end": 3.76,
+        "probability": 0.8753164410591125
+      },
+      {
+        "word": " out,",
+        "start": 3.76,
+        "end": 4.0,
+        "probability": 0.995230495929718
+      },
+      {
+        "word": " in",
+        "start": 4.02,
+        "end": 4.4,
+        "probability": 0.9032723307609558
+      },
+      {
+        "word": " progress,",
+        "start": 4.4,
+        "end": 4.78,
+        "probability": 0.977573037147522
+      },
+      {
+        "word": " right",
+        "start": 5.0,
+        "end": 5.18,
+        "probability": 0.7957806587219238
+      },
+      {
+        "word": " to",
+        "start": 5.18,
+        "end": 5.38,
+        "probability": 0.6483134627342224
+      },
+      {
+        "word": " where",
+        "start": 5.38,
+        "end": 5.52,
+        "probability": 0.11470908671617508
+      },
+      {
+        "word": " we're",
+        "start": 5.52,
+        "end": 5.8,
+        "probability": 0.5539534389972687
+      },
+      {
+        "word": " at.",
+        "start": 5.8,
+        "end": 5.92,
+        "probability": 0.6621612906455994
+      },
+      {
+        "word": " We're",
+        "start": 6.22,
+        "end": 6.34,
+        "probability": 0.5334396213293076
+      },
+      {
+        "word": " at",
+        "start": 6.34,
+        "end": 6.34,
+        "probability": 0.3036436438560486
+      },
+      {
+        "word": " five",
+        "start": 6.34,
+        "end": 6.34,
+        "probability": 0.4666632115840912
+      },
+      {
+        "word": " hours,",
+        "start": 6.34,
+        "end": 6.72,
+        "probability": 0.7617705464363098
+      },
+      {
+        "word": " you",
+        "start": 6.8,
+        "end": 6.92,
+        "probability": 0.14461573958396912
+      },
+      {
+        "word": " know",
+        "start": 6.92,
+        "end": 7.12,
+        "probability": 0.6407676935195923
+      },
+      {
+        "word": " that,",
+        "start": 7.12,
+        "end": 7.28,
+        "probability": 0.4053722023963928
+      },
+      {
+        "word": " right?",
+        "start": 7.4,
+        "end": 7.64,
+        "probability": 0.9212116003036499
+      },
+      {
+        "word": " Double,",
+        "start": 7.74,
+        "end": 8.04,
+        "probability": 0.07928739488124847
+      },
+      {
+        "word": " can",
+        "start": 8.24,
+        "end": 8.62,
+        "probability": 0.2248251587152481
+      },
+      {
+        "word": " I",
+        "start": 8.62,
+        "end": 8.9,
+        "probability": 0.9962356686592102
+      },
+      {
+        "word": " move?",
+        "start": 8.9,
+        "end": 9.16,
+        "probability": 0.9280604124069214
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 318.4713706970215,
+    "text": "Thank you.",
+    "confidence": 0.6013954728841782,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 0.8,
+    "transcription_time": 60.87731099128723,
+    "words": [
+      {
+        "word": " Thank",
+        "start": 0.0,
+        "end": 0.14,
+        "probability": 0.2048129141330719
+      },
+      {
+        "word": " you.",
+        "start": 0.14,
+        "end": 0.14,
+        "probability": 0.9979780316352844
+      }
+    ],
+    "speaker_id": "speaker_11",
+    "metadata": {}
+  },
+  {
+    "timestamp": 335.3075625896454,
+    "text": "Good night. We'll be right back.",
+    "confidence": 0.6445034891366959,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 2.6,
+    "transcription_time": 18.78274631500244,
+    "words": [
+      {
+        "word": " Good",
+        "start": 0.0,
+        "end": 0.18,
+        "probability": 0.05678011476993561
+      },
+      {
+        "word": " night.",
+        "start": 0.18,
+        "end": 0.26,
+        "probability": 0.9425087571144104
+      },
+      {
+        "word": " We'll",
+        "start": 0.46,
+        "end": 0.74,
+        "probability": 0.36037082970142365
+      },
+      {
+        "word": " be",
+        "start": 0.74,
+        "end": 0.88,
+        "probability": 0.8597262501716614
+      },
+      {
+        "word": " right",
+        "start": 0.88,
+        "end": 1.0,
+        "probability": 0.6603602170944214
+      },
+      {
+        "word": " back.",
+        "start": 1.0,
+        "end": 1.46,
+        "probability": 0.9872747659683228
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 340.63577103614807,
+    "text": "All right, so, happily stand, what do we got on that, uh...",
+    "confidence": 0.6859081865598758,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 3.3,
+    "transcription_time": 19.46770477294922,
+    "words": [
+      {
+        "word": " All",
+        "start": 0.0,
+        "end": 0.1,
+        "probability": 0.4301757216453552
+      },
+      {
+        "word": " right,",
+        "start": 0.1,
+        "end": 0.22,
+        "probability": 0.998325526714325
+      },
+      {
+        "word": " so,",
+        "start": 0.24,
+        "end": 0.44,
+        "probability": 0.9835081100463867
+      },
+      {
+        "word": " happily",
+        "start": 0.48,
+        "end": 0.86,
+        "probability": 0.17287395894527435
+      },
+      {
+        "word": " stand,",
+        "start": 0.86,
+        "end": 1.26,
+        "probability": 0.043607570230960846
+      },
+      {
+        "word": " what",
+        "start": 1.4,
+        "end": 1.6,
+        "probability": 0.9348239302635193
+      },
+      {
+        "word": " do",
+        "start": 1.6,
+        "end": 1.66,
+        "probability": 0.5453580021858215
+      },
+      {
+        "word": " we",
+        "start": 1.66,
+        "end": 1.78,
+        "probability": 0.9042388200759888
+      },
+      {
+        "word": " got",
+        "start": 1.78,
+        "end": 1.9,
+        "probability": 0.6474274396896362
+      },
+      {
+        "word": " on",
+        "start": 1.9,
+        "end": 2.02,
+        "probability": 0.9935966730117798
+      },
+      {
+        "word": " that,",
+        "start": 2.02,
+        "end": 2.22,
+        "probability": 0.9711219668388367
+      },
+      {
+        "word": " uh...",
+        "start": 2.28,
+        "end": 2.66,
+        "probability": 0.6058405190706253
+      }
+    ],
+    "speaker_id": "speaker_1",
+    "metadata": {}
+  },
+  {
+    "timestamp": 343.8439178466797,
+    "text": "We need to stand.",
+    "confidence": 0.5147022251039743,
+    "language": "en",
+    "language_probability": 1,
+    "duration": 1.3,
+    "transcription_time": 19.18111228942871,
+    "words": [
+      {
+        "word": " We",
+        "start": 0.0,
+        "end": 0.08,
+        "probability": 0.08815162628889084
+      },
+      {
+        "word": " need",
+        "start": 0.08,
+        "end": 0.16,
+        "probability": 0.21281419694423676
+      },
+      {
+        "word": " to",
+        "start": 0.16,
+        "end": 0.24,
+        "probability": 0.9520806074142456
+      },
+      {
+        "word": " stand.",
+        "start": 0.24,
+        "end": 0.52,
+        "probability": 0.8057624697685242
+      }
+    ],
+    "speaker_id": "speaker_2",
+    "metadata": {}
+  }
+]

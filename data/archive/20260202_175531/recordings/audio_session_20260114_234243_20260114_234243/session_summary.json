@@ -1,0 +1,30 @@
+{
+  "session_id": "audio_session_20260114_234243_20260114_234243",
+  "session_name": "audio_session_20260114_234243",
+  "duration_seconds": 876.1369123458862,
+  "duration": "14:36",
+  "total_transcripts": 31,
+  "output_dir": "data/recordings/audio_session_20260114_234243_20260114_234243",
+  "engagement": {
+    "speaker_1": {
+      "engagement_score": 40.2,
+      "participation_score": 1.5,
+      "consistency_score": 100.0,
+      "speaking_time_seconds": 3.0,
+      "utterance_count": 2,
+      "avg_utterance_duration": 1.5,
+      "longest_utterance": 1.7,
+      "interruptions": 1
+    },
+    "speaker_2": {
+      "engagement_score": 49.5,
+      "participation_score": 100,
+      "consistency_score": 0,
+      "speaking_time_seconds": 400.1,
+      "utterance_count": 29,
+      "avg_utterance_duration": 13.8,
+      "longest_utterance": 65.5,
+      "interruptions": 1
+    }
+  }
+}

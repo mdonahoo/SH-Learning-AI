@@ -1,0 +1,70 @@
+{
+  "session_id": "audio_session_20260115_151844_20260115_151844",
+  "session_name": "audio_session_20260115_151844",
+  "duration_seconds": 2152.0647988319397,
+  "duration": "35:52",
+  "total_transcripts": 106,
+  "output_dir": "data/recordings/audio_session_20260115_151844_20260115_151844",
+  "engagement": {
+    "speaker_1": {
+      "engagement_score": 27.6,
+      "participation_score": 59.3,
+      "consistency_score": 0,
+      "speaking_time_seconds": 64.1,
+      "utterance_count": 26,
+      "avg_utterance_duration": 2.47,
+      "longest_utterance": 4.6,
+      "interruptions": 7
+    },
+    "speaker_2": {
+      "engagement_score": 48.0,
+      "participation_score": 100,
+      "consistency_score": 0,
+      "speaking_time_seconds": 446.8,
+      "utterance_count": 54,
+      "avg_utterance_duration": 8.27,
+      "longest_utterance": 38.5,
+      "interruptions": 6
+    },
+    "speaker_3": {
+      "engagement_score": 14.5,
+      "participation_score": 33.1,
+      "consistency_score": 0,
+      "speaking_time_seconds": 35.8,
+      "utterance_count": 7,
+      "avg_utterance_duration": 5.11,
+      "longest_utterance": 10.0,
+      "interruptions": 4
+    },
+    "speaker_4": {
+      "engagement_score": 42.2,
+      "participation_score": 5.5,
+      "consistency_score": 100.0,
+      "speaking_time_seconds": 5.9,
+      "utterance_count": 2,
+      "avg_utterance_duration": 2.95,
+      "longest_utterance": 3.8,
+      "interruptions": 1
+    },
+    "speaker_5": {
+      "engagement_score": 36.0,
+      "participation_score": 75.0,
+      "consistency_score": 0,
+      "speaking_time_seconds": 81.1,
+      "utterance_count": 9,
+      "avg_utterance_duration": 9.01,
+      "longest_utterance": 23.3,
+      "interruptions": 3
+    },
+    "speaker_6": {
+      "engagement_score": 5.1,
+      "participation_score": 14.1,
+      "consistency_score": 0,
+      "speaking_time_seconds": 15.3,
+      "utterance_count": 8,
+      "avg_utterance_duration": 1.91,
+      "longest_utterance": 3.9,
+      "interruptions": 4
+    }
+  }
+}

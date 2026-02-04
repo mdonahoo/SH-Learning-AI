@@ -221,13 +221,21 @@ class BrowserMimicWebSocket:
         self.station_handlers = StationHandlers()
         self.crew_tracker = CrewPerformanceTracker()
 
-    def connect(self, screen_name: str = "Observer", is_main_viewer: bool = True) -> bool:
+    def connect(
+        self,
+        screen_name: str = "AI-Observer",
+        is_main_viewer: bool = False,
+        user_name: Optional[str] = None,
+        call_sign: Optional[str] = None
+    ) -> bool:
         """
         Connect to WebSocket mimicking browser.
 
         Args:
-            screen_name: Screen/station name
+            screen_name: Screen/station name shown on GM screen
             is_main_viewer: Whether this is a main viewer
+            user_name: Display name in UserInfo (defaults to screen_name)
+            call_sign: Call sign in UserInfo (defaults to screen_name uppercased)
         """
         try:
             logger.info(f"Connecting to {self.ws_url} as {screen_name}")
@@ -248,7 +256,10 @@ class BrowserMimicWebSocket:
                 self.connected = True
 
                 # Immediately identify like the browser does
-                self._send_identification(screen_name, is_main_viewer)
+                self._send_identification(
+                    screen_name, is_main_viewer,
+                    user_name=user_name, call_sign=call_sign
+                )
 
                 # Register for packets after short delay (like browser)
                 threading.Timer(0.1, self._register_packets).start()
@@ -276,15 +287,18 @@ class BrowserMimicWebSocket:
             # Wait for connection
             for i in range(10):
                 if self.connected:
-                    logger.info("✅ Successfully connected and identified")
+                    logger.info("Successfully connected and identified")
                     return True
                 time.sleep(0.5)
 
-            logger.warning("Connection timeout")
+            logger.warning(
+                f"Connection to {self.ws_url} timed out after 5s. "
+                f"WebSocket thread alive: {self.ws_thread.is_alive() if self.ws_thread else 'N/A'}"
+            )
             return False
 
         except Exception as e:
-            logger.error(f"Connection failed: {e}")
+            logger.error(f"Connection to {self.ws_url} failed: {e}", exc_info=True)
             return False
 
     def start_event_tracking(self):
@@ -336,9 +350,18 @@ class BrowserMimicWebSocket:
         """Get all tracked events."""
         return self.tracked_events.copy()
 
-    def _send_identification(self, screen_name: str, is_main_viewer: bool):
+    def _send_identification(
+        self,
+        screen_name: str,
+        is_main_viewer: bool,
+        user_name: Optional[str] = None,
+        call_sign: Optional[str] = None
+    ):
         """Send identification exactly like browser."""
         # Match the browser's Identify() function format
+        display_name = user_name or screen_name
+        display_callsign = call_sign or screen_name.upper().replace(" ", "-")
+
         identify_data = {
             "ScreenName": screen_name,
             "Location": "Bridge",
@@ -346,14 +369,14 @@ class BrowserMimicWebSocket:
             "Guid": self.guid,
             "IsMainViewer": is_main_viewer,
             "UserInfo": {
-                "Name": "AI Crew Member",
-                "CallSign": "AI-CREW"
+                "Name": display_name,
+                "CallSign": display_callsign
             }
         }
 
         # Send as JSON string in Value field
         self._send("IDENTIFY", json.dumps(identify_data))
-        logger.info(f"Sent IDENTIFY as {screen_name}")
+        logger.info(f"Sent IDENTIFY as {screen_name} (Name={display_name}, CallSign={display_callsign})")
 
     def _register_packets(self):
         """Register for packet types like browser's SendPacketTypes()."""

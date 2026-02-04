@@ -1,0 +1,1567 @@
+{
+  "metadata": {
+    "created_at": "2026-01-31T20:30:42.624054",
+    "recording_file": "recording_20260131_202624.wav",
+    "duration_seconds": 48.36,
+    "speaker_count": 2,
+    "segment_count": 12,
+    "auto_title": "Patrol mission briefing and system check",
+    "processing_time_seconds": 258.5,
+    "step_timings": {
+      "convert_and_save": 0.33,
+      "waveform": 0.0,
+      "transcription": 3.83,
+      "diarization": 1.1,
+      "sentiment": 0.0,
+      "role_inference": 0.0,
+      "communication_quality": 0.0,
+      "scorecards": 0.0,
+      "confidence": 0.0,
+      "learning": 0.0,
+      "seven_habits": 0.01,
+      "training_recommendations": 0.0,
+      "llm_narrative": 87.68,
+      "llm_story": 97.9
+    }
+  },
+  "results": {
+    "transcription": [
+      {
+        "start_time": 3.22,
+        "end_time": 5.18,
+        "text": "All stations report readiness.",
+        "confidence": 0.895263671875,
+        "speaker_id": "speaker_1",
+        "speaker_role": null,
+        "sentiment": {
+          "stress_level": 0.1906,
+          "stress_label": "low",
+          "emotion": "calm",
+          "sentiment": "positive",
+          "sentiment_score": 0.6189,
+          "signals": {
+            "speech_rate_wps": 2.04,
+            "lexicon_score": 0.0,
+            "confidence_signal": 0.0,
+            "prosodic_score": 0.0,
+            "dynamics_score": 1.0
+          }
+        }
+      },
+      {
+        "start_time": 5.48,
+        "end_time": 7.58,
+        "text": "Helm ready captain, all",
+        "confidence": 0.8761138916015625,
+        "speaker_id": "speaker_1",
+        "speaker_role": null,
+        "sentiment": {
+          "stress_level": 0.1804,
+          "stress_label": "low",
+          "emotion": "calm",
+          "sentiment": "positive",
+          "sentiment_score": 0.6393,
+          "signals": {
+            "speech_rate_wps": 1.9,
+            "lexicon_score": 0.0,
+            "confidence_signal": 0.0,
+            "prosodic_score": 0.0,
+            "dynamics_score": 1.0
+          }
+        }
+      },
+      {
+        "start_time": 7.58,
+        "end_time": 9.68,
+        "text": "maneuvering thrusters online warp",
+        "confidence": 0.8735504150390625,
+        "speaker_id": "speaker_1",
+        "speaker_role": null,
+        "sentiment": {
+          "stress_level": 0.1804,
+          "stress_label": "low",
+          "emotion": "calm",
+          "sentiment": "positive",
+          "sentiment_score": 0.6393,
+          "signals": {
+            "speech_rate_wps": 1.9,
+            "lexicon_score": 0.0,
+            "confidence_signal": 0.0,
+            "prosodic_score": 0.0,
+            "dynamics_score": 1.0
+          }
+        }
+      },
+      {
+        "start_time": 9.68,
+        "end_time": 10.76,
+        "text": "drive standing by",
+        "confidence": 0.984619140625,
+        "speaker_id": "speaker_1",
+        "speaker_role": null,
+        "sentiment": {
+          "stress_level": 0.3044,
+          "stress_label": "moderate",
+          "emotion": "focused",
+          "sentiment": "positive",
+          "sentiment_score": 0.3911,
+          "signals": {
+            "speech_rate_wps": 2.78,
+            "lexicon_score": 0.0,
+            "confidence_signal": 0.0,
+            "prosodic_score": 0.4,
+            "dynamics_score": 1.0
+          }
+        }
+      },
+      {
+        "start_time": 10.76,
+        "end_time": 14.62,
+        "text": "Tactical systems green across the board shields",
+        "confidence": 0.9167567661830357,
+        "speaker_id": "speaker_2",
+        "speaker_role": null,
+        "sentiment": {
+          "stress_level": 0.1735,
+          "stress_label": "low",
+          "emotion": "calm",
+          "sentiment": "positive",
+          "sentiment_score": 0.653,
+          "signals": {
+            "speech_rate_wps": 1.81,
+            "lexicon_score": 0.0,
+            "confidence_signal": 0.0,
+            "prosodic_score": 0.0,
+            "dynamics_score": 1.0
+          }
+        }
+      },
+      {
+        "start_time": 14.62,
+        "end_time": 19.38,
+        "text": "at 100 percent weapons assistance armed and ready Science",
+        "confidence": 0.8594648573133681,
+        "speaker_id": "speaker_2",
+        "speaker_role": null,
+        "sentiment": {
+          "stress_level": 0.3593,
+          "stress_label": "moderate",
+          "emotion": "focused",
+          "sentiment": "positive",
+          "sentiment_score": 0.2814,
+          "signals": {
+            "speech_rate_wps": 1.89,
+            "lexicon_score": 0.6,
+            "confidence_signal": 0.0,
+            "prosodic_score": 0.0,
+            "dynamics_score": 1.0
+          }
+        }
+      },
+      {
+        "start_time": 19.38,
+        "end_time": 23.78,
+        "text": "station operational long range sensors calibrated short",
+        "confidence": 0.9250662667410714,
+        "speaker_id": "speaker_1",
+        "speaker_role": null,
+        "sentiment": {
+          "stress_level": 0.1568,
+          "stress_label": "low",
+          "emotion": "calm",
+          "sentiment": "positive",
+          "sentiment_score": 0.6864,
+          "signals": {
+            "speech_rate_wps": 1.59,
+            "lexicon_score": 0.0,
+            "confidence_signal": 0.0,
+            "prosodic_score": 0.0,
+            "dynamics_score": 1.0
+          }
+        }
+      },
+      {
+        "start_time": 23.78,
+        "end_time": 25.04,
+        "text": "range sensors on line",
+        "confidence": 0.7625312805175781,
+        "speaker_id": "speaker_1",
+        "speaker_role": null,
+        "sentiment": {
+          "stress_level": 0.3392,
+          "stress_label": "moderate",
+          "emotion": "focused",
+          "sentiment": "positive",
+          "sentiment_score": 0.3216,
+          "signals": {
+            "speech_rate_wps": 3.17,
+            "lexicon_score": 0.0,
+            "confidence_signal": 0.4464,
+            "prosodic_score": 0.0,
+            "dynamics_score": 1.0
+          }
+        }
+      },
+      {
+        "start_time": 25.04,
+        "end_time": 31.38,
+        "text": "Engineering reports all system nominal power distribution optimal reactor running 98 % efficiency",
+        "confidence": 0.8572695071880634,
+        "speaker_id": "speaker_1",
+        "speaker_role": null,
+        "sentiment": {
+          "stress_level": 0.1874,
+          "stress_label": "low",
+          "emotion": "calm",
+          "sentiment": "positive",
+          "sentiment_score": 0.6252,
+          "signals": {
+            "speech_rate_wps": 2.05,
+            "lexicon_score": 0.0,
+            "confidence_signal": 0.0,
+            "prosodic_score": 0.0,
+            "dynamics_score": 0.9741
+          }
+        }
+      },
+      {
+        "start_time": 32.12,
+        "end_time": 36.84,
+        "text": "Operations online captain. All channels clear, communication protocols active",
+        "confidence": 0.3201941287878788,
+        "speaker_id": "speaker_1",
+        "speaker_role": null,
+        "sentiment": {
+          "stress_level": 0.3266,
+          "stress_label": "moderate",
+          "emotion": "focused",
+          "sentiment": "positive",
+          "sentiment_score": 0.3468,
+          "signals": {
+            "speech_rate_wps": 1.91,
+            "lexicon_score": 0.0,
+            "confidence_signal": 1.0,
+            "prosodic_score": 0.0,
+            "dynamics_score": 0.9741
+          }
+        }
+      },
+      {
+        "start_time": 36.84,
+        "end_time": 40.36,
+        "text": "Excellent! Crew we've",
+        "confidence": 0.7039566040039062,
+        "speaker_id": "speaker_1",
+        "speaker_role": null,
+        "sentiment": {
+          "stress_level": 0.3618,
+          "stress_label": "moderate",
+          "emotion": "focused",
+          "sentiment": "positive",
+          "sentiment_score": 0.2764,
+          "signals": {
+            "speech_rate_wps": 0.85,
+            "lexicon_score": 0.0,
+            "confidence_signal": 0.8369,
+            "prosodic_score": 0.575,
+            "dynamics_score": 1.0
+          }
+        }
+      },
+      {
+        "start_time": 40.36,
+        "end_time": 42.64,
+        "text": "been assigned a long range patrol of the outer comm stations",
+        "confidence": 0.9790482954545454,
+        "speaker_id": "speaker_2",
+        "speaker_role": null,
+        "sentiment": {
+          "stress_level": 0.3877,
+          "stress_label": "moderate",
+          "emotion": "focused",
+          "sentiment": "positive",
+          "sentiment_score": 0.2246,
+          "signals": {
+            "speech_rate_wps": 4.82,
+            "lexicon_score": 0.0,
+            "confidence_signal": 0.0,
+            "prosodic_score": 0.0,
+            "dynamics_score": 1.0
+          }
+        }
+      }
+    ],
+    "full_text": "All stations report readiness. Helm ready captain, all maneuvering thrusters online warp drive standing by Tactical systems green across the board shields at 100 percent weapons assistance armed and ready Science station operational long range sensors calibrated short range sensors on line Engineering reports all system nominal power distribution optimal reactor running 98 % efficiency Operations online captain. All channels clear, communication protocols active Excellent! Crew we've been assigned a long range patrol of the outer comm stations",
+    "duration_seconds": 48.36,
+    "speakers": [
+      {
+        "speaker_id": "speaker_1",
+        "total_speaking_time": 26.7,
+        "utterance_count": 10,
+        "avg_utterance_duration": 2.67,
+        "role": null,
+        "engagement_score": null
+      },
+      {
+        "speaker_id": "speaker_2",
+        "total_speaking_time": 10.9,
+        "utterance_count": 3,
+        "avg_utterance_duration": 3.6333333333333333,
+        "role": null,
+        "engagement_score": null
+      }
+    ],
+    "communication_quality": {
+      "effective_count": 1,
+      "improvement_count": 0,
+      "effective_percentage": 100.0,
+      "patterns": [
+        {
+          "pattern_name": "explicit_threshold",
+          "category": "effective",
+          "description": "Explicit numeric threshold provided",
+          "count": 1,
+          "examples": [
+            {
+              "text": "at 100 percent weapons assistance armed and ready Science",
+              "speaker": "speaker_2",
+              "timestamp": 14.62
+            }
+          ],
+          "evidence_details": [
+            {
+              "text": "at 100 percent weapons assistance armed and ready Science",
+              "speaker": "speaker_2",
+              "timestamp": 14.62,
+              "matched_substring": "at 100 percent"
+            }
+          ]
+        }
+      ],
+      "total_utterances_assessed": 12,
+      "calculation_summary": "Assessed 12 utterances. Matched 1 to patterns (1 effective, 0 needs improvement). Effective % = 1/1 = 8.3%",
+      "evidence_details": [
+        {
+          "text": "at 100 percent weapons assistance armed and ready Science",
+          "speaker": "speaker_2",
+          "timestamp": 14.62,
+          "matched_substring": "at 100 percent",
+          "pattern_name": "explicit_threshold",
+          "category": "effective"
+        }
+      ]
+    },
+    "speaker_scorecards": [
+      {
+        "speaker_id": "speaker_1",
+        "role": "Captain/Command",
+        "utterance_count": 9,
+        "overall_score": 4.6,
+        "metrics": [
+          {
+            "name": "Protocol Adherence",
+            "score": 5,
+            "evidence": "Consistent use of protocols (3/9 utterances, 33.3%)",
+            "supporting_quotes": [
+              "[0:05] \"Helm ready captain, all\"",
+              "[0:09] \"drive standing by\"",
+              "[0:32] \"Operations online captain. All channels clear, communication protocols active\""
+            ],
+            "threshold_info": "Score 5: \u226530% | Score 4: \u226520% | Score 3: \u226510% | Score 2: \u22655% | Score 1: <5%",
+            "pattern_breakdown": {
+              "acknowledgments": 0,
+              "titles": 2,
+              "status": 1,
+              "confirmations": 0
+            },
+            "calculation_details": "Counted utterances containing protocol keywords. Rate = 3/9 = 33.3%. Threshold for score 5: >=30%"
+          },
+          {
+            "name": "Communication Clarity",
+            "score": 5,
+            "evidence": "Consistently clear (confidence: 0.80)",
+            "supporting_quotes": [
+              "[0:03] \"All stations report readiness.\"",
+              "[0:05] \"Helm ready captain, all\"",
+              "[0:07] \"maneuvering thrusters online warp\""
+            ],
+            "threshold_info": "Score 5: \u226580% | Score 4: \u226570% | Score 3: \u226560% | Score 2: \u226550% | Score 1: <50%",
+            "pattern_breakdown": {
+              "incomplete_sentences": 0,
+              "filler_words": 0,
+              "clear_utterances": 8,
+              "unclear_utterances": 1
+            },
+            "calculation_details": "Clarity = (confidence \u00d7 0.6) + (completeness \u00d7 0.2) + (no-fillers \u00d7 0.2). Confidence: 0.80, Incomplete: 0.0%, Fillers: 0.0%. Final clarity: 88.0%"
+          },
+          {
+            "name": "Response Time",
+            "score": 4,
+            "evidence": "High engagement (9 utterances, no command-response pairs detected)",
+            "supporting_quotes": [
+              "[0:03] \"All stations report readiness.\"",
+              "[0:05] \"Helm ready captain, all\"",
+              "[0:07] \"maneuvering thrusters online warp\""
+            ],
+            "threshold_info": "Engagement-based: Score 4: \u226520% | Score 3: \u226510% | Score 2: <10%",
+            "pattern_breakdown": {
+              "utterance_count": 9,
+              "total_utterances": 12
+            },
+            "calculation_details": "No command-response pairs detected. Using engagement rate: 9/12 = 75.0%"
+          },
+          {
+            "name": "Technical Accuracy",
+            "score": 5,
+            "evidence": "Rich technical vocabulary (4 technical utterances)",
+            "supporting_quotes": [
+              "[0:07] \"maneuvering thrusters online warp\"",
+              "[0:19] \"station operational long range sensors calibrated short\"",
+              "[0:23] \"range sensors on line\"",
+              "[0:25] \"Engineering reports all system nominal power distribution optimal reactor runnin...\""
+            ],
+            "threshold_info": "Score 5: \u226540% | Score 4: \u226525% | Score 3: \u226515% | Score 2: \u22655% | Score 1: <5%",
+            "pattern_breakdown": {
+              "navigation": 2,
+              "systems": 2,
+              "weapons": 0,
+              "sensors": 0,
+              "spatial": 0,
+              "timing": 0
+            },
+            "calculation_details": "Counted utterances with technical terminology. Rate = 4/9 = 44.4%. Categories: navigation=2, systems=2"
+          },
+          {
+            "name": "Team Coordination",
+            "score": 4,
+            "evidence": "Good coordination (3 coordination utterances)",
+            "supporting_quotes": [
+              "[0:03] \"All stations report readiness.\"",
+              "[0:05] \"Helm ready captain, all\"",
+              "[0:09] \"drive standing by\""
+            ],
+            "threshold_info": "Score 5: \u226535% | Score 4: \u226525% | Score 3: \u226515% | Score 2: \u22655% | Score 1: <5%",
+            "pattern_breakdown": {
+              "assistance": 0,
+              "readiness": 2,
+              "acknowledgment": 0,
+              "team_language": 0,
+              "status_sharing": 1
+            },
+            "calculation_details": "Counted utterances with coordination language. Rate = 3/9 = 33.3%. Types: readiness=2, status_sharing=1"
+          }
+        ],
+        "strengths": [
+          "Protocol Adherence: Consistent use of protocols (3/9 utterances, 33.3%)",
+          "Communication Clarity: Consistently clear (confidence: 0.80)",
+          "Response Time: High engagement (9 utterances, no command-response pairs detected)"
+        ],
+        "areas_for_improvement": []
+      },
+      {
+        "speaker_id": "speaker_2",
+        "role": "Crew Member",
+        "utterance_count": 3,
+        "overall_score": 4.6,
+        "metrics": [
+          {
+            "name": "Protocol Adherence",
+            "score": 5,
+            "evidence": "Consistent use of protocols (1/3 utterances, 33.3%)",
+            "supporting_quotes": [
+              "[0:14] \"at 100 percent weapons assistance armed and ready Science\""
+            ],
+            "threshold_info": "Score 5: \u226530% | Score 4: \u226520% | Score 3: \u226510% | Score 2: \u22655% | Score 1: <5%",
+            "pattern_breakdown": {
+              "acknowledgments": 0,
+              "titles": 0,
+              "status": 1,
+              "confirmations": 0
+            },
+            "calculation_details": "Counted utterances containing protocol keywords. Rate = 1/3 = 33.3%. Threshold for score 5: >=30%"
+          },
+          {
+            "name": "Communication Clarity",
+            "score": 5,
+            "evidence": "Consistently clear (confidence: 0.92)",
+            "supporting_quotes": [
+              "[0:10] \"Tactical systems green across the board shields\"",
+              "[0:14] \"at 100 percent weapons assistance armed and ready Science\"",
+              "[0:40] \"been assigned a long range patrol of the outer comm stations\""
+            ],
+            "threshold_info": "Score 5: \u226580% | Score 4: \u226570% | Score 3: \u226560% | Score 2: \u226550% | Score 1: <50%",
+            "pattern_breakdown": {
+              "incomplete_sentences": 0,
+              "filler_words": 0,
+              "clear_utterances": 3,
+              "unclear_utterances": 0
+            },
+            "calculation_details": "Clarity = (confidence \u00d7 0.6) + (completeness \u00d7 0.2) + (no-fillers \u00d7 0.2). Confidence: 0.92, Incomplete: 0.0%, Fillers: 0.0%. Final clarity: 95.1%"
+          },
+          {
+            "name": "Response Time",
+            "score": 4,
+            "evidence": "High engagement (3 utterances, no command-response pairs detected)",
+            "supporting_quotes": [
+              "[0:10] \"Tactical systems green across the board shields\"",
+              "[0:14] \"at 100 percent weapons assistance armed and ready Science\"",
+              "[0:40] \"been assigned a long range patrol of the outer comm stations\""
+            ],
+            "threshold_info": "Engagement-based: Score 4: \u226520% | Score 3: \u226510% | Score 2: <10%",
+            "pattern_breakdown": {
+              "utterance_count": 3,
+              "total_utterances": 12
+            },
+            "calculation_details": "No command-response pairs detected. Using engagement rate: 3/12 = 25.0%"
+          },
+          {
+            "name": "Technical Accuracy",
+            "score": 5,
+            "evidence": "Rich technical vocabulary (3 technical utterances)",
+            "supporting_quotes": [
+              "[0:10] \"Tactical systems green across the board shields\"",
+              "[0:14] \"at 100 percent weapons assistance armed and ready Science\"",
+              "[0:40] \"been assigned a long range patrol of the outer comm stations\""
+            ],
+            "threshold_info": "Score 5: \u226540% | Score 4: \u226525% | Score 3: \u226515% | Score 2: \u22655% | Score 1: <5%",
+            "pattern_breakdown": {
+              "navigation": 1,
+              "systems": 1,
+              "weapons": 1,
+              "sensors": 0,
+              "spatial": 0,
+              "timing": 0
+            },
+            "calculation_details": "Counted utterances with technical terminology. Rate = 3/3 = 100.0%. Categories: navigation=1, systems=1, weapons=1"
+          },
+          {
+            "name": "Team Coordination",
+            "score": 4,
+            "evidence": "Good coordination (1 coordination utterances)",
+            "supporting_quotes": [
+              "[0:14] \"at 100 percent weapons assistance armed and ready Science\""
+            ],
+            "threshold_info": "Score 5: \u226535% | Score 4: \u226525% | Score 3: \u226515% | Score 2: \u22655% | Score 1: <5%",
+            "pattern_breakdown": {
+              "assistance": 0,
+              "readiness": 1,
+              "acknowledgment": 0,
+              "team_language": 0,
+              "status_sharing": 0
+            },
+            "calculation_details": "Counted utterances with coordination language. Rate = 1/3 = 33.3%. Types: readiness=1"
+          }
+        ],
+        "strengths": [
+          "Protocol Adherence: Consistent use of protocols (1/3 utterances, 33.3%)",
+          "Communication Clarity: Consistently clear (confidence: 0.92)",
+          "Response Time: High engagement (3 utterances, no command-response pairs detected)"
+        ],
+        "areas_for_improvement": []
+      }
+    ],
+    "role_assignments": [
+      {
+        "speaker_id": "speaker_1",
+        "role": "Captain/Command",
+        "confidence": 0.892,
+        "voice_confidence": 0.742,
+        "role_confidence": 0.63,
+        "evidence_factor": 0.45,
+        "keyword_matches": 12,
+        "key_indicators": [
+          "\"online\" (2)",
+          "\"sensors\" (2)",
+          "\"all stations report\" (1)",
+          "\"ready\" (1)",
+          "\"warp\" (1)"
+        ],
+        "example_utterances": [
+          {
+            "timestamp": 9.68,
+            "text": "drive standing by",
+            "confidence": 0.984619140625
+          },
+          {
+            "timestamp": 19.38,
+            "text": "station operational long range sensors calibrated short",
+            "confidence": 0.9250662667410714
+          },
+          {
+            "timestamp": 3.22,
+            "text": "All stations report readiness.",
+            "confidence": 0.895263671875
+          },
+          {
+            "timestamp": 5.48,
+            "text": "Helm ready captain, all",
+            "confidence": 0.8761138916015625
+          },
+          {
+            "timestamp": 7.58,
+            "text": "maneuvering thrusters online warp",
+            "confidence": 0.8735504150390625
+          }
+        ],
+        "methodology": "Captain indicators: +15.0% (1 station addresses, 3 commands, 0 questions)",
+        "telemetry_confidence": 0.15,
+        "evidence_count": 0,
+        "density_boost": 0.0,
+        "command_report_boost": 0.0,
+        "negative_adjustment": 0.0,
+        "captain_boost": 0.15
+      },
+      {
+        "speaker_id": "speaker_2",
+        "role": "Crew Member",
+        "confidence": 0.504,
+        "voice_confidence": 0.504,
+        "role_confidence": 0.31,
+        "evidence_factor": 0.15,
+        "keyword_matches": 4,
+        "key_indicators": [
+          "\"shields\" (1)",
+          "\"systems\" (1)",
+          "\"weapons\" (1)",
+          "\"ready\" (1)",
+          "2 types, 67% density, 25% of convo"
+        ],
+        "example_utterances": [
+          {
+            "timestamp": 40.36,
+            "text": "been assigned a long range patrol of the outer comm stations",
+            "confidence": 0.9790482954545454
+          },
+          {
+            "timestamp": 10.76,
+            "text": "Tactical systems green across the board shields",
+            "confidence": 0.9167567661830357
+          },
+          {
+            "timestamp": 14.62,
+            "text": "at 100 percent weapons assistance armed and ready Science",
+            "confidence": 0.8594648573133681
+          }
+        ],
+        "methodology": "No telemetry correlation evidence",
+        "telemetry_confidence": 0.0,
+        "evidence_count": 0,
+        "density_boost": 0.0,
+        "command_report_boost": 0.0,
+        "negative_adjustment": 0.0,
+        "captain_boost": 0.0
+      }
+    ],
+    "confidence_distribution": {
+      "total_utterances": 12,
+      "average_confidence": 0.829,
+      "median_confidence": 0.8761138916015625,
+      "buckets": [
+        {
+          "label": "90% and above",
+          "count": 4,
+          "percentage": 33.3
+        },
+        {
+          "label": "80% to 89%",
+          "count": 5,
+          "percentage": 41.7
+        },
+        {
+          "label": "70% to 79%",
+          "count": 2,
+          "percentage": 16.7
+        },
+        {
+          "label": "60% to 69%",
+          "count": 0,
+          "percentage": 0.0
+        },
+        {
+          "label": "Below 60%",
+          "count": 1,
+          "percentage": 8.3
+        }
+      ],
+      "speaker_averages": {
+        "speaker_1": 0.8,
+        "speaker_2": 0.918
+      },
+      "quality_assessment": "Good - Generally clear communications with minor issues"
+    },
+    "learning_evaluation": {
+      "kirkpatrick_levels": [
+        {
+          "level": 1,
+          "name": "Reaction",
+          "score": 0.2929,
+          "interpretation": "Low participation equity across 2 speakers"
+        },
+        {
+          "level": 2,
+          "name": "Learning",
+          "score": 0.5,
+          "interpretation": "Completed 0/0 objectives with 17% protocol adherence"
+        },
+        {
+          "level": 3,
+          "name": "Behavior",
+          "score": 0.5,
+          "interpretation": "Team responded in avg 0.0s with 0 decision-making communications"
+        },
+        {
+          "level": 4,
+          "name": "Results",
+          "score": 0.5,
+          "interpretation": "Partial completion: 0% objectives completed"
+        }
+      ],
+      "blooms_level": "Remember",
+      "blooms_score": 0.5,
+      "nasa_tlx_score": 0.5,
+      "engagement_score": 0.5,
+      "overall_learning_score": 0.00448225,
+      "top_communications": [
+        {
+          "speaker": "speaker_1",
+          "text": "drive standing by",
+          "timestamp": 9.68,
+          "confidence": 0.984619140625
+        },
+        {
+          "speaker": "speaker_2",
+          "text": "been assigned a long range patrol of the outer comm stations",
+          "timestamp": 40.36,
+          "confidence": 0.9790482954545454
+        },
+        {
+          "speaker": "speaker_1",
+          "text": "station operational long range sensors calibrated short",
+          "timestamp": 19.38,
+          "confidence": 0.9250662667410714
+        },
+        {
+          "speaker": "speaker_2",
+          "text": "Tactical systems green across the board shields",
+          "timestamp": 10.76,
+          "confidence": 0.9167567661830357
+        },
+        {
+          "speaker": "speaker_1",
+          "text": "All stations report readiness.",
+          "timestamp": 3.22,
+          "confidence": 0.895263671875
+        },
+        {
+          "speaker": "speaker_1",
+          "text": "Helm ready captain, all",
+          "timestamp": 5.48,
+          "confidence": 0.8761138916015625
+        },
+        {
+          "speaker": "speaker_1",
+          "text": "maneuvering thrusters online warp",
+          "timestamp": 7.58,
+          "confidence": 0.8735504150390625
+        },
+        {
+          "speaker": "speaker_2",
+          "text": "at 100 percent weapons assistance armed and ready Science",
+          "timestamp": 14.62,
+          "confidence": 0.8594648573133681
+        }
+      ],
+      "speaker_statistics": [
+        {
+          "speaker": "speaker_1",
+          "utterances": 9,
+          "percentage": 75.0
+        },
+        {
+          "speaker": "speaker_2",
+          "utterances": 3,
+          "percentage": 25.0
+        }
+      ]
+    },
+    "seven_habits": {
+      "overall_score": 1.6,
+      "habits": [
+        {
+          "habit_number": 1,
+          "habit_name": "Be Proactive",
+          "youth_friendly_name": "Take Initiative",
+          "score": 4,
+          "observation_count": 3,
+          "interpretation": "Excellent demonstration of 'Take Initiative' (3 examples observed)",
+          "development_tip": "Practice saying 'I will' instead of 'Someone should.' Look for opportunities to help before being asked.",
+          "examples": [
+            {
+              "text": "Helm ready captain, all",
+              "speaker": "speaker_1",
+              "timestamp": 5.48
+            },
+            {
+              "text": "drive standing by",
+              "speaker": "speaker_1",
+              "timestamp": 9.68
+            },
+            {
+              "text": "at 100 percent weapons assistance armed and ready Science",
+              "speaker": "speaker_2",
+              "timestamp": 14.62
+            }
+          ],
+          "pattern_breakdown": {
+            "pattern_3": 3
+          },
+          "speaker_contributions": {
+            "speaker_1": 2,
+            "speaker_2": 1
+          },
+          "gap_to_next_score": "Need 1 more observations to reach score 5 (target: 30% frequency)"
+        },
+        {
+          "habit_number": 2,
+          "habit_name": "Begin With End In Mind",
+          "youth_friendly_name": "Know Your Goals",
+          "score": 1,
+          "observation_count": 0,
+          "interpretation": "'Know Your Goals' needs attention (0 examples) - priority development area",
+          "development_tip": "Before starting any task, ask yourself: 'What does success look like?' State the goal clearly before taking action.",
+          "examples": [],
+          "pattern_breakdown": {},
+          "speaker_contributions": {},
+          "gap_to_next_score": "Need 1 more observations to reach score 2 (target: 5% frequency)"
+        },
+        {
+          "habit_number": 3,
+          "habit_name": "Put First Things First",
+          "youth_friendly_name": "Prioritize What Matters",
+          "score": 1,
+          "observation_count": 0,
+          "interpretation": "'Prioritize What Matters' needs attention (0 examples) - priority development area",
+          "development_tip": "When multiple things need attention, identify what's most important. Do the hard or urgent things first, not just the easy ones.",
+          "examples": [],
+          "pattern_breakdown": {},
+          "speaker_contributions": {},
+          "gap_to_next_score": "Need 1 more observations to reach score 2 (target: 5% frequency)"
+        },
+        {
+          "habit_number": 4,
+          "habit_name": "Think Win Win",
+          "youth_friendly_name": "Work Together for Success",
+          "score": 2,
+          "observation_count": 1,
+          "interpretation": "Some evidence of 'Work Together for Success' (1 examples) - focus area for growth",
+          "development_tip": "Ask 'How can we both succeed?' instead of 'How can I win?' Look for ways to help teammates while accomplishing your tasks.",
+          "examples": [
+            {
+              "text": "Excellent! Crew we've",
+              "speaker": "speaker_1",
+              "timestamp": 36.84
+            }
+          ],
+          "pattern_breakdown": {
+            "pattern_0": 1
+          },
+          "speaker_contributions": {
+            "speaker_1": 1
+          },
+          "gap_to_next_score": "Need 1 more observations to reach score 3 (target: 10% frequency)"
+        },
+        {
+          "habit_number": 5,
+          "habit_name": "Seek First To Understand",
+          "youth_friendly_name": "Listen Before Speaking",
+          "score": 1,
+          "observation_count": 0,
+          "interpretation": "'Listen Before Speaking' needs attention (0 examples) - priority development area",
+          "development_tip": "Practice repeating back what someone said before responding. Ask clarifying questions: 'Do you mean...?' or 'Can you explain...?'",
+          "examples": [],
+          "pattern_breakdown": {},
+          "speaker_contributions": {},
+          "gap_to_next_score": "Need 1 more observations to reach score 2 (target: 5% frequency)"
+        },
+        {
+          "habit_number": 6,
+          "habit_name": "Synergize",
+          "youth_friendly_name": "Create Better Solutions Together",
+          "score": 1,
+          "observation_count": 0,
+          "interpretation": "'Create Better Solutions Together' needs attention (0 examples) - priority development area",
+          "development_tip": "When facing a challenge, ask teammates for their ideas. Build on others' suggestions with 'Yes, and...' instead of 'No, but...'",
+          "examples": [],
+          "pattern_breakdown": {},
+          "speaker_contributions": {},
+          "gap_to_next_score": "Need 1 more observations to reach score 2 (target: 5% frequency)"
+        },
+        {
+          "habit_number": 7,
+          "habit_name": "Sharpen The Saw",
+          "youth_friendly_name": "Keep Learning and Growing",
+          "score": 1,
+          "observation_count": 0,
+          "interpretation": "'Keep Learning and Growing' needs attention (0 examples) - priority development area",
+          "development_tip": "After each mission, ask 'What did I learn?' and 'What would I do differently?' Practice weak areas during training, not just what you're already good at.",
+          "examples": [],
+          "pattern_breakdown": {},
+          "speaker_contributions": {},
+          "gap_to_next_score": "Need 1 more observations to reach score 2 (target: 5% frequency)"
+        }
+      ],
+      "strengths": [
+        {
+          "habit": "BE_PROACTIVE",
+          "name": "Take Initiative",
+          "score": 4,
+          "interpretation": "Excellent demonstration of 'Take Initiative' (3 examples observed)",
+          "speaker_contributions": {
+            "speaker_1": 2,
+            "speaker_2": 1
+          }
+        },
+        {
+          "habit": "THINK_WIN_WIN",
+          "name": "Work Together for Success",
+          "score": 2,
+          "interpretation": "Some evidence of 'Work Together for Success' (1 examples) - focus area for growth",
+          "speaker_contributions": {
+            "speaker_1": 1
+          }
+        },
+        {
+          "habit": "BEGIN_WITH_END_IN_MIND",
+          "name": "Know Your Goals",
+          "score": 1,
+          "interpretation": "'Know Your Goals' needs attention (0 examples) - priority development area",
+          "speaker_contributions": {}
+        }
+      ],
+      "growth_areas": [
+        {
+          "habit": "BEGIN_WITH_END_IN_MIND",
+          "name": "Know Your Goals",
+          "score": 1,
+          "development_tip": "Before starting any task, ask yourself: 'What does success look like?' State the goal clearly before taking action.",
+          "gap_to_next_score": "Need 1 more observations to reach score 2 (target: 5% frequency)"
+        },
+        {
+          "habit": "PUT_FIRST_THINGS_FIRST",
+          "name": "Prioritize What Matters",
+          "score": 1,
+          "development_tip": "When multiple things need attention, identify what's most important. Do the hard or urgent things first, not just the easy ones.",
+          "gap_to_next_score": "Need 1 more observations to reach score 2 (target: 5% frequency)"
+        },
+        {
+          "habit": "SEEK_FIRST_TO_UNDERSTAND",
+          "name": "Listen Before Speaking",
+          "score": 1,
+          "development_tip": "Practice repeating back what someone said before responding. Ask clarifying questions: 'Do you mean...?' or 'Can you explain...?'",
+          "gap_to_next_score": "Need 1 more observations to reach score 2 (target: 5% frequency)"
+        }
+      ],
+      "score_thresholds": "Score 5: \u226530% | Score 4: \u226520% | Score 3: \u226510% | Score 2: \u22655% | Score 1: <5%"
+    },
+    "training_recommendations": {
+      "immediate_actions": [],
+      "communication_improvements": [],
+      "leadership_development": [],
+      "teamwork_enhancements": [],
+      "drills": [],
+      "discussion_topics": [],
+      "framework_alignment": {},
+      "total_recommendations": 0
+    },
+    "waveform_data": {
+      "sample_rate": 10,
+      "duration_seconds": 48.36,
+      "amplitude": [
+        8.494705252815038e-05,
+        8.710214751772583e-05,
+        0.016486894339323044,
+        0.01822749339044094,
+        0.014006800018250942,
+        0.013723641633987427,
+        0.013831999152898788,
+        0.010960916988551617,
+        0.011004888452589512,
+        0.009174615144729614,
+        0.008029915392398834,
+        0.007568863220512867,
+        0.007786612492054701,
+        0.0070187426172196865,
+        0.007792813703417778,
+        0.006754258181899786,
+        0.005717103369534016,
+        0.005124262999743223,
+        0.005193760618567467,
+        0.005261043086647987,
+        0.003610603976994753,
+        0.0027879916597157717,
+        0.0027500558644533157,
+        0.005728765390813351,
+        0.002956515410915017,
+        0.0034668149892240763,
+        0.0025684169959276915,
+        0.0023072233889251947,
+        0.001910995808430016,
+        0.0017708793748170137,
+        0.0019068645779043436,
+        0.0019431303953751922,
+        0.0019546530675143003,
+        0.0020623612217605114,
+        0.002854467835277319,
+        0.1737796664237976,
+        0.2691259980201721,
+        0.1282111406326294,
+        0.14602552354335785,
+        0.43416592478752136,
+        0.23670165240764618,
+        0.07959169149398804,
+        0.031491201370954514,
+        0.017637621611356735,
+        0.0021869163028895855,
+        0.010753876529633999,
+        0.11081764847040176,
+        0.1900448203086853,
+        0.4399908781051636,
+        0.13670240342617035,
+        0.333528995513916,
+        0.19130896031856537,
+        0.07287964224815369,
+        0.04793541505932808,
+        0.023864105343818665,
+        0.0021731811575591564,
+        0.0016796088311821222,
+        0.0017396428156644106,
+        0.0021586562506854534,
+        0.5194274187088013,
+        0.3971375823020935,
+        0.1253611445426941,
+        0.6297869086265564,
+        0.4500906765460968,
+        0.6207308769226074,
+        0.09689804911613464,
+        0.2710758447647095,
+        0.306678831577301,
+        0.11987616866827011,
+        0.5686112642288208,
+        0.14340493083000183,
+        0.037881504744291306,
+        0.008658711798489094,
+        0.00481974333524704,
+        0.001994958147406578,
+        0.7827557325363159,
+        0.4995808005332947,
+        0.3891567885875702,
+        0.19595178961753845,
+        0.16516508162021637,
+        0.2585946321487427,
+        0.360413521528244,
+        0.11875942349433899,
+        0.39689144492149353,
+        0.1882316619157791,
+        0.23567672073841095,
+        0.39910420775413513,
+        0.6030739545822144,
+        0.2892107665538788,
+        0.32021400332450867,
+        0.4008084833621979,
+        0.33728083968162537,
+        0.10898206382989883,
+        0.0377897173166275,
+        0.0014510550536215305,
+        0.046997636556625366,
+        0.6215836405754089,
+        0.4158000946044922,
+        0.046945586800575256,
+        0.27060171961784363,
+        0.30085229873657227,
+        0.2621271312236786,
+        0.04967508092522621,
+        0.37865859270095825,
+        0.19074372947216034,
+        0.16113977134227753,
+        0.1115177795290947,
+        0.4151723384857178,
+        0.2946420907974243,
+        0.21016941964626312,
+        0.0543762668967247,
+        0.002084564883261919,
+        0.0012276200577616692,
+        0.0011997291585430503,
+        0.0015579292085021734,
+        0.25899606943130493,
+        0.20570047199726105,
+        0.08243202418088913,
+        0.16855916380882263,
+        0.4470024108886719,
+        0.15073442459106445,
+        0.06679532676935196,
+        0.08685100823640823,
+        0.09594655781984329,
+        0.03703370317816734,
+        0.31279778480529785,
+        0.11459021270275116,
+        0.11046355962753296,
+        0.10444219410419464,
+        0.16229961812496185,
+        0.5559458136558533,
+        0.20354053378105164,
+        0.19411729276180267,
+        0.07397639006376266,
+        0.3557860255241394,
+        0.14174605906009674,
+        0.1422223299741745,
+        0.1780668944120407,
+        0.512420117855072,
+        0.3670182228088379,
+        0.15155816078186035,
+        0.08204294741153717,
+        0.022058740258216858,
+        0.0015667134430259466,
+        0.040016740560531616,
+        0.07976872473955154,
+        0.15745809674263,
+        0.3473013639450073,
+        0.10002095997333527,
+        0.3122440576553345,
+        0.09071769565343857,
+        0.22832605242729187,
+        0.4049985706806183,
+        0.13465569913387299,
+        0.09654948115348816,
+        0.3454989790916443,
+        0.1965174376964569,
+        0.2673249840736389,
+        0.0675504058599472,
+        0.18968085944652557,
+        0.0829714834690094,
+        0.29554831981658936,
+        0.23572340607643127,
+        0.13257844746112823,
+        0.13847285509109497,
+        0.0053325798362493515,
+        0.06391223520040512,
+        0.5496239066123962,
+        0.2042788714170456,
+        0.25288262963294983,
+        0.2591770589351654,
+        0.1243366152048111,
+        0.08269696682691574,
+        0.11281618475914001,
+        0.1146816536784172,
+        0.2362000197172165,
+        0.2297467142343521,
+        0.11429961770772934,
+        0.10490502417087555,
+        0.33629634976387024,
+        0.2978430390357971,
+        0.16847699880599976,
+        0.15671831369400024,
+        0.16005727648735046,
+        0.21876266598701477,
+        0.1920221894979477,
+        0.49108001589775085,
+        0.3126858174800873,
+        0.05621061846613884,
+        0.02937345765531063,
+        0.0035602657590061426,
+        0.002049401169642806,
+        0.004056524485349655,
+        0.05209304764866829,
+        0.21390044689178467,
+        0.1519438475370407,
+        0.054597921669483185,
+        0.02899383008480072,
+        0.11748413741588593,
+        0.04998035728931427,
+        0.07232122123241425,
+        0.07881759852170944,
+        0.0858461931347847,
+        0.05704251304268837,
+        0.17722509801387787,
+        0.09675291180610657,
+        0.031707294285297394,
+        0.0835624560713768,
+        0.0970877930521965,
+        0.031796716153621674,
+        0.0038599087856709957,
+        0.003788924077525735,
+        0.0033301517833024263,
+        0.003626602003350854,
+        0.06893259286880493,
+        0.3834075629711151,
+        0.29112592339515686,
+        0.20570893585681915,
+        0.21123671531677246,
+        0.11797843873500824,
+        0.07095789164304733,
+        0.20916399359703064,
+        0.0640469565987587,
+        0.18695415556430817,
+        0.12307916581630707,
+        0.024046843871474266,
+        0.24085314571857452,
+        0.24406398832798004,
+        0.14570780098438263,
+        0.22313950955867767,
+        0.22468392550945282,
+        0.20141936838626862,
+        0.13259468972682953,
+        0.0072662364691495895,
+        0.0048549119383096695,
+        0.003104506991803646,
+        0.019419772550463676,
+        0.05413861200213432,
+        0.39565393328666687,
+        0.2204826921224594,
+        0.1979229897260666,
+        0.12177471071481705,
+        0.04795205220580101,
+        0.16442735493183136,
+        0.10533429682254791,
+        0.1772686094045639,
+        0.1705210953950882,
+        0.0917869433760643,
+        0.16641923785209656,
+        0.12936531007289886,
+        0.16366395354270935,
+        0.0972430631518364,
+        0.04517822712659836,
+        0.03613671660423279,
+        0.00336158717982471,
+        0.00349942478351295,
+        0.0034017886500805616,
+        0.002993245143443346,
+        0.20479658246040344,
+        1.0,
+        0.49734142422676086,
+        0.7073561549186707,
+        0.5675446391105652,
+        0.41582784056663513,
+        0.1470596045255661,
+        0.5060203075408936,
+        0.19695501029491425,
+        0.2649364769458771,
+        0.8051897287368774,
+        0.5065768957138062,
+        0.24245214462280273,
+        0.1005212664604187,
+        0.4173901379108429,
+        0.192445307970047,
+        0.679480791091919,
+        0.3931179642677307,
+        0.3865814208984375,
+        0.24101603031158447,
+        0.018712656572461128,
+        0.0027675465680658817,
+        0.0026969360187649727,
+        0.15506687760353088,
+        0.8280527591705322,
+        0.4155519902706146,
+        0.28280752897262573,
+        0.1993333250284195,
+        0.14542952179908752,
+        0.2795548737049103,
+        0.21551185846328735,
+        0.19206713140010834,
+        0.6157395243644714,
+        0.25328493118286133,
+        0.17903472483158112,
+        0.4687207043170929,
+        0.15137426555156708,
+        0.49919670820236206,
+        0.9498363733291626,
+        0.3784905672073364,
+        0.23525883257389069,
+        0.41209226846694946,
+        0.37209534645080566,
+        0.3541405498981476,
+        0.17120537161827087,
+        0.36849913001060486,
+        0.539156973361969,
+        0.427688866853714,
+        0.4748058021068573,
+        0.2374163717031479,
+        0.12462557107210159,
+        0.0752158835530281,
+        0.38860994577407837,
+        0.337567538022995,
+        0.37241482734680176,
+        0.13827356696128845,
+        0.1682441681623459,
+        0.04851614683866501,
+        0.15242743492126465,
+        0.04752302169799805,
+        0.005127513315528631,
+        0.0025579349603503942,
+        0.002363545121625066,
+        0.34298697113990784,
+        0.4455012381076813,
+        0.35051071643829346,
+        0.6484184265136719,
+        0.31187495589256287,
+        0.17941917479038239,
+        0.18926653265953064,
+        0.36200159788131714,
+        0.29279398918151855,
+        0.4011072516441345,
+        0.3590700626373291,
+        0.145551860332489,
+        0.24455219507217407,
+        0.23110359907150269,
+        0.06040244922041893,
+        0.2540740966796875,
+        0.34818601608276367,
+        0.2189159095287323,
+        0.006659471429884434,
+        0.005745819769799709,
+        0.0046282014809548855,
+        0.4601965546607971,
+        0.5873565673828125,
+        0.1284116506576538,
+        0.2280324399471283,
+        0.3152472972869873,
+        0.37383511662483215,
+        0.07163600623607635,
+        0.2250545769929886,
+        0.48054489493370056,
+        0.49710243940353394,
+        0.14285944402217865,
+        0.1828538030385971,
+        0.33175840973854065,
+        0.41193893551826477,
+        0.12195435911417007,
+        0.39151352643966675,
+        0.3401530385017395,
+        0.10246377438306808,
+        0.16887399554252625,
+        0.3451206684112549,
+        0.6130073666572571,
+        0.3938226103782654,
+        0.21497893333435059,
+        0.3244084417819977,
+        0.40229400992393494,
+        0.43504565954208374,
+        0.20734965801239014,
+        0.08433101326227188,
+        0.19421035051345825,
+        0.25794005393981934,
+        0.0588698573410511,
+        0.00326060364022851,
+        0.004004488233476877,
+        0.0067388517782092094,
+        0.178261861205101,
+        0.0653257817029953,
+        0.08995815366506577,
+        0.022049816325306892,
+        0.003332593245431781,
+        0.002539397217333317,
+        0.003014108631759882,
+        0.0024391310289502144,
+        0.0033081520814448595,
+        0.002718428149819374,
+        0.0027726690750569105,
+        0.002647749613970518,
+        0.002688642591238022,
+        0.0057297516614198685,
+        0.003896151203662157,
+        0.22781459987163544,
+        0.24105900526046753,
+        0.10424870997667313,
+        0.014268029481172562,
+        0.0025979653000831604,
+        0.003229689784348011,
+        0.004403502214699984,
+        0.006805954966694117,
+        0.007004957180470228,
+        0.0033290982246398926,
+        0.002920150524005294,
+        0.005171659868210554,
+        0.06425855308771133,
+        0.21990399062633514,
+        0.24297164380550385,
+        0.20007672905921936,
+        0.11852780729532242,
+        0.15036965906620026,
+        0.21673740446567535,
+        0.27546003460884094,
+        0.16632021963596344,
+        0.2752063572406769,
+        0.12950626015663147,
+        0.07839950174093246,
+        0.030213842168450356,
+        0.32224252820014954,
+        0.19873929023742676,
+        0.10265981405973434,
+        0.02684115059673786,
+        0.12123910337686539,
+        0.17460475862026215,
+        0.14538782835006714,
+        0.08861339837312698,
+        0.07686813920736313,
+        0.027262568473815918,
+        0.03461065515875816,
+        0.019006086513400078,
+        0.017572594806551933,
+        0.013982280157506466,
+        0.009413100779056549,
+        0.0032092027831822634,
+        0.0027645151130855083,
+        0.0027548656798899174,
+        0.0031750816851854324,
+        0.0025148987770080566,
+        0.00286960881203413,
+        0.002749964129179716,
+        0.0029462198726832867,
+        0.0029256476555019617,
+        0.0023461219388991594,
+        0.0031176810152828693,
+        0.002717551775276661,
+        0.002678417833521962,
+        0.002749633975327015,
+        0.0035376788582652807,
+        0.002960754092782736,
+        0.0027227525133639574,
+        0.003000514581799507,
+        0.003291371976956725,
+        0.0032418756745755672,
+        0.002959286095574498,
+        0.0026397842448204756,
+        0.002479728078469634,
+        0.002608208218589425,
+        0.004430337809026241,
+        0.0031308026518672705,
+        0.0032217202242463827,
+        0.0030960217118263245,
+        0.00434844521805644,
+        0.003182103158906102,
+        0.0031619707588106394,
+        0.002935341326519847,
+        0.0031671279575675726,
+        0.004839273635298014,
+        0.0028275728691369295,
+        0.003486272180452943,
+        0.003560116048902273,
+        0.0038770895916968584,
+        0.0032545814756304026,
+        0.0028829199727624655,
+        0.0056816875003278255,
+        0.005738342180848122,
+        0.006598521489650011,
+        0.006758092436939478,
+        0.005369280930608511,
+        0.005094501189887524,
+        0.0034578635822981596,
+        0.004373698495328426,
+        0.0044918544590473175,
+        0.003374777501448989,
+        0.00343970931135118,
+        0.07958129048347473
+      ],
+      "peak_amplitude": 0.247436,
+      "average_amplitude": 0.162589
+    },
+    "sentiment_summary": {
+      "average_stress": 0.2623,
+      "peak_stress_time": 40.36,
+      "peak_stress_level": 0.3877,
+      "stress_distribution": {
+        "low": 50,
+        "moderate": 50,
+        "high": 0
+      },
+      "speaker_stress": {
+        "speaker_1": {
+          "avg_stress": 0.2475,
+          "peak": 0.3618,
+          "dominant_emotion": "calm",
+          "segment_count": 9
+        },
+        "speaker_2": {
+          "avg_stress": 0.3068,
+          "peak": 0.3877,
+          "dominant_emotion": "focused",
+          "segment_count": 3
+        }
+      },
+      "stress_timeline": [
+        {
+          "time": 3.22,
+          "stress": 0.2059
+        },
+        {
+          "time": 13.22,
+          "stress": 0.2299
+        },
+        {
+          "time": 23.22,
+          "stress": 0.2525
+        },
+        {
+          "time": 33.22,
+          "stress": 0.3587
+        }
+      ]
+    },
+    "narrative_summary": {
+      "narrative": "### Mission Grade: C\nThe crew showed strong initiative but struggled with goal clarity and teamwork.\n\n### Top 3 Strengths (with evidence)\n1. **Initiative**: \"Helm ready captain, all\" - Captain\n2. **Communication Clarity**: \"Tactical systems green across the board shields\" - Crew Member\n3. **Protocol Adherence**: \"Engineering reports all system nominal power distribution optimal reactor running 98 % efficiency\" - Captain\n\n### Top 2 Growth Areas\n1. **Know Your Goals**: Before starting any task, ask yourself: 'What does success look like?' Example needed.\n2. **Work Together for Success**: Ask 'How can we both succeed?' instead of competing. \"Excellent! Crew we've\" shows potential but needs more teamwork.\n\n### Individual Performance\n| Role | Did Well | Work On |\n|------|----------|---------|\n| Captain | Initiative, Communication Clarity | Know Your Goals, Prioritize What Matters |\n| Helm | Protocol Adherence | Listen Before Speaking |\n| Tactical | Communication Clarity | Create Better Solutions Together |\n\n### Quick Wins for Next Mission\n- [ ] State clear goals before starting tasks.\n- [ ] Build on teammates' ideas with 'Yes, and...'\n- [ ] Practice repeating back what others say to ensure understanding.",
+      "model": "qwen2.5:14b-instruct",
+      "style": "entertaining",
+      "generated": true,
+      "validation_issues": 0,
+      "generation_time": 87.7
+    },
+    "saved_recording_path": "data/workspaces/e8eed8ca-21fc-4038-a6cd-57baf7b974fe/recordings/recording_20260131_202624.wav",
+    "processing_time_seconds": 258.5,
+    "language": "en",
+    "diarization_methodology": "Two-pass batch diarization: 12 embeddings clustered into 4 speakers using hierarchical clustering (threshold=0.60). Speaker IDs assigned by first appearance in audio for consistency across clip lengths.",
+    "confidence_filter": {
+      "enabled": true,
+      "threshold": 0.1,
+      "total_segments": 12,
+      "included_segments": 12,
+      "excluded_segments": 0,
+      "excluded_percentage": 0.0,
+      "excluded_examples": []
+    },
+    "telemetry_correlation": {
+      "strategy": "smart",
+      "speakers_analyzed": 2,
+      "density_correlations": 0,
+      "command_patterns": 0,
+      "report_patterns": 0,
+      "negative_exclusions": 0,
+      "captain_detections": 1,
+      "event_count": 0,
+      "transcript_count": 12
+    },
+    "auto_title": "Patrol mission briefing and system check",
+    "story_narrative": {
+      "story": "The lights flickered to life in the dimly lit bridge of a starship as the crew prepared for their mission. The hum of machinery and the soft glow of control panels created an aura of anticipation. As the clock ticked past zero, the Captain's voice echoed through the room with a sense of urgency.\n\n\"All stations report readiness,\" the Captain ordered, setting the stage for what was to come. The Helm Officer responded promptly, \"Helm ready captain, all.\" Moments later, the Tactical Officer chimed in, confirming that tactical systems were green across the board and shields were at 100 percent, adding a layer of security to their mission.\n\nThe Captain continued to check off each system as they went online. Maneuvering thrusters came online, followed by warp drive standing by. The Science Station reported its long-range sensors calibrated and short-range sensors operational, ensuring that every part of the ship was ready for whatever lay ahead. Engineering's report confirmed all systems were nominal with optimal power distribution and a reactor running at 98 percent efficiency.\n\nAs the Captain received each confirmation, they could feel the tension in the air. The crew was on edge but confident, knowing their training had prepared them well. \"Operations online captain,\" came the final call from an officer, signaling that all channels were clear and communication protocols active. With a sense of satisfaction, the Captain announced, \"Excellent! Crew we've been assigned a long range patrol of the outer comm stations.\"\n\nThe session concluded with the crew knowing exactly what was expected of them. The bridge was alive with the quiet energy of preparedness as they awaited their departure into the vast expanse of space to fulfill their mission.\n\nDirect quotes from the transcript:\n- \"All stations report readiness.\"\n- \"Tactical systems green across the board shields at 100 percent weapons assistance armed and ready Science station operational long range sensors calibrated short range sensors on line\"\n- \"Engineering reports all system nominal power distribution optimal reactor running 98 % efficiency\"\n- \"Operations online captain. All channels clear, communication protocols active\"\n- \"Excellent! Crew we've been assigned a long range patrol of the outer comm stations\"\n\n---\n\n> \u26a0\ufe0f **Data Verification Notice**\n> Some content could not be verified against transcript data.\n> - 1 quote(s) could not be verified\n",
+      "model": "qwen2.5:14b-instruct",
+      "style": "narrative",
+      "generated": true,
+      "validation_issues": 1,
+      "generation_time": 97.9
+    },
+    "step_timings": {
+      "convert_and_save": 0.33,
+      "waveform": 0.0,
+      "transcription": 3.83,
+      "diarization": 1.1,
+      "sentiment": 0.0,
+      "role_inference": 0.0,
+      "communication_quality": 0.0,
+      "scorecards": 0.0,
+      "confidence": 0.0,
+      "learning": 0.0,
+      "seven_habits": 0.01,
+      "training_recommendations": 0.0,
+      "llm_narrative": 87.68,
+      "llm_story": 97.9
+    }
+  }
+}

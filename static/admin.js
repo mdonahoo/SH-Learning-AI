@@ -67,6 +67,38 @@ class AdminApiClient {
         if (!resp.ok) throw new Error(`Shared list failed: ${resp.status}`);
         return resp.json();
     }
+
+    async getGameConfig() {
+        const resp = await fetch('/api/admin/game-config');
+        if (!resp.ok) throw new Error(`Game config failed: ${resp.status}`);
+        return resp.json();
+    }
+
+    async updateGameConfig(config) {
+        const resp = await fetch('/api/admin/game-config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(config),
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            throw new Error(data.detail || `Save failed: ${resp.status}`);
+        }
+        return data;
+    }
+
+    async testConnection(params) {
+        const resp = await fetch('/api/admin/test-connection', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(params),
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            throw new Error(data.detail || `Test failed: ${resp.status}`);
+        }
+        return data;
+    }
 }
 
 
@@ -129,6 +161,7 @@ class AdminApp {
             this.loadGlobalStats(),
             this.loadWorkspaces(),
             this.loadSharedData(),
+            this.loadGameConfig(),
         ]);
     }
 
@@ -159,13 +192,13 @@ class AdminApp {
     showView(view) {
         this.currentView = view;
         const sections = {
-            workspaces: ['stats-section', 'workspaces-section', 'shared-section'],
+            workspaces: ['stats-section', 'game-config-section', 'workspaces-section', 'shared-section'],
             detail: ['stats-section', 'workspace-detail-section'],
             analysis: ['analysis-viewer-section'],
         };
 
         // Hide all
-        ['stats-section', 'workspaces-section', 'shared-section',
+        ['stats-section', 'game-config-section', 'workspaces-section', 'shared-section',
          'workspace-detail-section', 'analysis-viewer-section'
         ].forEach(id => {
             document.getElementById(id).classList.add('hidden');
@@ -416,6 +449,132 @@ class AdminApp {
         // Raw JSON
         document.getElementById('analysis-raw-json').textContent =
             JSON.stringify(data, null, 2);
+    }
+
+    // --- Game Server Configuration ---
+
+    getFormValues() {
+        return {
+            game_host: (document.getElementById('config-host').value || '').trim(),
+            game_port_ws: parseInt(document.getElementById('config-port-ws').value, 10),
+            game_port_api: parseInt(document.getElementById('config-port-api').value, 10),
+            game_port_https: parseInt(document.getElementById('config-port-https').value, 10),
+            game_port_wss: parseInt(document.getElementById('config-port-wss').value, 10),
+        };
+    }
+
+    validateFormValues() {
+        const vals = this.getFormValues();
+        if (!vals.game_host) return 'Game host is required';
+        const ports = [
+            ['WS', vals.game_port_ws],
+            ['API', vals.game_port_api],
+            ['HTTPS', vals.game_port_https],
+            ['WSS', vals.game_port_wss],
+        ];
+        for (const [name, port] of ports) {
+            if (isNaN(port) || port < 1 || port > 65535) {
+                return `${name} port must be between 1 and 65535`;
+            }
+        }
+        return null;
+    }
+
+    showConfigStatus(message, type) {
+        const el = document.getElementById('config-status');
+        el.textContent = message;
+        el.className = 'config-status';
+        if (type) el.classList.add(`config-status-${type}`);
+    }
+
+    async loadGameConfig() {
+        try {
+            const config = await this.api.getGameConfig();
+            document.getElementById('config-host').value = config.game_host || '192.168.68.56';
+            document.getElementById('config-port-ws').value = config.game_port_ws || 1865;
+            document.getElementById('config-port-api').value = config.game_port_api || 1864;
+            document.getElementById('config-port-https').value = config.game_port_https || 1866;
+            document.getElementById('config-port-wss').value = config.game_port_wss || 1867;
+
+            if (config.read_only) {
+                const inputs = ['config-host', 'config-port-ws', 'config-port-api',
+                                'config-port-https', 'config-port-wss'];
+                inputs.forEach(id => document.getElementById(id).disabled = true);
+                document.getElementById('btn-save-config').disabled = true;
+                this.showConfigStatus('READ-ONLY', 'readonly');
+            }
+        } catch (err) {
+            console.error('Failed to load game config:', err);
+            this.showConfigStatus('LOAD ERROR', 'error');
+        }
+    }
+
+    async saveGameConfig() {
+        const error = this.validateFormValues();
+        if (error) {
+            this.showConfigStatus(error, 'error');
+            return;
+        }
+
+        const vals = this.getFormValues();
+        const btn = document.getElementById('btn-save-config');
+        btn.disabled = true;
+
+        try {
+            const result = await this.api.updateGameConfig(vals);
+            this.showConfigStatus('SAVED', 'success');
+            if (result.warning) {
+                console.warn('Config save warning:', result.warning);
+            }
+        } catch (err) {
+            this.showConfigStatus(err.message, 'error');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    async testConnection() {
+        const error = this.validateFormValues();
+        if (error) {
+            this.showConfigStatus(error, 'error');
+            return;
+        }
+
+        const vals = this.getFormValues();
+        const btn = document.getElementById('btn-test-connection');
+        btn.disabled = true;
+        this.showConfigStatus('TESTING...', 'pending');
+
+        try {
+            const result = await this.api.testConnection({
+                host: vals.game_host,
+                port_ws: vals.game_port_ws,
+                port_api: vals.game_port_api,
+            });
+            this.renderTestResults(result);
+            this.showConfigStatus('TEST COMPLETE', 'success');
+        } catch (err) {
+            this.showConfigStatus(err.message, 'error');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    renderTestResults(result) {
+        const container = document.getElementById('config-test-results');
+        container.classList.remove('hidden');
+        container.innerHTML = `
+            <div class="test-result-item ${result.ws_reachable ? 'success' : 'failure'}">
+                <div class="test-result-label">WebSocket Port</div>
+                <div class="test-result-value">${result.ws_reachable ? 'REACHABLE' : 'UNREACHABLE'}</div>
+                <div class="test-result-detail">${escapeHtml(result.ws_detail)}</div>
+            </div>
+            <div class="test-result-item ${result.api_reachable ? 'success' : 'failure'}">
+                <div class="test-result-label">API Port</div>
+                <div class="test-result-value">${result.api_reachable ? 'REACHABLE' : 'UNREACHABLE'}</div>
+                <div class="test-result-detail">${escapeHtml(result.api_detail)}</div>
+            </div>
+        `;
     }
 
     // --- Actions ---

@@ -196,7 +196,7 @@ AUDIO_SAMPLE_RATE=16000              # Sample rate (16000 recommended)
 AUDIO_CHANNELS=1                     # Mono (1) or Stereo (2)
 
 # Whisper AI Model
-WHISPER_MODEL_SIZE=base              # tiny, base, small, medium, large-v3
+WHISPER_MODEL_SIZE=large-v3          # tiny, base, small, medium, large-v3
 WHISPER_DEVICE=cpu                   # cpu or cuda
 WHISPER_COMPUTE_TYPE=int8            # int8, float16, float32
 

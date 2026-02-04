@@ -266,6 +266,33 @@ class ApiClient {
         return response.json();
     }
 
+    async listArchives() {
+        const response = await fetch(`${this.baseUrl}/api/archives`,
+            { headers: this._headers() });
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+    }
+
+    async getArchiveManifest(archiveId) {
+        const response = await fetch(`${this.baseUrl}/api/archives/${archiveId}`,
+            { headers: this._headers() });
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+    }
+
+    async getArchiveAnalysis(archiveId, filename) {
+        const response = await fetch(`${this.baseUrl}/api/archives/${archiveId}/analyses/${filename}`,
+            { headers: this._headers() });
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+    }
+
     async getServicesStatus() {
         const response = await fetch(`${this.baseUrl}/api/services-status`,
             { headers: this._headers() });
@@ -339,6 +366,10 @@ class ApiClient {
             throw new Error(`HTTP ${response.status}`);
         }
         return response.json();
+    }
+
+    telemetryDownloadUrl(sessionId) {
+        return `${this.baseUrl}/api/telemetry/${sessionId}/download`;
     }
 }
 
@@ -463,6 +494,9 @@ class ResultsRenderer {
 
         // Render Training recommendations
         this.renderTraining(results.training_recommendations);
+
+        // Render Captain Leadership Assessment (above narrative in debrief tab)
+        this.renderCaptainLeadership(results.captain_leadership);
 
         // Render AI Narrative (pass llm_skipped_reason for long recordings)
         this.renderNarrative(results.narrative_summary, results.llm_skipped_reason);
@@ -1714,6 +1748,88 @@ class ResultsRenderer {
         return text;
     }
 
+    renderCaptainLeadership(captainData) {
+        const section = document.getElementById('captain-leadership-section');
+        const content = document.getElementById('captain-leadership-content');
+        const divider = document.getElementById('captain-leadership-divider');
+
+        if (!captainData || !section || !content) {
+            if (section) section.classList.add('hidden');
+            if (divider) divider.classList.add('hidden');
+            return;
+        }
+
+        section.classList.remove('hidden');
+        if (divider) divider.classList.remove('hidden');
+
+        const overall = captainData.overall_score || 0;
+        const dims = captainData.dimensions || {};
+        const strengths = captainData.strengths || [];
+        const devAreas = captainData.development_areas || [];
+
+        // Score color helper
+        const scoreColor = (s) => {
+            if (s >= 4) return 'var(--color-green, #4caf50)';
+            if (s >= 3) return 'var(--color-gold, #ff9800)';
+            if (s >= 2) return 'var(--color-orange, #ff5722)';
+            return 'var(--color-red, #f44336)';
+        };
+
+        // Build dimensions table
+        let dimRows = '';
+        for (const [key, dim] of Object.entries(dims)) {
+            const score = dim.score || 0;
+            const pct = score > 0 ? (score / 5 * 100) : 0;
+            const label = score === 0 ? 'N/A' : `${score}/5`;
+            dimRows += `
+                <tr>
+                    <td><strong>${dim.display_name || key}</strong><br><small>${dim.description || ''}</small></td>
+                    <td style="text-align:center;">
+                        <span style="color:${score > 0 ? scoreColor(score) : '#888'}">${label}</span>
+                    </td>
+                    <td>
+                        <div class="score-bar-track" style="height:8px;">
+                            <div class="score-bar-fill" style="width:${pct}%; background:${scoreColor(score)};"></div>
+                        </div>
+                    </td>
+                    <td><small>${dim.evidence || ''}</small></td>
+                </tr>`;
+        }
+
+        let strengthsHtml = '';
+        if (strengths.length > 0) {
+            strengthsHtml = `<div class="captain-strengths"><strong>Strengths:</strong> ${strengths.map(s => `<span class="badge badge-green">${s}</span>`).join(' ')}</div>`;
+        }
+
+        let devHtml = '';
+        if (devAreas.length > 0) {
+            devHtml = `<div class="captain-development"><strong>Growth Areas:</strong> ${devAreas.map(d => `<span class="badge badge-orange">${d}</span>`).join(' ')}</div>`;
+        }
+
+        content.innerHTML = `
+            <div class="captain-overview">
+                <div class="captain-score-badge">
+                    <div class="score-circle" style="border-color:${scoreColor(overall)}">
+                        <span class="score-number">${overall}</span>
+                        <span class="score-label">/5</span>
+                    </div>
+                    <div class="score-caption">Overall Leadership</div>
+                </div>
+                <div class="captain-details">
+                    <p><strong>Role:</strong> ${captainData.captain_role || 'Captain'} &mdash; <strong>Utterances:</strong> ${captainData.utterance_count || 0}</p>
+                    ${strengthsHtml}
+                    ${devHtml}
+                </div>
+            </div>
+            <table class="narrative-table captain-dims-table">
+                <thead>
+                    <tr><th>Dimension</th><th>Score</th><th>Rating</th><th>Evidence</th></tr>
+                </thead>
+                <tbody>${dimRows}</tbody>
+            </table>
+        `;
+    }
+
     renderNarrative(narrativeSummary, llmSkippedReason = null) {
         const loadingEl = document.getElementById('narrative-loading');
         const contentEl = document.getElementById('narrative-section');
@@ -1785,9 +1901,15 @@ class ResultsRenderer {
             let html = story.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
             // Handle italics for quotes
             html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-            // Convert paragraphs
+            // Convert ## headers to section headers
+            html = html.replace(/^##\s+(.+)$/gm, '<h3 class="story-section-header">$1</h3>');
+            // Convert paragraphs (split on double newlines, skip headers)
             html = html.split(/\n\n+/).map(p => {
                 const trimmed = p.trim();
+                // Skip if already an HTML element (header)
+                if (trimmed.startsWith('<h3')) {
+                    return trimmed;
+                }
                 // Check if it's a quote (starts with ")
                 if (trimmed.startsWith('"') || trimmed.includes('said') || trimmed.includes('ordered')) {
                     return `<p class="story-dialogue">${trimmed}</p>`;
@@ -2834,6 +2956,7 @@ class App {
         this.bindEvents();
         this.loadConfig(); // Load server config first
         this.loadArchive();
+        this.loadDataArchives();
         this.checkServicesStatus(); // Check service status on load
 
         // Start with results section collapsed if no results
@@ -2906,6 +3029,9 @@ class App {
         if (this.saveAudioBtn) {
             this.saveAudioBtn.classList.add('hidden');
         }
+        if (this.saveTelemetryBtn) {
+            this.saveTelemetryBtn.classList.add('hidden');
+        }
     }
 
     applyReadOnlyState() {
@@ -2964,6 +3090,7 @@ class App {
         this.downloadBtn = document.getElementById('download-btn');
         this.downloadAudioBtn = document.getElementById('download-audio-btn');
         this.saveAudioBtn = document.getElementById('save-audio-btn');
+        this.saveTelemetryBtn = document.getElementById('save-telemetry-btn');
         this.archiveList = document.getElementById('archive-list');
         this.refreshArchiveBtn = document.getElementById('refresh-archive-btn');
         this.titleInput = document.getElementById('analysis-title-input');
@@ -2985,6 +3112,9 @@ class App {
         this.downloadBtn.addEventListener('click', () => this.downloadReport());
         this.downloadAudioBtn.addEventListener('click', () => this.downloadAudio());
         this.saveAudioBtn.addEventListener('click', () => this.downloadAudio());
+        if (this.saveTelemetryBtn) {
+            this.saveTelemetryBtn.addEventListener('click', () => this.downloadTelemetry());
+        }
 
         // Tabs
         document.querySelectorAll('.tab').forEach(tab => {
@@ -3169,6 +3299,10 @@ class App {
             if (this.telemetrySessionId) {
                 try {
                     await this.api.stopTelemetry(this.telemetrySessionId);
+                    // Show telemetry download button
+                    if (this.saveTelemetryBtn) {
+                        this.saveTelemetryBtn.classList.remove('hidden');
+                    }
                 } catch (error) {
                     console.error('Failed to stop telemetry:', error);
                 }
@@ -3192,10 +3326,11 @@ class App {
                     try {
                         const telemetryResult = await this.api.startTelemetry();
                         this.telemetrySessionId = telemetryResult.session_id;
-                        console.log('Telemetry recording started:', this.telemetrySessionId);
+                        console.log('Telemetry recording started:', this.telemetrySessionId, telemetryResult.message);
+                        this.showStatus(telemetryResult.message || 'Game telemetry connected', 'success');
                     } catch (error) {
                         console.error('Failed to start telemetry:', error);
-                        this.showStatus('Warning: Telemetry recording failed to start', 'warning');
+                        this.showStatus('Warning: Telemetry recording failed to start - ' + error.message, 'warning');
                         this.telemetrySessionId = null;
                     }
                 } else {
@@ -3219,6 +3354,9 @@ class App {
                 this.fileName.textContent = '';
                 this.hideStatus();
                 this.saveAudioBtn.classList.add('hidden');
+                if (this.saveTelemetryBtn) {
+                    this.saveTelemetryBtn.classList.add('hidden');
+                }
 
                 // Disable telemetry checkbox during recording
                 const telemetryOption = document.getElementById('telemetry-option');
@@ -3698,6 +3836,37 @@ class App {
         this.showStatus('No audio to download', 'error');
     }
 
+    async downloadTelemetry() {
+        if (!this.telemetrySessionId) {
+            this.showStatus('No telemetry session to download', 'error');
+            return;
+        }
+        SHTelemetry.trackEvent('download_telemetry', { session_id: this.telemetrySessionId });
+
+        try {
+            const response = await fetch(
+                this.api.telemetryDownloadUrl(this.telemetrySessionId),
+                { headers: this.api._headers() }
+            );
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `telemetry_${this.telemetrySessionId}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            this.showStatus('Telemetry downloaded!', 'success');
+        } catch (error) {
+            console.error('Failed to download telemetry:', error);
+            this.showStatus('Failed to download telemetry: ' + error.message, 'error');
+        }
+    }
+
     async loadArchive() {
         try {
             const data = await this.api.getArchiveIndex();
@@ -4134,6 +4303,175 @@ class App {
             // Collapse the expanded section
             expanded.classList.add('hidden');
         }, 800);
+    }
+
+    // ========================================================================
+    // Data Archives Browsing
+    // ========================================================================
+
+    async loadDataArchives() {
+        try {
+            const data = await this.api.listArchives();
+            const archives = data.archives || [];
+
+            const countBadge = document.getElementById('data-archives-count');
+            if (countBadge) {
+                countBadge.textContent = archives.length;
+            }
+
+            const select = document.getElementById('archive-batch-select');
+            if (!select) return;
+
+            // Preserve current selection
+            const current = select.value;
+            select.innerHTML = '<option value="">Select an archive batch...</option>';
+
+            archives.forEach(a => {
+                const date = new Date(a.created_at);
+                const dateStr = date.toLocaleDateString();
+                const desc = a.description ? ` - ${a.description}` : '';
+                const counts = a.file_counts || {};
+                const summary = `${counts.analyses || 0} analyses, ${counts.recordings || 0} recordings`;
+
+                const option = document.createElement('option');
+                option.value = a.archive_id;
+                option.textContent = `${dateStr}${desc} (${summary})`;
+                select.appendChild(option);
+            });
+
+            // Restore selection
+            if (current) {
+                select.value = current;
+            }
+        } catch (error) {
+            console.error('Failed to load data archives:', error);
+        }
+    }
+
+    async loadArchiveBatch(archiveId) {
+        const sessionsList = document.getElementById('archive-sessions-list');
+        const batchInfo = document.getElementById('archive-batch-info');
+
+        if (!archiveId) {
+            if (sessionsList) sessionsList.innerHTML = '<p class="empty-state">Select a batch to browse archived sessions</p>';
+            if (batchInfo) { batchInfo.classList.add('hidden'); batchInfo.textContent = ''; }
+            return;
+        }
+
+        if (sessionsList) sessionsList.innerHTML = '<p class="empty-state">Loading...</p>';
+
+        try {
+            const manifest = await this.api.getArchiveManifest(archiveId);
+            const sessions = manifest.sessions || [];
+
+            // Show batch info
+            if (batchInfo) {
+                const date = new Date(manifest.created_at);
+                const sizeMB = ((manifest.total_size_bytes || 0) / 1024 / 1024).toFixed(0);
+                batchInfo.textContent = `${date.toLocaleString()} | ${sizeMB} MB | ${sessions.length} items`;
+                batchInfo.classList.remove('hidden');
+            }
+
+            // Filter to sessions with analyses (most useful)
+            const analyzed = sessions.filter(s => s.analysis);
+            const standalone = sessions.filter(s => !s.analysis && s.recording);
+
+            if (!sessionsList) return;
+
+            if (analyzed.length === 0 && standalone.length === 0) {
+                sessionsList.innerHTML = '<p class="empty-state">No sessions in this archive</p>';
+                return;
+            }
+
+            let html = '';
+
+            analyzed.forEach(session => {
+                const title = session.title || session.analysis.replace('analysis_', '').replace('.json', '');
+                const date = session.created_at ? new Date(session.created_at).toLocaleString() : '';
+                const duration = this.formatDuration(session.duration_seconds || 0);
+                const speakers = session.speaker_count || 0;
+
+                html += `
+                    <div class="archive-item" data-archive-id="${archiveId}" data-filename="${session.analysis}">
+                        <div class="archive-item-info" onclick="app.loadArchivedSession('${archiveId}', '${session.analysis}')">
+                            <div class="archive-item-header">
+                                <span class="archive-item-title">${this.escapeHtml(title)}</span>
+                            </div>
+                            <div class="archive-item-meta">
+                                <span>${date}</span>
+                                <span>${duration}</span>
+                                <span>${speakers} speakers</span>
+                            </div>
+                        </div>
+                        <div class="archive-item-actions">
+                            ${session.recording && !this.audioDisabled ? `
+                                <button class="btn-icon" onclick="event.stopPropagation(); app.downloadArchiveBatchAudio('${archiveId}', '${session.recording}')" title="Download Audio">
+                                    <svg class="icon"><use href="#icon-waveform"></use></svg>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            if (standalone.length > 0) {
+                html += `<p class="empty-state" style="margin-top: 0.5rem; font-size: 0.85rem;">${standalone.length} standalone recording(s) without analysis</p>`;
+            }
+
+            sessionsList.innerHTML = html;
+        } catch (error) {
+            console.error('Failed to load archive batch:', error);
+            if (sessionsList) sessionsList.innerHTML = '<p class="empty-state">Failed to load archive</p>';
+        }
+    }
+
+    async loadArchivedSession(archiveId, filename) {
+        const item = document.querySelector(`.archive-item[data-archive-id="${archiveId}"][data-filename="${filename}"]`);
+        if (item) item.classList.add('loading');
+
+        try {
+            const data = await this.api.getArchiveAnalysis(archiveId, filename);
+
+            if (data && data.results) {
+                this.currentResults = data.results;
+                this.currentFilename = filename;
+                this.savedRecordingPath = null;
+
+                // Check for linked recording in archive
+                if (data.metadata && data.metadata.recording_file) {
+                    this.savedRecordingPath = `archive`;
+                    this.downloadAudioBtn.classList.remove('hidden');
+                    if (this.audioPlayer) {
+                        this.audioPlayer.src = `/api/archives/${archiveId}/recordings/${data.metadata.recording_file}`;
+                    }
+                } else {
+                    this.downloadAudioBtn.classList.add('hidden');
+                }
+
+                this.renderer.render(data.results);
+
+                this.collapsedSections.delete('results-section');
+                this.updateSectionState('results-section');
+                this.updateAnalysisInfo();
+                this.hideStatus();
+                this.resultsSection.scrollIntoView({ behavior: 'smooth' });
+            }
+        } catch (error) {
+            console.error('Failed to load archived session:', error);
+            this.showStatus('Failed to load archived session: ' + error.message, 'error');
+        } finally {
+            if (item) item.classList.remove('loading');
+        }
+    }
+
+    downloadArchiveBatchAudio(archiveId, filename) {
+        const a = document.createElement('a');
+        a.href = `/api/archives/${archiveId}/recordings/${filename}`;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        this.showStatus('Audio downloaded!', 'success');
     }
 
     showStatus(message, type = 'info') {

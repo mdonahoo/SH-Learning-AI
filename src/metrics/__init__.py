@@ -87,6 +87,7 @@ from src.metrics.training_recommendations import (
     RecommendationPriority,
     SkillCategory,
 )
+from src.metrics.performance_tracker import PerformanceTracker, DependencyCall
 
 __all__ = [
     # Core modules
@@ -143,4 +144,7 @@ __all__ = [
     'DrillActivity',
     'RecommendationPriority',
     'SkillCategory',
+    # Performance tracking
+    'PerformanceTracker',
+    'DependencyCall',
 ]

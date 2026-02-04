@@ -75,7 +75,7 @@ def download_model(model_size: str, device: str = "cpu", compute_type: str = "in
 
 def main():
     """Main entry point."""
-    model_size = os.getenv("WHISPER_MODEL_SIZE", "base")
+    model_size = os.getenv("WHISPER_MODEL_SIZE", os.getenv("WHISPER_MODEL", "large-v3"))
     device = os.getenv("WHISPER_DEVICE", "cpu")
     compute_type = os.getenv("WHISPER_COMPUTE_TYPE", "int8")
 

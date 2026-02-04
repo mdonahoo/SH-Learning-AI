@@ -26,7 +26,7 @@ ssh_public_key_path = "~/.ssh/id_rsa.pub"
 
 # Application
 git_repo_url   = ""                # Set to your repo URL
-whisper_model  = "medium"
+whisper_model  = "large-v3"
 ollama_model   = "llama3.2"
 web_server_port = 8000
 

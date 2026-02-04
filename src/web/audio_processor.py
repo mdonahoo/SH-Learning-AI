@@ -141,6 +141,14 @@ except ImportError:
     TRAINING_RECOMMENDATIONS_AVAILABLE = False
     TrainingRecommendationEngine = None
 
+# Captain leadership assessment
+try:
+    from src.metrics.captain_leadership import CaptainLeadershipAssessor
+    CAPTAIN_LEADERSHIP_AVAILABLE = True
+except ImportError:
+    CAPTAIN_LEADERSHIP_AVAILABLE = False
+    CaptainLeadershipAssessor = None
+
 # Telemetry-Audio Correlator for enhanced role confidence
 try:
     from src.integration.telemetry_audio_correlator import TelemetryAudioCorrelator
@@ -156,6 +164,23 @@ try:
 except ImportError:
     POSTPROCESSOR_AVAILABLE = False
     TranscriptPostProcessor = None
+
+# Domain post-correction and LLM transcript cleanup
+try:
+    from src.audio.domain_postcorrector import DomainPostCorrector, TranscriptLLMCleaner
+    POSTCORRECTOR_AVAILABLE = True
+except ImportError:
+    POSTCORRECTOR_AVAILABLE = False
+    DomainPostCorrector = None
+    TranscriptLLMCleaner = None
+
+# Telemetry timeline builder for mission phase analysis
+try:
+    from src.metrics.telemetry_timeline import TelemetryTimelineBuilder
+    TELEMETRY_TIMELINE_AVAILABLE = True
+except ImportError:
+    TELEMETRY_TIMELINE_AVAILABLE = False
+    TelemetryTimelineBuilder = None
 
 # Title generator and archive manager imports
 try:
@@ -199,6 +224,14 @@ try:
 except ImportError:
     WAVEFORM_ANALYZER_AVAILABLE = False
     WaveformAnalyzer = None
+
+# Performance tracking for dependency calls
+try:
+    from src.metrics.performance_tracker import PerformanceTracker
+    PERFORMANCE_TRACKER_AVAILABLE = True
+except ImportError:
+    PERFORMANCE_TRACKER_AVAILABLE = False
+    PerformanceTracker = None
 
 
 # Progress step definitions
@@ -247,7 +280,7 @@ class AudioProcessor:
             archive_manager: Optional shared ArchiveManager instance
         """
         self.whisper_model_size = whisper_model or os.getenv(
-            'WHISPER_MODEL_SIZE', 'base'
+            'WHISPER_MODEL_SIZE', os.getenv('WHISPER_MODEL', 'large-v3')
         )
         self._transcriber: Optional[WhisperTranscriber] = None
         self._model_loaded = False
@@ -598,6 +631,95 @@ class AudioProcessor:
 
         except Exception as e:
             logger.error(f"Failed to load telemetry events: {e}", exc_info=True)
+            return None
+
+    def _load_game_context(
+        self,
+        session_id: str,
+        telemetry_dir: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Load game context (vessel, mission, roles) from a telemetry session.
+
+        Extracts vessel identity, game variables, station roles, and mission
+        objectives from the telemetry JSON for use in story generation.
+
+        Args:
+            session_id: The telemetry session ID
+            telemetry_dir: Optional directory override for workspace isolation
+
+        Returns:
+            Dictionary with game context fields, or None if not found
+        """
+        try:
+            target_dir = Path(telemetry_dir) if telemetry_dir else Path("data/telemetry")
+            telemetry_file = target_dir / f"telemetry_{session_id}.json"
+
+            if not telemetry_file.exists():
+                logger.debug(f"Telemetry file not found for game context: {telemetry_file}")
+                return None
+
+            import json
+            with open(telemetry_file, 'r') as f:
+                data = json.load(f)
+
+            vessel = data.get('vessel_data', {})
+            mission = data.get('mission_data', {})
+
+            # Extract vessel identity
+            context: Dict[str, Any] = {
+                'vessel_name': vessel.get('vessel_name'),
+                'vessel_class': vessel.get('vessel_class'),
+                'faction': vessel.get('faction'),
+                'location': vessel.get('location'),
+            }
+
+            # Extract game variables (all var_* fields)
+            game_variables: Dict[str, str] = {}
+            for key, value in vessel.items():
+                if key.startswith('var_'):
+                    game_variables[key] = str(value)
+            context['game_variables'] = game_variables
+
+            # Extract game roles (station names like Captain, Flight, Tactical)
+            game_roles: List[str] = []
+            for role in vessel.get('game_roles', []):
+                name = role.get('Name', '')
+                if name and role.get('InUse', False):
+                    game_roles.append(name)
+            context['game_roles'] = game_roles
+
+            # Extract objectives from player_objectives
+            objectives: List[Dict[str, Any]] = []
+            for obj in mission.get('player_objectives', []):
+                objectives.append({
+                    'name': obj.get('Name', ''),
+                    'description': obj.get('Description', ''),
+                    'rank': obj.get('Rank', ''),
+                    'complete': obj.get('Complete', False),
+                    'current_count': obj.get('CurrentCount', 0),
+                    'total_count': obj.get('Count', 0),
+                    'visible': obj.get('Visible', True),
+                })
+            context['objectives'] = objectives
+
+            # Extract mission name from available_missions
+            available = mission.get('available_missions', [])
+            if available:
+                context['mission_name'] = available[0].get('Name', '')
+            else:
+                context['mission_name'] = mission.get('current_mission') or ''
+
+            logger.info(
+                f"Loaded game context: vessel={context.get('vessel_name')}, "
+                f"mission={context.get('mission_name')}, "
+                f"{len(game_roles)} roles, {len(objectives)} objectives, "
+                f"{len(game_variables)} game variables"
+            )
+            return context
+
+        except Exception as e:
+            logger.warning(f"Failed to load game context: {e}", exc_info=True)
             return None
 
     def save_recording(
@@ -1202,6 +1324,14 @@ class AudioProcessor:
             events = self._load_telemetry_events(
                 telemetry_session_id, telemetry_dir=telemetry_dir
             )
+
+        # Load game context (vessel, mission, roles) from telemetry session
+        game_context = None
+        if telemetry_session_id:
+            game_context = self._load_game_context(
+                telemetry_session_id, telemetry_dir=telemetry_dir
+            )
+
         start_time = time.time()
         # Generate timestamp for consistent file naming (pre-LLM and final use same base)
         from datetime import datetime
@@ -1228,18 +1358,27 @@ class AudioProcessor:
             'learning_evaluation': None,
             'seven_habits': None,
             'training_recommendations': None,
+            'telemetry_summary': None,
+            'game_context': game_context,
             'waveform_data': None,
             'sentiment_summary': None,
             'narrative_summary': None,
+            'captain_leadership': None,
             'saved_recording_path': None,
             'processing_time_seconds': 0
         }
+
+        # Shared state for telemetry-derived data
+        speech_action_data = None
 
         # Track cumulative progress
         progress = 0
 
         # Per-step timing breakdown
         step_timings = {}
+
+        # Performance tracker for structured dependency metrics
+        perf_tracker = PerformanceTracker() if PERFORMANCE_TRACKER_AVAILABLE else None
 
         # Step 1: Convert to WAV if needed
         update_progress("convert", "Converting audio format", progress)
@@ -1279,10 +1418,21 @@ class AudioProcessor:
             # Step 2: Transcription (with granular progress updates)
             update_progress("transcribe", "Transcribing audio with Whisper", progress)
             step_start = time.time()
-            segments, info = self.transcribe_with_segments(
-                wav_path,
-                progress_callback=progress_callback  # Pass through for granular updates
-            )
+            if perf_tracker:
+                with perf_tracker.track_dependency(
+                    'whisper_transcription', 'ML_MODEL',
+                    metadata={'model': self.whisper_model_size or 'default'}
+                ) as _whisper_meta:
+                    segments, info = self.transcribe_with_segments(
+                        wav_path,
+                        progress_callback=progress_callback
+                    )
+                    _whisper_meta['segment_count'] = len(segments)
+            else:
+                segments, info = self.transcribe_with_segments(
+                    wav_path,
+                    progress_callback=progress_callback  # Pass through for granular updates
+                )
             results['duration_seconds'] = info.get('duration', 0)
             results['language'] = info.get('language', 'unknown')
             step_timings['transcription'] = round(time.time() - step_start, 2)
@@ -1293,9 +1443,20 @@ class AudioProcessor:
             if include_diarization and DIARIZATION_AVAILABLE and segments:
                 update_progress("diarize", "Identifying speakers", progress)
                 step_start = time.time()
-                segments, diarization_result = self._add_speaker_info(
-                    wav_path, segments, progress_callback=progress_callback
-                )
+                if perf_tracker:
+                    with perf_tracker.track_dependency(
+                        'speaker_diarization', 'ML_MODEL'
+                    ) as _diar_meta:
+                        segments, diarization_result = self._add_speaker_info(
+                            wav_path, segments, progress_callback=progress_callback
+                        )
+                        _diar_meta['speaker_count'] = len(
+                            set(s.get('speaker_id') for s in segments if s.get('speaker_id'))
+                        )
+                else:
+                    segments, diarization_result = self._add_speaker_info(
+                        wav_path, segments, progress_callback=progress_callback
+                    )
                 results['speakers'] = self._calculate_speaker_stats(segments)
 
                 # Add diarization methodology to results if available
@@ -1319,6 +1480,64 @@ class AudioProcessor:
                         )
                 except Exception as e:
                     logger.warning(f"Transcript post-processing failed: {e}")
+
+            # Step 3c: Domain post-correction (known error patterns)
+            if POSTCORRECTOR_AVAILABLE and DomainPostCorrector and segments:
+                try:
+                    step_start = time.time()
+                    corrector = DomainPostCorrector()
+                    segments, correction_stats = corrector.correct_segments(segments)
+                    step_timings['domain_postcorrection'] = round(
+                        time.time() - step_start, 2
+                    )
+                    if correction_stats['corrections_count'] > 0:
+                        results['domain_corrections'] = correction_stats
+                        logger.info(
+                            f"Domain post-correction: "
+                            f"{correction_stats['corrections_count']} fixes"
+                        )
+                except Exception as e:
+                    logger.warning(f"Domain post-correction failed: {e}")
+
+            # Step 3d: LLM transcript cleanup (semantic correction)
+            llm_cleanup_enabled = os.getenv(
+                'LLM_TRANSCRIPT_CLEANUP', 'true'
+            ).lower() == 'true'
+            if (POSTCORRECTOR_AVAILABLE and TranscriptLLMCleaner
+                    and segments and llm_cleanup_enabled):
+                try:
+                    update_progress(
+                        "llm_cleanup",
+                        "Cleaning transcript with LLM...",
+                        progress
+                    )
+                    step_start = time.time()
+                    cleaner = TranscriptLLMCleaner()
+                    if perf_tracker:
+                        with perf_tracker.track_dependency(
+                            'llm_transcript_cleanup', 'LLM'
+                        ) as _cleanup_meta:
+                            segments, cleanup_stats = cleaner.clean_segments(segments)
+                            _cleanup_meta['model'] = cleaner.model
+                            _cleanup_meta['batches_sent'] = cleanup_stats.get('batches_sent', 0)
+                            _cleanup_meta['corrections_made'] = cleanup_stats.get('corrections_made', 0)
+                            _cleanup_meta['prompt_tokens'] = cleanup_stats.get('total_prompt_tokens', 0)
+                            _cleanup_meta['completion_tokens'] = cleanup_stats.get('total_completion_tokens', 0)
+                            _cleanup_meta['total_tokens'] = cleanup_stats.get('total_tokens', 0)
+                    else:
+                        segments, cleanup_stats = cleaner.clean_segments(segments)
+                    step_timings['llm_transcript_cleanup'] = round(
+                        time.time() - step_start, 2
+                    )
+                    if cleanup_stats['corrections_made'] > 0:
+                        results['llm_transcript_cleanup'] = cleanup_stats
+                        logger.info(
+                            f"LLM transcript cleanup: "
+                            f"{cleanup_stats['corrections_made']} fixes "
+                            f"in {cleanup_stats['time_seconds']:.1f}s"
+                        )
+                except Exception as e:
+                    logger.warning(f"LLM transcript cleanup failed: {e}")
 
             # Format transcription segments for response
             results['transcription'] = [
@@ -1428,8 +1647,39 @@ class AudioProcessor:
                             f"{results['telemetry_correlation'].get('command_patterns', 0)} commands, "
                             f"{results['telemetry_correlation'].get('report_patterns', 0)} reports"
                         )
+
+                        # Step 4c: Speech-action cross-reference
+                        try:
+                            speech_action_data = correlator.cross_reference_speech_action()
+                            results['speech_action_alignment'] = {
+                                'alignment_score': speech_action_data.get('alignment_score', 0),
+                                'total_aligned': speech_action_data.get('total_aligned', 0),
+                                'total_speech_intentions': speech_action_data.get('total_speech_intentions', 0),
+                                'total_game_actions': speech_action_data.get('total_game_actions', 0),
+                            }
+                            logger.info(
+                                f"Speech-action cross-reference: "
+                                f"{speech_action_data.get('total_aligned', 0)} aligned, "
+                                f"score={speech_action_data.get('alignment_score', 0):.2f}"
+                            )
+                        except Exception as e:
+                            logger.warning(f"Speech-action cross-reference failed: {e}", exc_info=True)
                     except Exception as e:
                         logger.warning(f"Telemetry correlation failed: {e}", exc_info=True)
+
+                # Step 4d: Build telemetry timeline and summary
+                if (TELEMETRY_TIMELINE_AVAILABLE and
+                        TelemetryTimelineBuilder and events):
+                    try:
+                        timeline_builder = TelemetryTimelineBuilder(events)
+                        results['telemetry_summary'] = timeline_builder.build_telemetry_summary()
+                        logger.info(
+                            f"Telemetry timeline: {results['telemetry_summary'].get('total_events', 0)} events, "
+                            f"{len(results['telemetry_summary'].get('phases', []))} phases, "
+                            f"{len(results['telemetry_summary'].get('key_events', []))} key events"
+                        )
+                    except Exception as e:
+                        logger.warning(f"Telemetry timeline building failed: {e}", exc_info=True)
 
             if include_detailed and ROLE_INFERENCE_AVAILABLE and transcripts:
                 step_timings['role_inference'] = round(time.time() - step_start, 2)
@@ -1452,10 +1702,12 @@ class AudioProcessor:
             if include_detailed and SCORECARD_AVAILABLE and filtered_transcripts:
                 update_progress("scorecards", "Generating speaker scorecards", progress)
                 step_start = time.time()
-                # Pass role assignments so scorecards show detected roles
+                # Pass role assignments and telemetry data so scorecards include game metrics
                 results['speaker_scorecards'] = self._generate_scorecards(
                     filtered_transcripts,
-                    results.get('role_assignments', [])
+                    results.get('role_assignments', []),
+                    telemetry_events=events,
+                    speech_action_data=speech_action_data
                 )
                 step_timings['scorecards'] = round(time.time() - step_start, 2)
             progress = 85
@@ -1472,7 +1724,10 @@ class AudioProcessor:
             if include_detailed and LEARNING_EVALUATOR_AVAILABLE and filtered_transcripts:
                 update_progress("learning", "Evaluating learning metrics", progress)
                 step_start = time.time()
-                results['learning_evaluation'] = self._evaluate_learning(filtered_transcripts)
+                results['learning_evaluation'] = self._evaluate_learning(
+                    filtered_transcripts,
+                    speech_action_data=speech_action_data
+                )
                 step_timings['learning'] = round(time.time() - step_start, 2)
             progress = 80
 
@@ -1483,6 +1738,32 @@ class AudioProcessor:
                 results['seven_habits'] = self._analyze_seven_habits(filtered_transcripts)
                 step_timings['seven_habits'] = round(time.time() - step_start, 2)
             progress = 90
+
+            # Step 9b: Captain leadership assessment (uses FILTERED transcripts + roles)
+            if include_detailed and CAPTAIN_LEADERSHIP_AVAILABLE and filtered_transcripts:
+                try:
+                    step_start = time.time()
+                    # Build role map from role_assignments list
+                    role_map = {}
+                    for ra in results.get('role_assignments', []):
+                        if ra.get('speaker_id') and ra.get('role'):
+                            role_map[ra['speaker_id']] = ra['role']
+
+                    captain_assessor = CaptainLeadershipAssessor(
+                        filtered_transcripts,
+                        role_assignments=role_map,
+                        telemetry_events=events
+                    )
+                    captain_results = captain_assessor.get_structured_results()
+                    if captain_results:
+                        results['captain_leadership'] = captain_results
+                        logger.info(
+                            f"Captain leadership assessment complete: "
+                            f"overall {captain_results.get('overall_score', 0)}/5"
+                        )
+                    step_timings['captain_leadership'] = round(time.time() - step_start, 2)
+                except Exception as e:
+                    logger.warning(f"Captain leadership assessment failed: {e}")
 
             # Step 10: Training recommendations (uses FILTERED transcripts)
             if include_detailed and TRAINING_RECOMMENDATIONS_AVAILABLE and filtered_transcripts:
@@ -1570,7 +1851,21 @@ class AudioProcessor:
                     llm_start = time.time()
                     logger.info("Starting LLM team analysis generation...")
 
-                    narrative_result = generate_summary_sync(results)
+                    if perf_tracker:
+                        with perf_tracker.track_dependency(
+                            'ollama_narrative', 'LLM'
+                        ) as _narr_meta:
+                            narrative_result = generate_summary_sync(results)
+                            if narrative_result:
+                                llm_metrics = narrative_result.get('llm_metrics', {})
+                                _narr_meta['model'] = narrative_result.get('model', '')
+                                _narr_meta['prompt_tokens'] = llm_metrics.get('prompt_tokens', 0)
+                                _narr_meta['completion_tokens'] = llm_metrics.get('completion_tokens', 0)
+                                _narr_meta['total_tokens'] = llm_metrics.get('total_tokens', 0)
+                                _narr_meta['tokens_per_second'] = llm_metrics.get('tokens_per_second', 0)
+                                _narr_meta['prompt_size_chars'] = llm_metrics.get('prompt_size_chars', 0)
+                    else:
+                        narrative_result = generate_summary_sync(results)
 
                     llm_duration = time.time() - llm_start
                     step_timings['llm_narrative'] = round(llm_duration, 2)
@@ -1594,7 +1889,21 @@ class AudioProcessor:
                     story_start = time.time()
                     logger.info("Starting LLM story generation...")
 
-                    story_result = generate_story_sync(results)
+                    if perf_tracker:
+                        with perf_tracker.track_dependency(
+                            'ollama_story', 'LLM'
+                        ) as _story_meta:
+                            story_result = generate_story_sync(results)
+                            if story_result:
+                                llm_metrics = story_result.get('llm_metrics', {})
+                                _story_meta['model'] = story_result.get('model', '')
+                                _story_meta['prompt_tokens'] = llm_metrics.get('prompt_tokens', 0)
+                                _story_meta['completion_tokens'] = llm_metrics.get('completion_tokens', 0)
+                                _story_meta['total_tokens'] = llm_metrics.get('total_tokens', 0)
+                                _story_meta['tokens_per_second'] = llm_metrics.get('tokens_per_second', 0)
+                                _story_meta['prompt_size_chars'] = llm_metrics.get('prompt_size_chars', 0)
+                    else:
+                        story_result = generate_story_sync(results)
 
                     story_duration = time.time() - story_start
                     step_timings['llm_story'] = round(story_duration, 2)
@@ -1617,6 +1926,11 @@ class AudioProcessor:
             # Always calculate processing time in finally block
             results['processing_time_seconds'] = round(time.time() - start_time, 2)
             results['step_timings'] = step_timings
+
+            # Add structured performance telemetry
+            if perf_tracker:
+                results['performance'] = perf_tracker.get_summary()
+
             logger.info(
                 f"Total processing time: {results['processing_time_seconds']:.1f}s | "
                 f"Step breakdown: {step_timings}"
@@ -1837,7 +2151,9 @@ class AudioProcessor:
     def _generate_scorecards(
         self,
         transcripts: List[Dict[str, Any]],
-        role_assignments: List[Dict[str, Any]] = None
+        role_assignments: List[Dict[str, Any]] = None,
+        telemetry_events: Optional[List[Dict[str, Any]]] = None,
+        speech_action_data: Optional[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
         """
         Generate speaker scorecards with evidence.
@@ -1845,6 +2161,8 @@ class AudioProcessor:
         Args:
             transcripts: List of transcript dictionaries
             role_assignments: List of role assignment dicts with 'speaker_id' and 'role'
+            telemetry_events: Optional telemetry events for game effectiveness scoring
+            speech_action_data: Optional speech-action cross-reference data
         """
         try:
             # Convert role_assignments list to dict format expected by SpeakerScorecardGenerator
@@ -1856,7 +2174,12 @@ class AudioProcessor:
                     if speaker_id:
                         role_map[speaker_id] = role
 
-            generator = SpeakerScorecardGenerator(transcripts, role_assignments=role_map)
+            generator = SpeakerScorecardGenerator(
+                transcripts,
+                role_assignments=role_map,
+                telemetry_events=telemetry_events or [],
+                speech_action_data=speech_action_data or {}
+            )
 
             # Use get_structured_results for evidence fields
             structured = generator.get_structured_results()
@@ -1954,12 +2277,17 @@ class AudioProcessor:
 
     def _evaluate_learning(
         self,
-        transcripts: List[Dict[str, Any]]
+        transcripts: List[Dict[str, Any]],
+        speech_action_data: Optional[Dict[str, Any]] = None
     ) -> Optional[Dict[str, Any]]:
         """Evaluate learning metrics."""
         try:
             # LearningEvaluator needs events too, but we'll pass empty list for audio-only
-            evaluator = LearningEvaluator(events=[], transcripts=transcripts)
+            evaluator = LearningEvaluator(
+                events=[],
+                transcripts=transcripts,
+                speech_action_data=speech_action_data
+            )
             results = evaluator.evaluate_all()
 
             # Extract Kirkpatrick levels
@@ -1999,7 +2327,7 @@ class AudioProcessor:
             structured = evaluator.generate_structured_report()
             top_communications = structured.get('top_communications', [])
 
-            return {
+            learning_result = {
                 'kirkpatrick_levels': levels,
                 'blooms_level': blooms_level,
                 'blooms_score': blooms_score / 100,  # Convert to 0-1
@@ -2009,6 +2337,13 @@ class AudioProcessor:
                 'top_communications': top_communications,
                 'speaker_statistics': structured.get('speaker_statistics', {})
             }
+
+            # Include speech-action alignment if available
+            speech_action = results.get('speech_action_alignment')
+            if speech_action:
+                learning_result['speech_action_alignment'] = speech_action
+
+            return learning_result
 
         except Exception as e:
             logger.error(f"Learning evaluation failed: {e}")

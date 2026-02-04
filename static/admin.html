@@ -66,6 +66,57 @@
         </div>
     </section>
 
+    <!-- Game Server Configuration -->
+    <section class="lcars-panel" id="game-config-section">
+        <div class="lcars-panel-bar cyan"></div>
+        <div class="lcars-panel-body">
+            <div class="section-header">
+                <h2>Game Server Configuration</h2>
+                <span class="config-status" id="config-status"></span>
+            </div>
+            <div class="config-field-group">
+                <div class="config-field config-field-wide">
+                    <label class="config-label" for="config-host">Game Host</label>
+                    <input type="text" id="config-host" class="config-input" value="192.168.68.56" autocomplete="off">
+                </div>
+                <div class="config-field">
+                    <label class="config-label" for="config-port-ws">WS Port</label>
+                    <input type="number" id="config-port-ws" class="config-input" value="1865" min="1" max="65535">
+                </div>
+                <div class="config-field">
+                    <label class="config-label" for="config-port-api">API Port</label>
+                    <input type="number" id="config-port-api" class="config-input" value="1864" min="1" max="65535">
+                </div>
+                <div class="config-field">
+                    <label class="config-label" for="config-port-https">HTTPS Port</label>
+                    <input type="number" id="config-port-https" class="config-input" value="1866" min="1" max="65535">
+                </div>
+                <div class="config-field">
+                    <label class="config-label" for="config-port-wss">WSS Port</label>
+                    <input type="number" id="config-port-wss" class="config-input" value="1867" min="1" max="65535">
+                </div>
+            </div>
+            <div class="config-actions">
+                <button class="btn btn-secondary btn-sm" id="btn-test-connection" onclick="adminApp.testConnection()">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                    Test Connection
+                </button>
+                <button class="btn btn-primary btn-sm" id="btn-save-config" onclick="adminApp.saveGameConfig()">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+                        <polyline points="17 21 17 13 7 13 7 21"/>
+                        <polyline points="7 3 7 8 15 8"/>
+                    </svg>
+                    Save Configuration
+                </button>
+            </div>
+            <div class="config-test-results hidden" id="config-test-results"></div>
+        </div>
+    </section>
+
     <!-- Workspaces Table View -->
     <section class="lcars-panel" id="workspaces-section">
         <div class="lcars-panel-bar gold"></div>

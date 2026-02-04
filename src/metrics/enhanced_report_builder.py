@@ -20,6 +20,11 @@ from src.metrics.learning_evaluator import LearningEvaluator
 from src.metrics.seven_habits import SevenHabitsAnalyzer
 from src.metrics.training_recommendations import TrainingRecommendationEngine
 
+try:
+    from src.metrics.telemetry_timeline import TelemetryTimelineBuilder
+except ImportError:
+    TelemetryTimelineBuilder = None
+
 logger = logging.getLogger(__name__)
 
 
@@ -449,8 +454,18 @@ class EnhancedReportBuilder:
         analyses = self.build_all_analyses()
         statistics = self.build_mission_statistics()
 
-        return {
+        result = {
             'mission_statistics': statistics,
             'full_report': self.generate_full_report(),
             **analyses
         }
+
+        # Add telemetry summary if events are available
+        if self.events and TelemetryTimelineBuilder:
+            try:
+                timeline_builder = TelemetryTimelineBuilder(self.events)
+                result['telemetry_summary'] = timeline_builder.build_telemetry_summary()
+            except Exception as e:
+                logger.warning(f"Telemetry timeline building failed: {e}")
+
+        return result

@@ -250,7 +250,10 @@
                             Analyze Mission Audio
                         </button>
                         <button id="save-audio-btn" class="btn btn-secondary hidden">
-                            Save Recording
+                            Download Audio
+                        </button>
+                        <button id="save-telemetry-btn" class="btn btn-secondary hidden">
+                            Download Telemetry
                         </button>
                     </div>
                 </div>
@@ -326,6 +329,34 @@
                 </div>
                 <div id="archive-list" class="archive-list">
                     <p class="empty-state">Loading...</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Data Archives Section -->
+    <section class="lcars-panel collapsed" id="data-archives-section">
+        <div class="lcars-panel-bar periwinkle"></div>
+        <div class="lcars-panel-body">
+            <div class="card-header" onclick="app.toggleSection('data-archives-section')">
+                <div class="card-title">
+                    <span class="collapse-icon">&#9660;</span>
+                    <h2>Data Archives</h2>
+                    <span id="data-archives-count" class="badge">0</span>
+                </div>
+                <button class="btn-icon-only" onclick="event.stopPropagation(); app.loadDataArchives();" title="Refresh">
+                    <svg class="icon"><use href="#icon-refresh"></use></svg>
+                </button>
+            </div>
+            <div class="card-content">
+                <div id="archive-batch-selector" class="archive-controls">
+                    <select id="archive-batch-select" class="search-input" onchange="app.loadArchiveBatch(this.value)">
+                        <option value="">Select an archive batch...</option>
+                    </select>
+                </div>
+                <div id="archive-batch-info" class="hidden" style="margin-bottom: 0.5rem; font-size: 0.85rem; opacity: 0.8;"></div>
+                <div id="archive-sessions-list" class="archive-list">
+                    <p class="empty-state">Select a batch to browse archived sessions</p>
                 </div>
             </div>
         </div>
@@ -510,8 +541,19 @@
                         <div id="quality-content" class="quality-content"></div>
                     </div>
 
-                    <!-- Captain's Debrief Tab (merged: Narrative + Story) -->
+                    <!-- Captain's Debrief Tab (merged: Captain Leadership + Narrative + Story) -->
                     <div id="tab-debrief" class="tab-panel hidden">
+                        <!-- Captain Leadership Assessment -->
+                        <div id="captain-leadership-section" class="captain-leadership-section hidden">
+                            <h2>
+                                <svg class="icon"><use href="#icon-captain"></use></svg>
+                                Captain Leadership Assessment
+                            </h2>
+                            <div id="captain-leadership-content" class="captain-leadership-content"></div>
+                        </div>
+
+                        <div id="captain-leadership-divider" class="lcars-bar gold hidden" style="margin: 32px 0;"></div>
+
                         <!-- AI Team Analysis -->
                         <div class="narrative-header">
                             <h2>

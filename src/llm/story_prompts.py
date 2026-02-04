@@ -4,7 +4,127 @@ Story prompt templates for mission narrative generation.
 Uses the hybrid approach: Python provides facts, LLM creates narrative.
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
+
+
+def _build_story_telemetry_section(telemetry_summary: Optional[Dict[str, Any]]) -> str:
+    """
+    Build telemetry section for story prompts.
+
+    Groups consecutive similar events for concise presentation.
+
+    Args:
+        telemetry_summary: Telemetry summary data
+
+    Returns:
+        Formatted telemetry section for story prompt
+    """
+    if not telemetry_summary or telemetry_summary.get('total_events', 0) == 0:
+        return ""
+
+    sections = [
+        "## GAME EVENTS (actual in-game data — use specific numbers and names)",
+        f"**Total events recorded:** {telemetry_summary.get('total_events', 0)}",
+        "",
+    ]
+
+    # Mission phases for story structure
+    phases = telemetry_summary.get('phases', [])
+    if phases:
+        sections.append("**Mission phases:**")
+        for phase in phases:
+            sections.append(
+                f"- {phase.get('start_formatted', '?')}-{phase.get('end_formatted', '?')}: "
+                f"{phase.get('display_name', 'Unknown')}"
+            )
+        sections.append("")
+
+    # Key events — group consecutive same-type events
+    key_events = telemetry_summary.get('key_events', [])
+    if key_events:
+        grouped = _group_consecutive_events(key_events, max_events=25)
+        sections.append("**Key game events (weave these into the narrative with specific details):**")
+        for event in grouped:
+            sections.append(
+                f"- [{event['time_formatted']}] {event['description']}"
+            )
+        sections.append("")
+
+    return '\n'.join(sections)
+
+
+def _group_consecutive_events(
+    events: List[Dict[str, Any]],
+    max_events: int = 25
+) -> List[Dict[str, Any]]:
+    """
+    Group consecutive events of the same type into summary entries.
+
+    Args:
+        events: List of key event dictionaries
+        max_events: Maximum grouped events to return
+
+    Returns:
+        List of grouped event dictionaries
+    """
+    if not events:
+        return []
+
+    grouped: List[Dict[str, Any]] = []
+    current_type: Optional[str] = None
+    current_group: List[Dict[str, Any]] = []
+
+    for event in events:
+        event_type = event.get('event_type', 'unknown')
+        if event_type == current_type:
+            current_group.append(event)
+        else:
+            if current_group:
+                grouped.append(_format_event_group(current_group))
+            current_group = [event]
+            current_type = event_type
+
+    if current_group:
+        grouped.append(_format_event_group(current_group))
+
+    return grouped[:max_events]
+
+
+def _format_event_group(events: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Format a group of consecutive same-type events into one entry.
+
+    Args:
+        events: List of consecutive events of the same type
+
+    Returns:
+        Single formatted event dictionary
+    """
+    if len(events) == 1:
+        return events[0]
+
+    first = events[0]
+    last = events[-1]
+    event_type = first.get('event_type', 'unknown')
+    type_label = event_type.replace('_', ' ')
+
+    first_time = first.get('time', 0)
+    last_time = last.get('time', 0)
+    duration_secs = last_time - first_time
+
+    if duration_secs > 60:
+        duration_str = f"{duration_secs / 60:.0f} minutes"
+    else:
+        duration_str = f"{duration_secs:.0f} seconds"
+
+    return {
+        'time_formatted': f"{first.get('time_formatted', '?')}-{last.get('time_formatted', '?')}",
+        'event_type': event_type,
+        'description': (
+            f"{len(events)} {type_label} events over {duration_str} "
+            f"(e.g., {first.get('description', '')})"
+        ),
+    }
 
 
 def build_mission_story_prompt(structured_data: Dict[str, Any]) -> str:
@@ -106,37 +226,24 @@ def build_mission_story_prompt(structured_data: Dict[str, Any]) -> str:
         for role in speaker_roles
     ])
 
-    prompt = f"""You are a creative writer crafting a short story based on REAL mission data.
+    prompt = f"""You are a narrative writer who transforms real game sessions into compelling true stories. Your craft is narrative nonfiction — you find the genuine drama, humor, and meaning in what actually happened.
 
-🎯 YOUR MISSION: Write an engaging short story (1500-2000 words) about this bridge simulation mission.
-
-📋 CRITICAL RULES:
-1. Use ONLY the actual dialogue provided below - these are REAL quotes from the mission
-2. You may add narrative, descriptions, internal thoughts, and action between quotes
-3. DO NOT modify or paraphrase the quotes - use them VERBATIM
-4. DO NOT invent new dialogue - only use provided quotes
-5. **FOLLOW THE TIMELINE:** Quotes MUST appear in chronological order (Scene 1 → Scene 2 → Scene 3, etc.)
-6. **NEVER jump backward or forward in time** - the story must progress linearly through the mission
-7. DO NOT invent dramatic scenarios (enemy attacks, combat, etc.) unless they appear in the dialogue
-8. The actual mission may be mundane (logistics, routine patrol) - that's OK! Make it interesting through character dynamics and atmosphere, not fake drama
-9. You MAY describe actions, emotions, and scene details
-10. Assign the speaker IDs to bridge positions as specified below
-11. If the crew discussed containers and supplies, write about that - don't invent space battles
-12. Stay true to what ACTUALLY happened, even if it's less exciting than sci-fi combat
+## YOUR TASK
+Write a narrative nonfiction story (800-1200 words) about this bridge crew's mission. This is a TRUE STORY — your job is to tell it compellingly, not to invent drama.
 
 ---
 
-# MISSION FACTS (USE THESE EXACTLY)
+# MISSION FACTS
 
 **Mission Name:** {mission_name}
 **Mission ID:** {mission_id}
 **Duration:** {metadata['duration']}
 **Bridge Crew:** {metadata['unique_speakers']} officers
 
-## Character Assignments (USE THESE)
+## Crew
 {character_profiles}
 
-## Mission Objectives (ACTUAL)
+## Mission Objectives
 {objectives_text}
 
 ## Mission Outcome
@@ -144,73 +251,45 @@ def build_mission_story_prompt(structured_data: Dict[str, Any]) -> str:
 - Total Events: {metadata['total_events']}
 - Total Communications: {metadata['total_communications']}
 
-## ACTUAL DIALOGUE SEQUENCES (USE VERBATIM)
+## CREW DIALOGUE (chronological — use verbatim)
 {scene_text}
 
----
-
-# STORY REQUIREMENTS
-
-**Structure:**
-1. **Opening Hook** (200-300 words)
-   - Set the scene on the bridge
-   - Introduce the characters and their roles
-   - Establish the mission stakes
-
-2. **Rising Action** (600-800 words)
-   - Use the actual dialogue sequences above
-   - Add narrative between quotes (describe actions, thoughts, reactions)
-   - Build tension based on mission objectives
-   - Show character dynamics and teamwork
-
-3. **Climax** (300-400 words)
-   - The critical moment of the mission
-   - Use dialogue from the most intense scene
-   - Show decision-making under pressure
-
-4. **Resolution** (200-300 words)
-   - Reflect the actual mission outcome
-   - Character reflections on performance
-   - Hint at growth/lessons learned
-
-**Writing Style:**
-- Engaging, immersive prose
-- Show don't tell (use actions and dialogue)
-- Create tension and atmosphere through character interactions, NOT invented combat
-- Make it feel like you're on the bridge during a real training mission
-- Use naval/space terminology appropriately
-- Keep the actual mission duration and stakes realistic ({metadata['duration']} mission)
-- Even routine missions can be interesting through character development and team dynamics
-- Focus on the human element: learning, teamwork, decision-making under training conditions
-
-**IMPORTANT - TIMELINE ADHERENCE:**
-- **USE SCENES IN ORDER:** Start with Scene 1, then Scene 2, then Scene 3, etc.
-- **NEVER reorder or shuffle quotes** - they are pre-sorted chronologically
-- **You may skip quotes**, but if you use them, use them IN THE ORDER SHOWN
-- All dialogue MUST be verbatim from the sequences above
-- Add rich descriptions between dialogue
-- Create believable internal thoughts for characters
-- Make the story compelling while staying 100% true to the facts
-- DO NOT ADD: Combat, enemies, battles, hostile forces, or danger UNLESS clearly present in dialogue
-- DO ADD: Character development, team dynamics, training atmosphere, realistic bridge operations
-
-**TIMELINE EXAMPLE:**
-✅ CORRECT: Use Scene 1 quote → narrative → Scene 1 quote → narrative → Scene 2 quote → etc.
-❌ WRONG: Use Scene 3 quote → then Scene 1 quote (backward jump)
-❌ WRONG: Use Scene 5 quote → then Scene 2 quote (forward then back)
-
-**Tone:** Professional but engaging - like a realistic bridge simulation training story (NOT action-packed space combat unless the dialogue supports it)
-
-**REALITY CHECK:**
-- This is a TRAINING SIMULATION, not a combat mission
-- The dialogue may reference routine tasks - that's the actual story
-- Make it engaging through characters and atmosphere, NOT fabricated danger
-
-**Format:** Plain text prose, no markdown headers within the story body
+{_build_story_telemetry_section(structured_data.get('telemetry_summary'))}
 
 ---
 
-BEGIN YOUR STORY NOW:
+## STRUCTURE
+Write 3-6 sections, each with a descriptive markdown header (## format) based on natural story beats. Headers should be specific and evocative.
+
+GOOD headers: "## The Turret That Turned", "## Racing to Outpost D-3", "## A Question of Credits"
+BAD headers: "## Opening", "## Rising Action", "## Climax"
+
+## TONE & STYLE: NARRATIVE NONFICTION
+
+GOOD example:
+"The team started with 620 credits and a clear strategy. 'Taking these first three is gonna be good,' someone noted. What they didn't realize was that every outpost they captured would drain credits from a shared pool."
+
+BAD example:
+"Captain Rodriguez surveyed the bridge with steely determination as alarms blared across the command deck."
+
+## CRITICAL RULES
+1. The TRANSCRIPT is your primary source. Use exact quotes woven naturally into prose.
+2. Use EXACT NUMBERS from game data: credits, outpost names, objective counts.
+3. DO NOT INVENT scenarios, combat, characters, or drama not in the data.
+4. Use GENDER-NEUTRAL language (they/them). Never "he said" or "she ordered".
+5. Maintain CHRONOLOGICAL order — scenes must flow Scene 1 → 2 → 3.
+6. Be HONEST about bugs, mistakes, confusion — these are often the best parts.
+7. Include 10+ direct quotes woven naturally into prose.
+8. Write in PAST TENSE, third person.
+9. Find the REAL story in what happened. Don't fabricate danger or drama.
+
+## FORMAT
+- 800-1200 words of flowing prose
+- 3-6 sections with ## markdown headers
+- Quotes woven into narrative, not block-quoted
+- No bullet points or tables — this is a story
+
+Write your narrative nonfiction story now:
 """
 
     return prompt.strip()

@@ -34,57 +34,71 @@ class HabitIndicators:
     """Observable behavior indicators for each habit."""
 
     # Habit 1: Be Proactive - Take initiative without being asked
+    # Note: "ready/standing by/prepared" removed — these indicate REACTIVE waiting,
+    # not proactive initiative. Kept patterns that show self-directed action.
     BE_PROACTIVE_PATTERNS: List[str] = field(default_factory=lambda: [
-        r"(?i)\b(i'll|i will|let me|i can|i've got|i have)\b",
+        r"(?i)\b(i'll|i will|let me|i can|i've got)\b",
         r"(?i)\b(taking|handling|on it|got this)\b",
         r"(?i)\b(initiative|volunteer|step up)\b",
-        r"(?i)\b(ready|prepared|standing by)\b",
-        r"(?i)\b(checking|monitoring|watching)\b",
+        r"(?i)\b(i'm going to|i'm gonna|i'll go ahead)\b",
+        r"(?i)\b(checking|monitoring|watching)\b.{5,}",
     ])
 
     # Habit 2: Begin with the End in Mind - Goal-oriented communication
+    # Note: Removed bare "first/then/next" — too common and non-specific.
+    # Kept goal/plan/strategy vocabulary that signals forward-looking intent.
     BEGIN_WITH_END_PATTERNS: List[str] = field(default_factory=lambda: [
         r"(?i)\b(objective|goal|mission|target|purpose)\b",
         r"(?i)\b(plan|strategy|approach)\b",
-        r"(?i)\b(outcome|result|success|complete)\b",
-        r"(?i)\b(priority|primary|secondary)\b",
-        r"(?i)\b(first|then|finally|next)\b",
+        r"(?i)\b(outcome|result|success)\b.{3,}",
+        r"(?i)\b(our (priority|objective|goal|mission))\b",
+        r"(?i)\bwe need to .{5,}",
     ])
 
     # Habit 3: Put First Things First - Prioritization
+    # Note: Removed bare "first/before/primary" — too common in bridge chatter.
+    # Kept patterns showing explicit prioritization decisions.
     FIRST_THINGS_FIRST_PATTERNS: List[str] = field(default_factory=lambda: [
-        r"(?i)\b(priority|urgent|critical|important)\b",
-        r"(?i)\b(first|before|primary)\b",
-        r"(?i)\b(focus|concentrate|attention)\b",
-        r"(?i)\b(now|immediately|right away)\b",
-        r"(?i)\b(sequence|order|step)\b",
+        r"(?i)\b(priority|urgent|critical)\b",
+        r"(?i)\b(most important|top priority|main concern)\b",
+        r"(?i)\b(focus on|concentrate on|attend to)\b",
+        r"(?i)\b(right away|immediately|right now)\b.{3,}",
+        r"(?i)\b(before we|first we need|first priority)\b",
     ])
 
     # Habit 4: Think Win-Win - Mutual benefit, cooperation
+    # Note: Removed bare "we/us/our" — nearly every collaborative utterance
+    # contains these, inflating scores to near-max. Kept words that signal
+    # deliberate cooperation and mutual benefit.
     THINK_WIN_WIN_PATTERNS: List[str] = field(default_factory=lambda: [
-        r"(?i)\b(together|team|we|us|our)\b",
+        r"(?i)\b(together|as a team)\b",
         r"(?i)\b(help|assist|support|backup)\b",
         r"(?i)\b(share|collaborate|cooperate)\b",
-        r"(?i)\b(both|everyone|all of us)\b",
+        r"(?i)\b(everyone|all of us)\b",
         r"(?i)\b(fair|equal|balance)\b",
     ])
 
     # Habit 5: Seek First to Understand - Active listening, questions
+    # Note: Tightened question pattern — bare "what?" interjections don't
+    # indicate empathic listening. Require at least a few words after the
+    # question word to signal a genuine clarifying question.
     SEEK_TO_UNDERSTAND_PATTERNS: List[str] = field(default_factory=lambda: [
-        r"(?i)\b(what|why|how|where|when|who)\b.*\?",
+        r"(?i)\b(what|why|how|where|when|who)\b.{4,}\?",
         r"(?i)\b(understand|clarify|explain|tell me)\b",
         r"(?i)\b(confirm|verify|repeat|say again)\b",
-        r"(?i)\b(meaning|means|because)\b",
-        r"(?i)\b(listen|hear|heard)\b",
+        r"(?i)\b(do you mean|can you explain|what do you think)\b",
+        r"(?i)\b(listen|hear me out|let me understand)\b",
     ])
 
     # Habit 6: Synergize - Creative cooperation, building on ideas
+    # Note: Removed "together" (overlaps Habit 4). Tightened to patterns
+    # indicating creative brainstorming and building on others' ideas.
     SYNERGIZE_PATTERNS: List[str] = field(default_factory=lambda: [
         r"(?i)\b(idea|suggest|option|alternative)\b",
-        r"(?i)\b(what if|how about|could we|let's try)\b",
+        r"(?i)\b(what if we|how about we|could we try|let's try)\b",
         r"(?i)\b(build on|add to|combine)\b",
-        r"(?i)\b(creative|solution|solve)\b",
-        r"(?i)\b(together|teamwork|coordinate)\b",
+        r"(?i)\b(solution|solve|figure out)\b",
+        r"(?i)\b(coordinate|work with|teamwork)\b",
     ])
 
     # Habit 7: Sharpen the Saw - Learning, improvement, reflection
@@ -202,6 +216,9 @@ class SevenHabitsAnalyzer:
         results = {}
         total_utterances = len(self.transcripts) if self.transcripts else 1
 
+        # Track which utterance indices matched ANY habit for dedup
+        self._matched_utterance_indices: set = set()
+
         for habit in SevenHabit:
             patterns = self._habit_pattern_map[habit]
             count = 0
@@ -209,7 +226,7 @@ class SevenHabitsAnalyzer:
             pattern_breakdown = {f"pattern_{i}": 0 for i in range(len(patterns))}
             speaker_contributions = defaultdict(int)
 
-            for t in self.transcripts:
+            for idx, t in enumerate(self.transcripts):
                 text = t.get('text', '')
                 speaker = t.get('speaker') or t.get('speaker_id') or 'unknown'
                 timestamp = t.get('timestamp', '')
@@ -219,6 +236,7 @@ class SevenHabitsAnalyzer:
                         count += 1
                         pattern_breakdown[f"pattern_{i}"] += 1
                         speaker_contributions[speaker] += 1
+                        self._matched_utterance_indices.add(idx)
                         if len(examples) < 5:
                             examples.append({
                                 'timestamp': timestamp,
@@ -471,5 +489,11 @@ class SevenHabitsAnalyzer:
             'overall_effectiveness_score': round(
                 sum(a.score for a in results.values()) / len(results), 1
             ),
+            # Deduplicated engagement rate: what % of utterances matched
+            # at least one habit (each utterance counted only once)
+            'unique_habit_utterances': len(
+                getattr(self, '_matched_utterance_indices', set())
+            ),
+            'total_utterances': len(self.transcripts),
             'score_thresholds': "Score 5: ≥30% | Score 4: ≥20% | Score 3: ≥10% | Score 2: ≥5% | Score 1: <5%",
         }

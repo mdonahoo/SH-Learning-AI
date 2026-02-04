@@ -55,6 +55,14 @@ except ImportError:
         "num_predict": 1200,
     }
 
+# Telemetry timeline builder for story event grouping
+try:
+    from src.metrics.telemetry_timeline import TelemetryTimelineBuilder
+    TELEMETRY_TIMELINE_AVAILABLE = True
+except ImportError:
+    TELEMETRY_TIMELINE_AVAILABLE = False
+    TelemetryTimelineBuilder = None
+
 
 class NarrativeSummaryGenerator:
     """
@@ -310,6 +318,43 @@ class NarrativeSummaryGenerator:
                 for rec in learning['recommendations'][:5]:
                     sections.append(f"  - {rec}")
 
+        # Telemetry game events (actual in-game data)
+        telemetry_summary = analysis.get('telemetry_summary')
+        if telemetry_summary and telemetry_summary.get('total_events', 0) > 0:
+            sections.append("\n" + "="*50)
+            sections.append("GAME TELEMETRY DATA (actual in-game events)")
+            sections.append("="*50)
+            sections.append(f"\nTotal game events: {telemetry_summary['total_events']}")
+
+            # Event category breakdown
+            event_summ = telemetry_summary.get('event_summary', {})
+            cat_dist = event_summ.get('category_distribution', {})
+            if cat_dist:
+                sections.append("\nActivity by category:")
+                for cat, count in cat_dist.items():
+                    sections.append(f"  - {cat}: {count} events")
+
+            # Mission phases from telemetry
+            phases = telemetry_summary.get('phases', [])
+            if phases:
+                sections.append("\nMission phases (from game telemetry):")
+                for phase in phases:
+                    sections.append(
+                        f"  - {phase.get('start_formatted', '?')}-{phase.get('end_formatted', '?')}: "
+                        f"{phase.get('display_name', 'Unknown')} ({phase.get('event_count', 0)} events)"
+                    )
+
+            # Key game events
+            key_events = telemetry_summary.get('key_events', [])
+            if key_events:
+                sections.append("\nKEY GAME EVENTS (use these to ground your analysis):")
+                for event in key_events[:15]:
+                    sections.append(
+                        f"  [{event.get('time_formatted', '?')}] {event.get('description', 'Unknown event')}"
+                    )
+                if len(key_events) > 15:
+                    sections.append(f"  ... and {len(key_events) - 15} more events")
+
         # Selected transcript highlights (high confidence, interesting content)
         transcripts = analysis.get('transcription', [])
         if transcripts:
@@ -403,6 +448,90 @@ Your goal: make feedback feel like friendly advice, not evaluation.
         }
         return styles.get(self.style, styles['entertaining'])
 
+    def _compute_mission_grade(self, analysis: Dict[str, Any]) -> str:
+        """
+        Compute mission grade from data using explicit criteria.
+
+        Grade criteria:
+        - A: ≥80% objectives complete AND avg scorecard ≥4.0 AND avg habits ≥4.0
+        - B: ≥60% objectives OR (avg scorecard ≥3.0 AND avg habits ≥3.0)
+        - C: ≥40% objectives OR (avg scorecard ≥2.5 AND avg habits ≥2.5)
+        - D: ≥20% objectives OR avg scorecard ≥2.0
+        - F: <20% objectives AND avg scorecard <2.0
+
+        When objectives data is unavailable, grade is based on scorecard
+        and habits scores only.
+
+        Args:
+            analysis: Full analysis results
+
+        Returns:
+            Grade string with justification, e.g. "B (scorecard 3.4/5, habits 3.2/5)"
+        """
+        # Objective completion rate
+        game_context = analysis.get('game_context') or {}
+        objectives = game_context.get('objectives', [])
+        if objectives:
+            completed = sum(1 for o in objectives if o.get('complete', False))
+            obj_rate = completed / len(objectives)
+        else:
+            obj_rate = None  # No objective data
+
+        # Average scorecard score
+        scorecards = analysis.get('speaker_scorecards', [])
+        if scorecards:
+            sc_scores = []
+            for sc in scorecards:
+                overall = sc.get('overall_score', 0)
+                if isinstance(overall, (int, float)) and overall > 0:
+                    sc_scores.append(overall)
+            avg_scorecard = sum(sc_scores) / len(sc_scores) if sc_scores else 0
+        else:
+            avg_scorecard = 0
+
+        # Average habits score
+        habits = analysis.get('seven_habits') or {}
+        avg_habits = habits.get('overall_score', 0)
+        if isinstance(avg_habits, (int, float)):
+            avg_habits = float(avg_habits)
+        else:
+            avg_habits = 0
+
+        # Determine grade
+        if obj_rate is not None:
+            if obj_rate >= 0.80 and avg_scorecard >= 4.0 and avg_habits >= 4.0:
+                grade = "A"
+            elif obj_rate >= 0.60 or (avg_scorecard >= 3.0 and avg_habits >= 3.0):
+                grade = "B"
+            elif obj_rate >= 0.40 or (avg_scorecard >= 2.5 and avg_habits >= 2.5):
+                grade = "C"
+            elif obj_rate >= 0.20 or avg_scorecard >= 2.0:
+                grade = "D"
+            else:
+                grade = "F"
+        else:
+            # No objectives — grade on team performance only
+            avg_perf = (avg_scorecard + avg_habits) / 2 if (avg_scorecard and avg_habits) else max(avg_scorecard, avg_habits)
+            if avg_perf >= 4.0:
+                grade = "A"
+            elif avg_perf >= 3.0:
+                grade = "B"
+            elif avg_perf >= 2.5:
+                grade = "C"
+            elif avg_perf >= 2.0:
+                grade = "D"
+            else:
+                grade = "F"
+
+        # Build justification string
+        parts = []
+        if obj_rate is not None:
+            parts.append(f"objectives {obj_rate*100:.0f}%")
+        parts.append(f"scorecard {avg_scorecard:.1f}/5")
+        parts.append(f"habits {avg_habits:.1f}/5")
+
+        return f"{grade} ({', '.join(parts)})"
+
     def _build_prompt(self, analysis: Dict[str, Any]) -> str:
         """
         Build the complete prompt for narrative generation.
@@ -415,6 +544,13 @@ Your goal: make feedback feel like friendly advice, not evaluation.
         """
         context = self._build_analysis_context(analysis)
         style_instructions = self._get_style_instructions()
+        mission_grade = self._compute_mission_grade(analysis)
+
+        # Build captain leadership context if available
+        captain_section = ""
+        captain_leadership = analysis.get('captain_leadership')
+        if captain_leadership:
+            captain_section = self._build_captain_context(captain_leadership)
 
         prompt = f"""You are an experienced bridge crew instructor providing a structured mission debrief.
 
@@ -425,13 +561,17 @@ Generate a CONCISE, STRUCTURED debrief using bullet points and tables. NO PROSE 
 
 ## SESSION DATA
 {context}
+{captain_section}
 
 ---
 
+## COMPUTED MISSION GRADE: {mission_grade}
+(This grade was computed from the data above. Use it as-is in your output.)
+
 ## OUTPUT FORMAT (use exactly this structure)
 
-### Mission Grade: [A/B/C/D/F]
-One sentence summary based on metrics.
+### Mission Grade: {mission_grade}
+One sentence summary explaining why this grade was earned.
 
 ### Top 3 Strengths (with evidence)
 1. **[Strength]**: "[Exact quote]" - [Role]
@@ -461,10 +601,44 @@ One sentence summary based on metrics.
 3. Keep total output under 200 words
 4. Every claim needs a quote as evidence
 5. Be specific and actionable, not vague
+6. Use the computed mission grade exactly as provided — do not override it
 
 Generate the structured debrief now:"""
 
         return prompt
+
+    def _build_captain_context(self, captain_leadership: Dict[str, Any]) -> str:
+        """
+        Build context string for captain leadership assessment.
+
+        Args:
+            captain_leadership: Captain leadership assessment results
+
+        Returns:
+            Formatted context string for LLM
+        """
+        sections = []
+        sections.append("\n" + "=" * 50)
+        sections.append("CAPTAIN LEADERSHIP ASSESSMENT (with evidence)")
+        sections.append("=" * 50)
+
+        captain_id = captain_leadership.get('captain_speaker', 'Unknown')
+        overall = captain_leadership.get('overall_score', 0)
+        sections.append(f"\nCaptain: {captain_id} — Overall Leadership: {overall}/5")
+
+        dimensions = captain_leadership.get('dimensions', {})
+        for dim_name, dim_data in dimensions.items():
+            display_name = dim_name.replace('_', ' ').title()
+            score = dim_data.get('score', 0)
+            evidence = dim_data.get('evidence', '')
+            sections.append(f"\n  {display_name}: {score}/5")
+            if evidence:
+                sections.append(f"    {evidence}")
+            examples = dim_data.get('examples', [])
+            for ex in examples[:2]:
+                sections.append(f"    - \"{ex}\"")
+
+        return '\n'.join(sections)
 
     async def generate_summary(
         self,
@@ -526,6 +700,20 @@ Generate the structured debrief now:"""
 
             logger.info(f"Generated narrative summary: {len(narrative)} characters")
 
+            # Extract LLM token metrics from Ollama response
+            prompt_tokens = result.get('prompt_eval_count', 0)
+            completion_tokens = result.get('eval_count', 0)
+            eval_duration_ns = result.get('eval_duration', 0)
+            llm_metrics: Dict[str, Any] = {
+                'prompt_tokens': prompt_tokens,
+                'completion_tokens': completion_tokens,
+                'total_tokens': prompt_tokens + completion_tokens,
+                'tokens_per_second': round(
+                    completion_tokens / (eval_duration_ns / 1e9), 2
+                ) if eval_duration_ns > 0 and completion_tokens > 0 else 0.0,
+                'prompt_size_chars': len(prompt),
+            }
+
             # Validate output if requested and module available
             validation_issues = []
             if validate_output and HALLUCINATION_PREVENTION_AVAILABLE:
@@ -544,7 +732,8 @@ Generate the structured debrief now:"""
                 'model': self.ollama_model,
                 'style': self.style,
                 'generated': True,
-                'validation_issues': len(validation_issues) if validation_issues else 0
+                'validation_issues': len(validation_issues) if validation_issues else 0,
+                'llm_metrics': llm_metrics,
             }
 
         except httpx.TimeoutException:
@@ -654,7 +843,11 @@ Generate the structured debrief now:"""
 
     def _build_story_prompt(self, analysis: Dict[str, Any]) -> str:
         """
-        Build prompt for story narrative generation.
+        Build prompt for narrative nonfiction story generation.
+
+        Produces a prompt that guides the LLM to write a genuine, compelling
+        story about what actually happened — grounded in specific game details,
+        real quotes, and honest moments.
 
         Args:
             analysis: Full analysis results
@@ -664,56 +857,61 @@ Generate the structured debrief now:"""
         """
         context = self._build_story_context(analysis)
 
-        prompt = f"""You are a talented storyteller who transforms bridge crew training sessions into compelling narratives. Your stories capture the drama, tension, and triumph of space operations while staying STRICTLY TRUE to the transcript.
+        prompt = f"""You are a narrative writer who transforms real game sessions into compelling true stories. Your craft is narrative nonfiction — you find the genuine drama, humor, and meaning in what actually happened.
 
 ## YOUR TASK
-Write a SHORT, ENGAGING story (300-400 words) about this bridge crew's session. Transform the raw communications into a narrative that brings the mission to life.
+Write a narrative nonfiction story (800-1200 words) about this bridge crew's session. This is a TRUE STORY — your job is to tell it compellingly, not to invent drama.
 
-## THE SESSION DATA
+## SESSION DATA
 
 {context}
 
-## STORY GUIDELINES
+## STRUCTURE
+Write 3-6 sections, each with a descriptive markdown header (## format) based on natural story beats. Headers should be specific and evocative — based on what actually happened.
 
-**STRUCTURE YOUR STORY:**
-1. **Opening** (2-3 sentences): Set the scene based on the first communications.
-2. **Rising Action** (1 paragraph): What challenges or tasks did they face? Build tension from actual events.
-3. **Key Moments** (1-2 paragraphs): The heart of the story - use ACTUAL QUOTES from the transcript.
-4. **Resolution** (2-3 sentences): How did the session end based on the final communications?
+GOOD headers: "## The Turret That Turned", "## Racing to Outpost D-3", "## A Question of Credits"
+BAD headers: "## Opening", "## Rising Action", "## Climax", "## Resolution"
 
-**CRITICAL RULES - DO NOT VIOLATE:**
-- ONLY reference events, names, and details that appear IN THE TRANSCRIPT
-- Use GENDER-NEUTRAL language for all crew (they/them, "the Captain", "the officer")
-- DO NOT invent ship names, character names, or enemy names not in the transcript
-- DO NOT make up events that didn't happen
-- DO NOT assume genders - never say "he said" or "she ordered"
-- If the transcript is unclear, use vague language rather than inventing specifics
+## TONE & STYLE: NARRATIVE NONFICTION
 
-**STORYTELLING RULES:**
-- Write in PAST TENSE, third person ("The Captain ordered..." not "Order given")
-- Use role names as characters (the Captain, the Helm Officer, the Tactical Officer)
-- Weave in ACTUAL QUOTES from the transcript - these bring authenticity
-- Create narrative flow - don't just list what happened
-- Add atmosphere (tension in voices, urgency) but not invented details
-- Find the drama in what actually happened
+GOOD example:
+"The team started with 620 credits and a clear strategy. 'Taking these first three is gonna be good,' someone noted. What they didn't realize was that every outpost they captured would drain credits from a shared pool — and soon they'd be racing to stay solvent."
 
-**TONE:**
-- Engaging and cinematic, like a scene from a space opera
-- Respectful of the crew's efforts
-- Grounded in the actual transcript
+BAD example:
+"Captain Rodriguez surveyed the bridge with steely determination as alarms blared across the command deck. The fate of the galaxy hung in the balance."
 
-**FORMAT:**
-- 300-400 words
-- Flowing prose paragraphs (not bullet points)
-- Include 3-5 direct quotes from the crew woven into the narrative
+Your story should read like a magazine feature about a real event — engaging, specific, honest. The entertainment comes from authenticity, not invention.
 
-Write your story now (remember: only use facts from the transcript, gender-neutral language):"""
+## CRITICAL RULES
+1. The TRANSCRIPT is your primary source — but respect the confidence markers:
+   - Lines in "quotes" = HIGH CONFIDENCE. Safe to quote verbatim in your story.
+   - Lines in ~tildes~ = LOW CONFIDENCE. The words may be wrong. Paraphrase the general gist, do NOT quote these verbatim. Use hedging: "someone mentioned...", "the crew discussed...", "what sounded like..."
+2. Use EXACT NUMBERS from game data: credits, outpost names, marine counts, target IDs.
+3. DO NOT INVENT scenarios, combat, characters, or drama not in the data.
+4. Use GENDER-NEUTRAL language (they/them, "the Captain", "the officer"). Never "he said" or "she ordered".
+5. Use role names as characters (the Captain, Flight, Tactical, Operations, Sciences, Engineer).
+6. Be HONEST about bugs, mistakes, confusion, miscommunication — these are often the best parts of the story.
+7. Include direct quotes ONLY from high-confidence "quoted" lines. Aim for 8-12 quotes woven naturally into prose.
+8. Maintain CHRONOLOGICAL order — never jump backward in time.
+9. Find the REAL story: a sentry turret spawning as hostile IS the drama. Crew discovering shared credits IS the twist.
+10. Write in PAST TENSE, third person.
+
+## FORMAT
+- 800-1200 words of flowing prose
+- 3-6 sections with ## markdown headers
+- Quotes woven into narrative (not listed or block-quoted)
+- No bullet points or tables — this is a story
+
+Write your narrative nonfiction story now:"""
 
         return prompt
 
     def _build_story_context(self, analysis: Dict[str, Any]) -> str:
         """
-        Build context for story narrative generation.
+        Build context for narrative nonfiction story generation.
+
+        Produces three sections: GAME CONTEXT (vessel/mission/variables),
+        KEY GAME EVENTS (deduplicated), and CREW COMMUNICATIONS (transcripts).
 
         Args:
             analysis: Full analysis results
@@ -723,74 +921,182 @@ Write your story now (remember: only use facts from the transcript, gender-neutr
         """
         sections = []
 
-        # Duration
-        duration = analysis.get('duration_seconds', 0)
-        minutes = int(duration // 60)
-        sections.append(f"SESSION LENGTH: {minutes} minutes")
-
         # Build role map
         role_assignments = analysis.get('role_assignments', [])
-        role_map = {}
+        role_map: Dict[str, str] = {}
         for ra in role_assignments:
             if ra.get('speaker_id') and ra.get('role'):
                 role_map[ra['speaker_id']] = ra['role']
 
+        # === SECTION 1: GAME CONTEXT ===
+        game_context = analysis.get('game_context')
+        duration = analysis.get('duration_seconds', 0)
+        minutes = int(duration // 60)
+
+        sections.append("### GAME CONTEXT")
+        sections.append(f"Session length: {minutes} minutes")
+
+        if game_context:
+            vessel_name = game_context.get('vessel_name')
+            vessel_class = game_context.get('vessel_class')
+            faction = game_context.get('faction')
+            location = game_context.get('location')
+            mission_name = game_context.get('mission_name')
+
+            if vessel_name:
+                vessel_str = f"Vessel: {vessel_name}"
+                if vessel_class and vessel_class != vessel_name:
+                    vessel_str += f" ({vessel_class} class)"
+                sections.append(vessel_str)
+            if faction:
+                sections.append(f"Faction: {faction}")
+            if location:
+                sections.append(f"Location: {location}")
+            if mission_name:
+                sections.append(f"Mission: {mission_name}")
+
+            # Game variables (credits, outpost counts, etc.)
+            game_vars = game_context.get('game_variables', {})
+            if game_vars:
+                sections.append("\nGame variables:")
+                for key, value in game_vars.items():
+                    # Strip var_ prefix for readability
+                    display_key = key.replace('var_', '')
+                    sections.append(f"  {display_key}: {value}")
+
+            # Game station roles
+            game_roles = game_context.get('game_roles', [])
+            if game_roles:
+                sections.append(f"\nGame stations active: {', '.join(game_roles)}")
+
+            # Objectives
+            objectives = game_context.get('objectives', [])
+            if objectives:
+                sections.append("\nMission objectives:")
+                for obj in objectives:
+                    if not obj.get('visible', True):
+                        continue
+                    status = "COMPLETE" if obj.get('complete') else (
+                        f"{obj.get('current_count', 0)}/{obj.get('total_count', 0)}"
+                    )
+                    sections.append(f"  - {obj['name']}: {obj.get('description', '')} [{status}]")
+
         # Crew roster
         speakers = analysis.get('speakers', [])
         if speakers:
-            sections.append("\nCREW ROSTER:")
+            sections.append("\nCrew detected:")
             for s in speakers:
                 speaker_id = s.get('speaker_id', 'Unknown')
                 role = role_map.get(speaker_id, 'Crew Member')
                 utterances = s.get('utterance_count', 0)
                 sections.append(f"  - {role}: {utterances} communications")
+        sections.append("")
 
-        # Transcript for story context (smart sampling for long recordings)
+        # === SECTION 2: KEY GAME EVENTS (deduplicated) ===
+        telemetry_summary = analysis.get('telemetry_summary')
+        if telemetry_summary and telemetry_summary.get('total_events', 0) > 0:
+            sections.append("### KEY GAME EVENTS")
+
+            # Use deduplicated story events if timeline builder is available
+            key_events = telemetry_summary.get('key_events', [])
+            if TELEMETRY_TIMELINE_AVAILABLE and TelemetryTimelineBuilder:
+                try:
+                    # Rebuild events from the raw telemetry events stored in the summary
+                    # We pass key_events through the grouping logic
+                    builder = TelemetryTimelineBuilder([])
+                    # Manually set the grouped events using key_events
+                    grouped = self._group_story_events(key_events, max_events=25)
+                    for event in grouped:
+                        sections.append(
+                            f"  [{event['time_formatted']}] {event['description']}"
+                        )
+                except Exception as e:
+                    logger.debug(f"Story event grouping failed, using raw events: {e}")
+                    for event in key_events[:25]:
+                        sections.append(
+                            f"  [{event.get('time_formatted', '?')}] "
+                            f"{event.get('description', 'Unknown event')}"
+                        )
+            else:
+                for event in key_events[:25]:
+                    sections.append(
+                        f"  [{event.get('time_formatted', '?')}] "
+                        f"{event.get('description', 'Unknown event')}"
+                    )
+
+            if len(key_events) > 25:
+                sections.append(f"  ... and {len(key_events) - 25} more events")
+            sections.append("")
+
+        # === SECTION 3: CREW COMMUNICATIONS (confidence-gated) ===
+        # Segments are split into two tiers:
+        #   QUOTABLE (confidence >= 0.60): safe to use as direct quotes
+        #   CONTEXT  (confidence < 0.60): may contain transcription errors,
+        #            should be paraphrased not quoted verbatim
+        QUOTE_CONFIDENCE_THRESHOLD = 0.60
+
         transcripts = analysis.get('transcription', [])
         if transcripts:
-            # For long transcripts, sample strategically to preserve narrative arc
-            # while keeping context size manageable
-            MAX_TRANSCRIPT_SEGMENTS = 300
+            MAX_TRANSCRIPT_SEGMENTS = 200
             total_count = len(transcripts)
 
             if total_count > MAX_TRANSCRIPT_SEGMENTS:
-                # Smart sampling: beginning (scene setting), middle (action), end (resolution)
-                beginning_count = 50  # First ~5 min for scene setting
-                end_count = 50        # Last ~5 min for resolution
+                # Sample: beginning (scene setting), middle (high confidence), end (resolution)
+                beginning_count = 40
+                end_count = 40
                 middle_count = MAX_TRANSCRIPT_SEGMENTS - beginning_count - end_count
 
-                # Get beginning and end segments
                 beginning = transcripts[:beginning_count]
                 ending = transcripts[-end_count:]
 
-                # Sample evenly from middle, preferring high-confidence segments
                 middle_transcripts = transcripts[beginning_count:-end_count]
                 if middle_transcripts:
-                    # Sort by confidence, take top ones, then re-sort by time
                     middle_sorted = sorted(
                         [(i, t) for i, t in enumerate(middle_transcripts)
                          if t.get('text', '').strip()],
                         key=lambda x: x[1].get('confidence', 0.5),
                         reverse=True
                     )[:middle_count]
-                    # Re-sort by original index to maintain chronological order
                     middle_sorted.sort(key=lambda x: x[0])
                     middle = [t for _, t in middle_sorted]
                 else:
                     middle = []
 
                 sampled_transcripts = beginning + middle + ending
-                sections.append(f"\nMISSION LOG (sampled {len(sampled_transcripts)} of {total_count} communications):")
-                sections.append("Key communications from throughout the mission:\n")
+                sections.append(f"### CREW COMMUNICATIONS (sampled {len(sampled_transcripts)} of {total_count})")
             else:
                 sampled_transcripts = transcripts
-                sections.append(f"\nCOMPLETE MISSION LOG ({total_count} communications):")
-                sections.append("Use these actual communications to build your story:\n")
+                sections.append(f"### CREW COMMUNICATIONS ({total_count} total)")
+
+            # Count quotable vs context-only for the LLM's awareness
+            quotable_count = sum(
+                1 for t in sampled_transcripts
+                if t.get('confidence', 0) >= QUOTE_CONFIDENCE_THRESHOLD
+                and t.get('text', '').strip()
+            )
+            context_count = sum(
+                1 for t in sampled_transcripts
+                if t.get('confidence', 0) < QUOTE_CONFIDENCE_THRESHOLD
+                and t.get('text', '').strip()
+            )
+            sections.append(
+                f"({quotable_count} high-confidence QUOTABLE, "
+                f"{context_count} low-confidence CONTEXT-ONLY — see legend below)"
+            )
+            sections.append(
+                "QUOTABLE lines (marked with \"quotes\") = safe to quote verbatim."
+            )
+            sections.append(
+                "CONTEXT lines (marked with ~tildes~) = may have transcription errors; "
+                "paraphrase the general meaning, do NOT quote verbatim."
+            )
+            sections.append("")
 
             for i, t in enumerate(sampled_transcripts):
                 speaker = t.get('speaker_id', 'Unknown')
                 role = role_map.get(speaker, speaker)
                 text = t.get('text', '').strip()
+                confidence = t.get('confidence', 0)
                 timestamp = t.get('start_time', i)
 
                 if isinstance(timestamp, (int, float)):
@@ -801,20 +1107,89 @@ Write your story now (remember: only use facts from the transcript, gender-neutr
                     time_str = str(timestamp)
 
                 if text:
-                    sections.append(f"  [{time_str}] {role}: \"{text}\"")
-
-        # Mission outcome if available
-        quality = analysis.get('communication_quality', {})
-        if quality:
-            effective_pct = quality.get('effective_percentage', 0)
-            sections.append(f"\nMISSION EFFECTIVENESS: {effective_pct:.0f}%")
-
-        habits = analysis.get('seven_habits', {})
-        if habits:
-            overall = habits.get('overall_score', 0)
-            sections.append(f"TEAM PERFORMANCE SCORE: {overall}/5")
+                    if confidence >= QUOTE_CONFIDENCE_THRESHOLD:
+                        # High confidence — quotable
+                        sections.append(f"  [{time_str}] {role}: \"{text}\"")
+                    else:
+                        # Low confidence — context only, marked with tildes
+                        sections.append(f"  [{time_str}] {role}: ~{text}~")
 
         return '\n'.join(sections)
+
+    def _group_story_events(
+        self,
+        key_events: List[Dict[str, Any]],
+        max_events: int = 25
+    ) -> List[Dict[str, Any]]:
+        """
+        Group consecutive similar events for concise story context.
+
+        Args:
+            key_events: List of key event dictionaries from telemetry summary
+            max_events: Maximum grouped events to return
+
+        Returns:
+            List of grouped event dictionaries
+        """
+        if not key_events:
+            return []
+
+        grouped: List[Dict[str, Any]] = []
+        current_type: Optional[str] = None
+        current_group: List[Dict[str, Any]] = []
+
+        for event in key_events:
+            event_type = event.get('event_type', 'unknown')
+            if event_type == current_type:
+                current_group.append(event)
+            else:
+                if current_group:
+                    grouped.append(self._format_event_group(current_group))
+                current_group = [event]
+                current_type = event_type
+
+        if current_group:
+            grouped.append(self._format_event_group(current_group))
+
+        return grouped[:max_events]
+
+    def _format_event_group(self, events: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Format a group of consecutive events into a single entry.
+
+        Args:
+            events: List of consecutive events of the same type
+
+        Returns:
+            Single formatted event dictionary
+        """
+        if len(events) == 1:
+            return events[0]
+
+        first = events[0]
+        last = events[-1]
+        event_type = first.get('event_type', 'unknown')
+        type_label = event_type.replace('_', ' ')
+
+        first_time = first.get('time', 0)
+        last_time = last.get('time', 0)
+        duration_secs = last_time - first_time
+
+        if duration_secs > 60:
+            duration_str = f"{duration_secs / 60:.0f} minutes"
+        else:
+            duration_str = f"{duration_secs:.0f} seconds"
+
+        return {
+            'time_formatted': f"{first.get('time_formatted', '?')}-{last.get('time_formatted', '?')}",
+            'event_type': event_type,
+            'category': first.get('category', ''),
+            'description': (
+                f"{len(events)} {type_label} events over {duration_str} "
+                f"(e.g., {first.get('description', '')})"
+            ),
+            'time': first_time,
+        }
 
     async def generate_story(
         self,
@@ -874,6 +1249,20 @@ Write your story now (remember: only use facts from the transcript, gender-neutr
 
             logger.info(f"Generated story narrative: {len(story)} characters")
 
+            # Extract LLM token metrics from Ollama response
+            prompt_tokens = result.get('prompt_eval_count', 0)
+            completion_tokens = result.get('eval_count', 0)
+            eval_duration_ns = result.get('eval_duration', 0)
+            llm_metrics: Dict[str, Any] = {
+                'prompt_tokens': prompt_tokens,
+                'completion_tokens': completion_tokens,
+                'total_tokens': prompt_tokens + completion_tokens,
+                'tokens_per_second': round(
+                    completion_tokens / (eval_duration_ns / 1e9), 2
+                ) if eval_duration_ns > 0 and completion_tokens > 0 else 0.0,
+                'prompt_size_chars': len(prompt),
+            }
+
             # Validate output if requested and module available
             validation_issues = []
             if validate_output and HALLUCINATION_PREVENTION_AVAILABLE:
@@ -892,7 +1281,8 @@ Write your story now (remember: only use facts from the transcript, gender-neutr
                 'model': self.ollama_model,
                 'style': 'narrative',
                 'generated': True,
-                'validation_issues': len(validation_issues) if validation_issues else 0
+                'validation_issues': len(validation_issues) if validation_issues else 0,
+                'llm_metrics': llm_metrics,
             }
 
         except Exception as e:

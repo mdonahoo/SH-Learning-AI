@@ -163,6 +163,10 @@ class NASA4DBehaviors:
 class BloomVerbIndicators:
     """Observable verbs mapped to Bloom's Taxonomy cognitive levels."""
 
+    # Bloom's verb indicators — tightened to reduce false positives.
+    # Bare common words like "should", "best", "important" no longer count
+    # as Evaluate-level; they require sentence-level context.
+    # "how about" alone is too vague for Create; requires a verb phrase.
     LEVEL_PATTERNS: Dict[BloomLevel, List[str]] = field(default_factory=lambda: {
         BloomLevel.REMEMBER: [
             r"(?i)\b(recall|list|name|state|define|identify|repeat|label)\b",
@@ -170,26 +174,27 @@ class BloomVerbIndicators:
         ],
         BloomLevel.UNDERSTAND: [
             r"(?i)\b(explain|describe|interpret|summarize|classify|compare)\b",
-            r"(?i)\b(shows|indicates|means|because|therefore)\b",
+            r"(?i)\b(shows|indicates|means that|because|therefore)\b",
         ],
         BloomLevel.APPLY: [
-            r"(?i)\b(use|execute|implement|operate|perform|apply)\b",
+            r"(?i)\b(execute|implement|operate|perform|apply)\b",
             r"(?i)\b(firing|launching|engaging|activating|deploying)\b",
         ],
         BloomLevel.ANALYZE: [
             r"(?i)\b(analyze|differentiate|organize|compare|contrast)\b",
             r"(?i)\b(pattern|connection|relationship|cause|effect)\b",
-            r"(?i)\b(if.*then|because.*therefore|either.*or)\b",
+            r"(?i)\b(if .{3,} then|because .{3,} therefore|either .{3,} or)\b",
         ],
         BloomLevel.EVALUATE: [
             r"(?i)\b(judge|assess|evaluate|recommend|decide|prioritize)\b",
-            r"(?i)\b(should|best|better|worse|critical|important)\b",
-            r"(?i)\b(i think|in my opinion|my assessment)\b",
+            r"(?i)\b(i think we should|we should|we need to)\b.{5,}",
+            r"(?i)\b(in my opinion|my assessment|my recommendation)\b",
+            r"(?i)\b(better to|worse than|best option|critical that)\b",
         ],
         BloomLevel.CREATE: [
             r"(?i)\b(create|design|develop|propose|plan|construct)\b",
             r"(?i)\b(new approach|alternative|different way|modify)\b",
-            r"(?i)\b(what if we|could we try|how about)\b",
+            r"(?i)\b(what if we \w+|could we try \w+|how about we \w+)\b",
         ],
     })
 

@@ -24,7 +24,7 @@
       "value": ""
     },
     "whisperModel": {
-      "value": "medium"
+      "value": "large-v3"
     },
     "ollamaModel": {
       "value": "llama3.2"

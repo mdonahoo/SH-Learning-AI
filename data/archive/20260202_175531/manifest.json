@@ -1,0 +1,1296 @@
+{
+  "archive_id": "20260202_175531",
+  "created_at": "2026-02-02T17:55:34.756913",
+  "description": "Pre-correction pipeline data archive",
+  "source_locations": [
+    "data"
+  ],
+  "file_counts": {
+    "analyses": 22,
+    "recordings": 110,
+    "telemetry": 11
+  },
+  "total_size_bytes": 3023606268,
+  "sessions": [
+    {
+      "analysis": "analysis_20260202_021312.json",
+      "recording": "recording_20260202_021312.wav",
+      "telemetry": null,
+      "title": "Gravitational Anomaly Response Drill",
+      "duration_seconds": 285.3303125,
+      "speaker_count": 2,
+      "segment_count": 97,
+      "created_at": "2026-02-02T02:20:41.145480"
+    },
+    {
+      "analysis": "analysis_20260202_010528.json",
+      "recording": "recording_20260202_010528.wav",
+      "telemetry": null,
+      "title": "Bridge crew coordination in strategic mission planning",
+      "duration_seconds": 673.62,
+      "speaker_count": 4,
+      "segment_count": 167,
+      "created_at": "2026-02-02T01:12:43.647323"
+    },
+    {
+      "analysis": "analysis_20260201_222803.json",
+      "recording": "recording_20260201_222803.wav",
+      "telemetry": null,
+      "title": "Warhawk overpowered discussion and outpost strategy planning",
+      "duration_seconds": 227.52,
+      "speaker_count": 2,
+      "segment_count": 60,
+      "created_at": "2026-02-01T22:33:31.996149"
+    },
+    {
+      "analysis": "analysis_20260201_215016.json",
+      "recording": "recording_20260201_215018.wav",
+      "telemetry": null,
+      "title": "Bridge crew coordination in strategic mission planning",
+      "duration_seconds": 673.62,
+      "speaker_count": 4,
+      "segment_count": 167,
+      "created_at": "2026-02-01T21:56:40.532232"
+    },
+    {
+      "analysis": "analysis_20260201_210254.json",
+      "recording": "recording_20260201_210255.wav",
+      "telemetry": null,
+      "title": "Bridge crew ice removal simulation and tool discussion",
+      "duration_seconds": 137.88,
+      "speaker_count": 4,
+      "segment_count": 39,
+      "created_at": "2026-02-01T21:08:06.631106"
+    },
+    {
+      "analysis": "analysis_20260201_002045.json",
+      "recording": "recording_20260201_002045.wav",
+      "telemetry": null,
+      "title": "VR bridge simulation and crew interaction session",
+      "duration_seconds": 7554.752,
+      "speaker_count": 11,
+      "segment_count": 1823,
+      "created_at": "2026-02-01T00:39:38.274157"
+    },
+    {
+      "analysis": "analysis_20260131_222024.json",
+      "recording": "recording_20260131_222024.wav",
+      "telemetry": null,
+      "title": "Combat scenario against Klingon vessels",
+      "duration_seconds": 190.0553125,
+      "speaker_count": 5,
+      "segment_count": 51,
+      "created_at": "2026-01-31T22:25:40.199540"
+    },
+    {
+      "analysis": "analysis_20260131_220706.json",
+      "recording": "recording_20260131_220706.wav",
+      "telemetry": null,
+      "title": "Learning from an Encounter: Adaptation Drill",
+      "duration_seconds": 387.4255625,
+      "speaker_count": 2,
+      "segment_count": 116,
+      "created_at": "2026-01-31T22:15:56.095222"
+    },
+    {
+      "analysis": "analysis_20260131_212829.json",
+      "recording": "recording_20260131_212829.wav",
+      "telemetry": null,
+      "title": "Borg encounter simulation and tactical response",
+      "duration_seconds": 277.4790625,
+      "speaker_count": 2,
+      "segment_count": 91,
+      "created_at": "2026-01-31T21:35:22.093550"
+    },
+    {
+      "analysis": "analysis_20260131_211441.json",
+      "recording": "recording_20260131_211441.wav",
+      "telemetry": null,
+      "title": "Bridge crew connection test and UI review",
+      "duration_seconds": 57.3,
+      "speaker_count": 4,
+      "segment_count": 4,
+      "created_at": "2026-01-31T21:17:31.261527"
+    },
+    {
+      "analysis": "analysis_20260131_210613.json",
+      "recording": "recording_20260131_210613.wav",
+      "telemetry": null,
+      "title": "Telemetry Recording Troubleshooting Session",
+      "duration_seconds": 66.78,
+      "speaker_count": 2,
+      "segment_count": 17,
+      "created_at": "2026-01-31T21:10:45.280756"
+    },
+    {
+      "analysis": "analysis_20260131_202624.json",
+      "recording": "recording_20260131_202624.wav",
+      "telemetry": null,
+      "title": "Patrol mission briefing and system check",
+      "duration_seconds": 48.36,
+      "speaker_count": 2,
+      "segment_count": 12,
+      "created_at": "2026-01-31T20:30:42.624054"
+    },
+    {
+      "analysis": "analysis_20260131_200454.json",
+      "recording": "recording_20260131_200455.wav",
+      "telemetry": null,
+      "title": "Emergency evacuation during combat impact",
+      "duration_seconds": 75.9,
+      "speaker_count": 2,
+      "segment_count": 18,
+      "created_at": "2026-01-31T20:09:10.055562"
+    },
+    {
+      "analysis": "analysis_20260131_192934.json",
+      "recording": "recording_20260131_192934.wav",
+      "telemetry": null,
+      "title": "Emergency evacuation during combat impact",
+      "duration_seconds": 75.9,
+      "speaker_count": 2,
+      "segment_count": 18,
+      "created_at": "2026-01-31T19:33:03.068687"
+    },
+    {
+      "analysis": "analysis_20260131_190803.json",
+      "recording": "recording_20260131_190803.wav",
+      "telemetry": null,
+      "title": "Emergency evacuation during combat impact",
+      "duration_seconds": 75.9,
+      "speaker_count": 2,
+      "segment_count": 18,
+      "created_at": "2026-01-31T19:11:52.755620"
+    },
+    {
+      "analysis": "analysis_20260128_181407_with_stress.json",
+      "recording": null,
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 3869.712,
+      "speaker_count": 8,
+      "segment_count": 1229,
+      "created_at": "2026-01-28T19:11:47.232470"
+    },
+    {
+      "analysis": "analysis_20260128_152724_improved.json",
+      "recording": null,
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 665.431,
+      "speaker_count": 6,
+      "segment_count": 185,
+      "created_at": "2026-01-28T15:27:24.984330"
+    },
+    {
+      "analysis": "analysis_20260128_151455.json",
+      "recording": null,
+      "telemetry": null,
+      "title": "Simulation race and combat strategy session",
+      "duration_seconds": 3603.461,
+      "speaker_count": 2,
+      "segment_count": 68,
+      "created_at": "2026-01-28T15:22:04.084822"
+    },
+    {
+      "analysis": "analysis_20260128_150525.json",
+      "recording": null,
+      "telemetry": null,
+      "title": "Pirate encounter simulation and combat strategy session",
+      "duration_seconds": 4008.96,
+      "speaker_count": 1,
+      "segment_count": 48,
+      "created_at": "2026-01-28T15:14:44.365315"
+    },
+    {
+      "analysis": "analysis_20260128_145111.json",
+      "recording": null,
+      "telemetry": null,
+      "title": "Minefield navigation and race simulation",
+      "duration_seconds": 3807.33,
+      "speaker_count": 10,
+      "segment_count": 1005,
+      "created_at": "2026-01-28T15:05:13.412431"
+    },
+    {
+      "analysis": "analysis_20260128_144051.json",
+      "recording": null,
+      "telemetry": null,
+      "title": "Docking maneuver under enemy fire and planetary interference",
+      "duration_seconds": 3705.131,
+      "speaker_count": 9,
+      "segment_count": 835,
+      "created_at": "2026-01-28T14:51:00.126282"
+    },
+    {
+      "analysis": "analysis_20260128_060905.json",
+      "recording": null,
+      "telemetry": null,
+      "title": "Container retrieval operation planning",
+      "duration_seconds": 164.34,
+      "speaker_count": 2,
+      "segment_count": 19,
+      "created_at": "2026-01-28T06:10:05.180355"
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_052025.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_053140.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_055744.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_060842.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_061947.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_062543.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_063840.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_065359.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_141112.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_141509.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_141715.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_141856.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_142107.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_142345.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_144319.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_144624.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_153557.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_153610.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_160024.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_160636.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_170550.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_174245.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_174606.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_180048.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_183224.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_183332.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_194707.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_195256.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_200932.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_201030.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_201055.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_201913.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_201931.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_202735.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_202754.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_205514.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_205727.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_211124.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_214103.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_214138.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_215227.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_220422.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_225221.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_225839.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_234252.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260116_234608.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260117_000630.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260117_002302.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260117_012953.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260117_013408.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260117_013834.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260117_015025.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260117_015532.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260117_020039.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260117_020212.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260117_020423.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260117_020504.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260117_020513.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260117_021704.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260117_022742.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260117_051341.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260117_155450.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260117_162444.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260117_164043.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260117_165057.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260117_201950.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260117_202318.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260117_214854.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260119_000710.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260119_023841.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260119_045354.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260119_050220.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260119_050513.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260119_051533.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260119_141535.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260119_185542.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260119_190424.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260119_191446.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260119_192646.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260120_024327.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260120_030812.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260120_031703.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260120_053648.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260120_165622.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260131_175049.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260131_181317.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260131_185529.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260131_215542.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "recording_20260202_010427.wav",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "audio_session_20260114_224645_20260114_224645",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "audio_session_20260114_234243_20260114_234243",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "audio_session_20260115_001141_20260115_001141",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "audio_session_20260115_002522_20260115_002522",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "audio_session_20260115_022411_20260115_022411",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": "audio_session_20260115_151844_20260115_151844",
+      "telemetry": null,
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": null,
+      "telemetry": "telemetry_01f97616.json",
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": null,
+      "telemetry": "telemetry_48fe39c3.json",
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": null,
+      "telemetry": "telemetry_55534bb3.json",
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": null,
+      "telemetry": "telemetry_67ad0b68.json",
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": null,
+      "telemetry": "telemetry_86c59810.json",
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": null,
+      "telemetry": "telemetry_a134d7c8.json",
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": null,
+      "telemetry": "telemetry_a4272fae.json",
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": null,
+      "telemetry": "telemetry_d5b515e0.json",
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": null,
+      "telemetry": "telemetry_d84395f4.json",
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": null,
+      "telemetry": "telemetry_daaae1b0.json",
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    },
+    {
+      "analysis": null,
+      "recording": null,
+      "telemetry": "telemetry_fa4ab76e.json",
+      "title": null,
+      "duration_seconds": 0,
+      "speaker_count": 0,
+      "segment_count": 0,
+      "created_at": null
+    }
+  ]
+}

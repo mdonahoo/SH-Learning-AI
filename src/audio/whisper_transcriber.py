@@ -28,10 +28,11 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-# Optimized domain-specific prompt for Whisper (~150 words, ~195 tokens).
+# Optimized domain-specific prompt for Whisper (~170 words, ~220 tokens).
 # Whisper silently truncates initial_prompt to the last ~224 tokens, so this
 # prompt is intentionally short.  The most commonly mis-recognized terms
-# (warp, ship names, alien races) appear first.
+# (warp, ship names, alien races) appear first.  Status/command terms
+# (tolerance, detected, aye sir, breathe) prevent meaning-inverting errors.
 STARSHIP_HORIZONS_PROMPT = (
     "Starship Horizons bridge simulator. "
     "Warp drive, go to warp, maximum warp, engage warp, drop out of warp, "
@@ -40,12 +41,15 @@ STARSHIP_HORIZONS_PROMPT = (
     "Races: Craylor, Craylord, Kralien, Torgoth, Arvonian, Ximni, Skaraan. "
     "Weapons: nuke, nukes, EMP, homing missile, torpedo, HVLI, terahertz, "
     "left tube, right tube, phasers, beam weapons. "
-    "Stations: helm, tactical, science, engineering, communications. "
+    "Stations: helm, tactical, science, engineering, operations, communications. "
     "Navigation: waypoint, bearing, heading, impulse, full stop, evasive maneuvers. "
     "Alerts: red alert, shields up, battle stations. "
-    "Commands: engage, fire, aye captain, on screen, make it so. "
-    "Locations: Paravera, Calavera, Faraday, Starbase Delta. "
-    "Docking: undock, Space Dock, shuttle bay."
+    "Commands: engage, fire, aye sir, aye captain, aye aye, on screen, make it so. "
+    "Status: detected, within tolerance, structural integrity, hostile intent, "
+    "the ship breathe, compensate, nominal. "
+    "Locations: Paravera, Calavera, Faraday, Starbase Delta, comm station, outpost. "
+    "Docking: undock, Space Dock, shuttle bay. "
+    "Cargo: credits, marines, cargo operation, supplies."
 )
 
 # Full prompt preserved for reference and documentation.
@@ -188,7 +192,8 @@ STARSHIP_HORIZONS_HOTWORDS = (
     "Craylor, Craylord, Kralien, Daichi, Arvonian, Ximni, Skaraan, "
     "nuke, EMP, HVLI, terahertz, "
     "Caravera, Calavera, Faraday, Starbase Delta, "
-    "Horizons, Lutren, Belgore, Wickert, Phobos"
+    "Horizons, Lutren, Belgore, Wickert, Phobos, "
+    "aye, tolerance, detected, breathe, engineering, outpost, credits"
 )
 
 # Known Whisper hallucinations to filter out

@@ -152,6 +152,10 @@ class RolePatterns:
         r"(?i)\b(approach|approaching|orbit|docking)\b",
         r"(?i)\b(evasive|maneuver|turn|rotate)\b",
         r"(?i)\b(navigation|nav|plotting|plot course)\b",
+        # Starship Horizons game-specific helm actions
+        r"(?i)\b(head to|headed to|heading to|heading for)\b",
+        r"(?i)\b(stick around|moving to|move to|fly to)\b",
+        r"(?i)\b(outpost|waypoint|sector)\s+\w",
     ])
 
     TACTICAL_PATTERNS: List[str] = field(default_factory=lambda: [
@@ -161,6 +165,9 @@ class RolePatterns:
         r"(?i)\b(firing|fire|launch|launching)\b",
         r"(?i)\b(enemy|hostile|threat|contact|bogey)\b",
         r"(?i)\b(damage|hit|impact|taking fire)\b",
+        # Starship Horizons game-specific tactical
+        r"(?i)\b(turret|sentry|deploy)\b",
+        r"(?i)\b(combat|attack|defend)\b",
     ])
 
     SCIENCE_PATTERNS: List[str] = field(default_factory=lambda: [
@@ -170,6 +177,9 @@ class RolePatterns:
         r"(?i)\b(life signs|life forms|biosigns)\b",
         r"(?i)\b(composition|spectrum|radiation)\b",
         r"(?i)\b(data|research|scientific)\b",
+        # Starship Horizons game-specific science
+        r"(?i)\b(scan|ended scan|boost.*(sensor|scan))\b",
+        r"(?i)\b(sciences?\s+(has|have|granted|completed))\b",
     ])
 
     ENGINEERING_PATTERNS: List[str] = field(default_factory=lambda: [
@@ -179,15 +189,22 @@ class RolePatterns:
         r"(?i)\b(systems|subsystems|online|offline)\b",
         r"(?i)\b(coolant|overload|overheating|venting)\b",
         r"(?i)\b(efficiency|output|capacity)\b",
+        # Starship Horizons game-specific engineering
+        r"(?i)\b(warp core breach|restart|lattice|alignment)\b",
+        r"(?i)\b(boost|power).*(engines?|shields?|sensors?)\b",
+        r"(?i)\b(mini[- ]?game|puzzle)\b",
     ])
 
     OPERATIONS_PATTERNS: List[str] = field(default_factory=lambda: [
         r"(?i)\b(sector|quadrant|grid|coordinates)\b",
         r"(?i)\b(monitoring|tracking|observing)\b",
-        r"(?i)\b(status|nominal|operational|ready)\b",
         r"(?i)\b(cargo|supplies|inventory|manifest)\b",
         r"(?i)\b(docking|dock|bay|hangar)\b",
         r"(?i)\b(schedule|timing|countdown)\b",
+        # Starship Horizons game-specific operations
+        r"(?i)\b(credits?|alliance|resources?)\b",
+        r"(?i)\b(capture|captured|outpost)\b",
+        r"(?i)\b(assist|granted)\b",
     ])
 
     COMMUNICATIONS_PATTERNS: List[str] = field(default_factory=lambda: [
@@ -197,6 +214,43 @@ class RolePatterns:
         r"(?i)\b(audio|visual|subspace)\b",
         r"(?i)\b(broadcast|distress|mayday)\b",
     ])
+
+    # Self-identification patterns: when a speaker claims or confirms their station
+    # These get a strong boost because they're direct evidence of role assignment
+    # IMPORTANT: Patterns must be specific to CLAIMING a station, not just mentioning it.
+    # Exclude mini-game references ("take engineering as my mini game") and
+    # questions about stations ("who's at flight?").
+    SELF_IDENTIFICATION_PATTERNS: Dict[str, List[str]] = field(default_factory=lambda: {
+        "Captain/Command": [
+            r"(?i)\bi('m| am) (?:the )?(?:captain|commanding|in command)\b",
+        ],
+        "Helm/Navigation": [
+            # "I'll be helm" / "I'll take flight" — but NOT "take X as my mini game"
+            r"(?i)\bi('ll| will) (?:take |be )(?:the )?(?:helm|flight|navigation|nav)\b(?!.*mini[ -]?game)",
+            # Confirming station: "Helm, yes" / "Flight, here"
+            r"(?i)^(?:helm|flight|nav(?:igation)?),?\s*(?:yes|here|ready|aye)\b",
+        ],
+        "Tactical/Weapons": [
+            r"(?i)\bi('ll| will) (?:take |be )(?:the )?(?:tactical|weapons|gunnery)\b(?!.*mini[ -]?game)",
+            r"(?i)^(?:tactical|weapons),?\s*(?:yes|here|ready|aye)\b",
+        ],
+        "Science/Sensors": [
+            r"(?i)\bi('ll| will) (?:take |be )(?:the )?(?:science|sciences|sensors?)\b(?!.*mini[ -]?game)",
+            r"(?i)^(?:science|sciences?),?\s*(?:yes|here|ready|aye)\b",
+        ],
+        "Engineering/Systems": [
+            r"(?i)\bi('ll| will) (?:take |be )(?:the )?(?:engineering|engineer)\b(?!.*mini[ -]?game)",
+            r"(?i)^(?:engineering|engineer),?\s*(?:yes|here|ready|aye)\b",
+        ],
+        "Operations/Monitoring": [
+            r"(?i)\bi('ll| will) (?:take |be )(?:the )?(?:operations?|ops)\b(?!.*mini[ -]?game)",
+            r"(?i)^(?:operations?|ops),?\s*(?:yes|here|ready|aye)\b",
+        ],
+        "Communications": [
+            r"(?i)\bi('ll| will) (?:take |be )(?:the )?(?:comms?|communications?)\b(?!.*mini[ -]?game)",
+            r"(?i)^(?:comms?|communications?),?\s*(?:yes|here|ready|aye)\b",
+        ],
+    })
 
     # XO patterns should be SPECIFIC to XO role, not generic acknowledgments
     # Generic "aye", "copy", "roger" are used by everyone - don't count these
@@ -275,6 +329,7 @@ class RoleInferenceEngine:
         self.patterns = patterns or RolePatterns()
         self._role_pattern_map = self._build_role_pattern_map()
         self._addressing_patterns = self._build_addressing_patterns()
+        self._self_id_patterns = self._build_self_identification_patterns()
 
     def _build_role_pattern_map(self) -> Dict[BridgeRole, List[str]]:
         """Build mapping of roles to their detection patterns."""
@@ -292,6 +347,24 @@ class RoleInferenceEngine:
     def _build_addressing_patterns(self) -> List[re.Pattern]:
         """Build compiled patterns for detecting when someone is addressing authority."""
         return [re.compile(p) for p in self.patterns.ADDRESSING_AUTHORITY_PATTERNS]
+
+    def _build_self_identification_patterns(self) -> Dict[BridgeRole, List[re.Pattern]]:
+        """Build compiled patterns for detecting self-identification with a role."""
+        role_name_map = {
+            "Captain/Command": BridgeRole.CAPTAIN,
+            "Helm/Navigation": BridgeRole.HELM,
+            "Tactical/Weapons": BridgeRole.TACTICAL,
+            "Science/Sensors": BridgeRole.SCIENCE,
+            "Engineering/Systems": BridgeRole.ENGINEERING,
+            "Operations/Monitoring": BridgeRole.OPERATIONS,
+            "Communications": BridgeRole.COMMUNICATIONS,
+        }
+        result: Dict[BridgeRole, List[re.Pattern]] = {}
+        for role_name, patterns in self.patterns.SELF_IDENTIFICATION_PATTERNS.items():
+            bridge_role = role_name_map.get(role_name)
+            if bridge_role:
+                result[bridge_role] = [re.compile(p) for p in patterns]
+        return result
 
     def analyze_all_speakers(self) -> Dict[str, SpeakerRoleAnalysis]:
         """
@@ -365,6 +438,7 @@ class RoleInferenceEngine:
         matched_keywords: Dict[BridgeRole, set] = defaultdict(set)
         utterances_with_keywords: Dict[BridgeRole, set] = defaultdict(set)
         addressing_count = 0
+        self_identified_roles: Dict[BridgeRole, List[str]] = defaultdict(list)
 
         for idx, utterance in enumerate(utterances):
             text = utterance.get('text', '')
@@ -376,6 +450,17 @@ class RoleInferenceEngine:
                     is_addressing = True
                     addressing_count += 1
                     break
+
+            # Check for self-identification ("I'll take engineering", "Operations, yes")
+            for role, patterns in self._self_id_patterns.items():
+                for pattern in patterns:
+                    if pattern.search(text):
+                        self_identified_roles[role].append(text)
+                        # Self-ID also counts as keyword evidence for the role
+                        role_match_counts[role] += 3  # Strong weight
+                        utterances_with_keywords[role].add(idx)
+                        matched_keywords[role].add(f"self-id: {role.value}")
+                        break
 
             for role, patterns in self._role_pattern_map.items():
                 for pattern in patterns:
@@ -446,6 +531,20 @@ class RoleInferenceEngine:
                         prominence_score * 0.15
                     )
 
+        # Apply self-identification boost — strong evidence of role assignment
+        for role, id_texts in self_identified_roles.items():
+            if role in role_scores:
+                role_scores[role] = min(1.0, role_scores[role] + 0.35)
+            else:
+                # Self-ID alone is strong enough to create a score from nothing
+                role_scores[role] = 0.50
+            # Ensure the role has keyword evidence for minimum threshold checks
+            matched_keywords[role].add(f"self-id: {role.value}")
+            logger.info(
+                f"Self-identification boost for {speaker} -> {role.value}: "
+                f'"{id_texts[0][:60]}"'
+            )
+
         # Determine primary role
         addressing_ratio = addressing_count / utterance_count if utterance_count > 0 else 0
 
@@ -508,6 +607,10 @@ class RoleInferenceEngine:
                 if prominence > 0.25 and distinct_keyword_count >= 1:
                     meets_minimum = True
 
+            # Self-identification always meets minimum — direct evidence of role
+            if top_role in self_identified_roles:
+                meets_minimum = True
+
             if meets_minimum:
                 inferred_role = top_role
 
@@ -525,6 +628,9 @@ class RoleInferenceEngine:
                         confidence = min(0.95, confidence + 0.08)
                     if prominence > 0.3 and top_role in (BridgeRole.CAPTAIN, BridgeRole.EXECUTIVE_OFFICER):
                         confidence = min(0.95, confidence + 0.1)
+                    # Self-identification is strong direct evidence
+                    if top_role in self_identified_roles:
+                        confidence = min(0.95, confidence + 0.15)
 
                 # Handle captain addressing pattern
                 if addressing_ratio > 0.3 and inferred_role == BridgeRole.CAPTAIN:
@@ -544,6 +650,11 @@ class RoleInferenceEngine:
         # Build key indicators
         top_keywords = sorted(keyword_matches.items(), key=lambda x: -x[1])[:5]
         key_indicators = [f'"{kw}" ({count})' for kw, count in top_keywords]
+
+        # Add self-identification as a key indicator
+        for role, id_texts in self_identified_roles.items():
+            snippet = id_texts[0][:40]
+            key_indicators.insert(0, f'SELF-ID {role.value}: "{snippet}"')
 
         if addressing_count > 2:
             key_indicators.append(f"addresses authority ({addressing_count}x)")

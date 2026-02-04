@@ -10,7 +10,7 @@ Implements industry-standard learning and teamwork assessment frameworks:
 """
 
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from collections import defaultdict, Counter
 from datetime import datetime
 
@@ -20,16 +20,23 @@ logger = logging.getLogger(__name__)
 class LearningEvaluator:
     """Evaluates mission performance using established learning frameworks."""
 
-    def __init__(self, events: List[Dict[str, Any]], transcripts: List[Dict[str, Any]]):
+    def __init__(
+        self,
+        events: List[Dict[str, Any]],
+        transcripts: List[Dict[str, Any]],
+        speech_action_data: Optional[Dict[str, Any]] = None
+    ):
         """
         Initialize evaluator with mission data.
 
         Args:
             events: List of mission events
             transcripts: List of crew communications
+            speech_action_data: Optional cross-reference data from TelemetryAudioCorrelator
         """
         self.events = events
         self.transcripts = transcripts
+        self.speech_action_data = speech_action_data
 
     def evaluate_all(self) -> Dict[str, Any]:
         """
@@ -38,12 +45,18 @@ class LearningEvaluator:
         Returns:
             Complete evaluation results
         """
-        return {
+        results = {
             'kirkpatrick': self.evaluate_kirkpatrick(),
             'blooms_taxonomy': self.evaluate_blooms_taxonomy(),
             'nasa_teamwork': self.evaluate_nasa_teamwork(),
-            'mission_specific': self.evaluate_mission_metrics()
+            'mission_specific': self.evaluate_mission_metrics(),
         }
+
+        # Include speech-action alignment if telemetry data is available
+        if self.speech_action_data:
+            results['speech_action_alignment'] = self._evaluate_speech_action_alignment()
+
+        return results
 
     def evaluate_kirkpatrick(self) -> Dict[str, Any]:
         """
@@ -173,6 +186,99 @@ class LearningEvaluator:
             'success_level': 'high' if completion_rate > 80 else 'moderate' if completion_rate > 50 else 'low',
             'organizational_impact': 'Training objectives achieved' if completion_rate > 70 else 'Partial training success',
             'interpretation': f"{'Success' if completion_rate > 70 else 'Partial completion'}: {completion_rate:.0f}% objectives completed"
+        }
+
+    def _evaluate_speech_action_alignment(self) -> Dict[str, Any]:
+        """
+        Evaluate alignment between crew speech and game actions.
+
+        Uses cross-reference data from TelemetryAudioCorrelator to assess
+        whether crew followed through on stated intentions.
+
+        Returns:
+            Speech-action alignment evaluation
+        """
+        if not self.speech_action_data:
+            return {
+                'alignment_score': 0.0,
+                'assessment': 'No telemetry data available for speech-action analysis',
+                'aligned_count': 0,
+                'speech_only_count': 0,
+                'action_only_count': 0,
+                'examples': [],
+            }
+
+        alignment_score = self.speech_action_data.get('alignment_score', 0.0)
+        aligned = self.speech_action_data.get('aligned', [])
+        speech_only = self.speech_action_data.get('speech_only', [])
+        action_only = self.speech_action_data.get('action_only', [])
+
+        # Build assessment
+        if alignment_score >= 0.7:
+            assessment = (
+                "Strong speech-action alignment. The crew consistently followed through "
+                "on stated intentions, demonstrating effective communication and execution."
+            )
+            quality = 'excellent'
+        elif alignment_score >= 0.4:
+            assessment = (
+                "Moderate speech-action alignment. The crew followed through on many "
+                "stated intentions, but some actions occurred without verbal coordination "
+                "and some stated plans were not executed."
+            )
+            quality = 'good'
+        elif alignment_score > 0:
+            assessment = (
+                "Weak speech-action alignment. Many crew statements were not followed "
+                "by corresponding game actions, or significant actions occurred without "
+                "verbal coordination. This suggests a gap between communication and execution."
+            )
+            quality = 'needs_improvement'
+        else:
+            assessment = (
+                "No meaningful speech-action alignment detected. This may indicate "
+                "the crew operated silently or the telemetry capture was limited."
+            )
+            quality = 'insufficient_data'
+
+        # Build examples for narrative
+        examples = []
+        for item in aligned[:5]:
+            examples.append({
+                'type': 'aligned',
+                'description': (
+                    f"{item['speaker']} said \"{item['speech'][:80]}\" and "
+                    f"the action '{item['action']}' followed {item['time_delta']}s later"
+                ),
+            })
+        for item in speech_only[:3]:
+            examples.append({
+                'type': 'speech_only',
+                'description': (
+                    f"{item['speaker']} said \"{item['text'][:80]}\" "
+                    f"but no matching game action was detected"
+                ),
+            })
+        for item in action_only[:3]:
+            examples.append({
+                'type': 'action_only',
+                'description': (
+                    f"Game action '{item['description'][:80]}' occurred "
+                    f"without verbal coordination"
+                ),
+            })
+
+        return {
+            'alignment_score': alignment_score,
+            'alignment_percentage': round(alignment_score * 100, 1),
+            'quality': quality,
+            'assessment': assessment,
+            'aligned_count': len(aligned),
+            'speech_only_count': len(speech_only),
+            'action_only_count': len(action_only),
+            'total_speech_intentions': self.speech_action_data.get('total_speech_intentions', 0),
+            'total_game_actions': self.speech_action_data.get('total_game_actions', 0),
+            'examples': examples,
         }
 
     def evaluate_blooms_taxonomy(self) -> Dict[str, Any]:

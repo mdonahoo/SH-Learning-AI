@@ -44,7 +44,7 @@ write_files:
         --gpus all \
         -p ${web_server_port}:${web_server_port} \
         --name sh-learning-ai \
-        -e WHISPER_MODEL=${whisper_model} \
+        -e WHISPER_MODEL_SIZE=${whisper_model} \
         -e OLLAMA_MODEL=${ollama_model} \
         -e WEB_SERVER_PORT=${web_server_port} \
         -v /home/${admin_username}/ollama-models:/root/.ollama \

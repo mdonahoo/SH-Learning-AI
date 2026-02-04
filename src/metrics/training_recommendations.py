@@ -378,7 +378,17 @@ class TrainingRecommendationEngine:
 
         # 7 Habits integration: Check for low-scoring habits
         seven_habits = self.analysis.get('seven_habits', {})
-        habits_data = seven_habits.get('habits', {}) if isinstance(seven_habits, dict) else {}
+        habits_raw = seven_habits.get('habits', {}) if isinstance(seven_habits, dict) else {}
+        # Handle both dict format (from SevenHabitsAnalyzer) and list format (from audio_processor)
+        if isinstance(habits_raw, list):
+            habits_data = {
+                h.get('habit_name', '').upper().replace(' ', '_'): h
+                for h in habits_raw if isinstance(h, dict)
+            }
+        elif isinstance(habits_raw, dict):
+            habits_data = habits_raw
+        else:
+            habits_data = {}
 
         # Mapping of habit names to user-friendly descriptions and focus areas
         habit_focus_areas = {

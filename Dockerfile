@@ -45,7 +45,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 ENV WEB_SERVER_HOST=0.0.0.0 \
     WEB_SERVER_PORT=8000 \
     PRELOAD_WHISPER=true \
-    WHISPER_MODEL=medium \
+    WHISPER_MODEL_SIZE=large-v3 \
     WEB_MAX_UPLOAD_MB=100
 
 # Ollama configuration
@@ -96,7 +96,7 @@ RUN mkdir -p /app/data /app/logs /app/models /root/.ollama \
     && chmod +x /entrypoint.sh
 
 # Pre-download Whisper model (cached in image)
-RUN python -c "from faster_whisper import WhisperModel; WhisperModel('medium', device='cpu', compute_type='int8')" \
+RUN python -c "from faster_whisper import WhisperModel; WhisperModel('large-v3', device='cpu', compute_type='int8')" \
     || echo "Whisper model will be downloaded on first use"
 
 # Expose ports

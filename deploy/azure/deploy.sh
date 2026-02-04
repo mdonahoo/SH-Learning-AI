@@ -79,7 +79,7 @@ SSH_KEY_PATH=""
 GIT_REPO_URL=""
 VM_NAME=""
 VM_SIZE=""
-WHISPER_MODEL=""
+WHISPER_MODEL_SIZE=""
 OLLAMA_MODEL=""
 
 while [[ $# -gt 0 ]]; do
@@ -109,7 +109,7 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         -w|--whisper-model)
-            WHISPER_MODEL="$2"
+            WHISPER_MODEL_SIZE="$2"
             shift 2
             ;;
         -o|--ollama-model)
@@ -183,7 +183,7 @@ echo "DNS Name:        $EXPECTED_FQDN"
 echo "SSH Key:         $SSH_KEY_PATH"
 [ -n "$GIT_REPO_URL" ] && echo "Git Repository:  $GIT_REPO_URL"
 [ -n "$VM_SIZE" ] && echo "VM Size:         $VM_SIZE" || echo "VM Size:         Standard_NC4as_T4_v3 (default)"
-[ -n "$WHISPER_MODEL" ] && echo "Whisper Model:   $WHISPER_MODEL" || echo "Whisper Model:   medium (default)"
+[ -n "$WHISPER_MODEL_SIZE" ] && echo "Whisper Model:   $WHISPER_MODEL_SIZE" || echo "Whisper Model:   large-v3 (default)"
 [ -n "$OLLAMA_MODEL" ] && echo "Ollama Model:    $OLLAMA_MODEL" || echo "Ollama Model:    llama3.2 (default)"
 echo "=========================================="
 echo ""
@@ -215,7 +215,7 @@ PARAMS="adminPasswordOrKey=$SSH_KEY"
 [ -n "$VM_NAME" ] && PARAMS="$PARAMS vmName=$VM_NAME"
 [ -n "$GIT_REPO_URL" ] && PARAMS="$PARAMS gitRepoUrl=$GIT_REPO_URL"
 [ -n "$VM_SIZE" ] && PARAMS="$PARAMS vmSize=$VM_SIZE"
-[ -n "$WHISPER_MODEL" ] && PARAMS="$PARAMS whisperModel=$WHISPER_MODEL"
+[ -n "$WHISPER_MODEL_SIZE" ] && PARAMS="$PARAMS whisperModel=$WHISPER_MODEL_SIZE"
 [ -n "$OLLAMA_MODEL" ] && PARAMS="$PARAMS ollamaModel=$OLLAMA_MODEL"
 
 # Deploy template

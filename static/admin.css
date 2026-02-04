@@ -353,6 +353,156 @@
     font-style: italic;
 }
 
+/* Game Server Configuration */
+.config-field-group {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-top: 12px;
+}
+
+.config-field-wide {
+    grid-column: 1 / -1;
+}
+
+.config-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.config-label {
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+}
+
+.config-input {
+    background: var(--bg-card);
+    border: 1px solid var(--bg-hover);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    padding: 8px 12px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.config-input:focus {
+    border-color: var(--lcars-cyan);
+    box-shadow: 0 0 0 2px rgba(0, 200, 255, 0.15);
+}
+
+.config-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.config-input::placeholder {
+    color: var(--text-dim);
+}
+
+/* Remove spinner from number inputs */
+.config-input[type="number"]::-webkit-inner-spin-button,
+.config-input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.config-input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+.config-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.config-status {
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 4px 12px;
+}
+
+.config-status-success {
+    color: var(--lcars-green, #7fff7f);
+    border: 1px solid var(--lcars-green, #7fff7f);
+}
+
+.config-status-error {
+    color: var(--lcars-red);
+    border: 1px solid var(--lcars-red);
+}
+
+.config-status-readonly {
+    color: var(--lcars-orange);
+    border: 1px solid var(--lcars-orange);
+}
+
+.config-status-pending {
+    color: var(--lcars-cyan);
+    border: 1px solid var(--lcars-cyan);
+}
+
+/* Connection test results */
+.config-test-results {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.config-test-results.hidden {
+    display: none;
+}
+
+.test-result-item {
+    background: var(--bg-elevated);
+    padding: 12px;
+    border-left: 3px solid var(--text-muted);
+}
+
+.test-result-item.success {
+    border-left-color: var(--lcars-green, #7fff7f);
+}
+
+.test-result-item.failure {
+    border-left-color: var(--lcars-red);
+}
+
+.test-result-label {
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+}
+
+.test-result-value {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    margin-top: 2px;
+}
+
+.test-result-item.success .test-result-value {
+    color: var(--lcars-green, #7fff7f);
+}
+
+.test-result-item.failure .test-result-value {
+    color: var(--lcars-red);
+}
+
+.test-result-detail {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
 /* Responsive */
 @media (max-width: 900px) {
     .stats-grid {
@@ -371,6 +521,16 @@
 
     .file-row {
         grid-template-columns: 1fr 80px auto;
+    }
+}
+
+@media (max-width: 700px) {
+    .config-field-group {
+        grid-template-columns: 1fr;
+    }
+
+    .config-test-results {
+        grid-template-columns: 1fr;
     }
 }
 
