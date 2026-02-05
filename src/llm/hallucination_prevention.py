@@ -263,6 +263,174 @@ class ConstrainedContextBuilder:
         return False
 
 
+class ContradictionDetector:
+    """
+    Detects logical contradictions in LLM-generated debrief content.
+
+    Identifies patterns like the same skill listed as both strength and weakness,
+    which suggest the LLM received conflicting data or hallucinated.
+    """
+
+    def __init__(self, narrative: str, analysis: Dict[str, Any]):
+        """
+        Initialize contradiction detector.
+
+        Args:
+            narrative: LLM-generated narrative text
+            analysis: Original analysis data for validation context
+        """
+        self.narrative = narrative.lower()
+        self.analysis = analysis
+
+    def detect_contradictions(self) -> List[ValidationIssue]:
+        """
+        Detect contradictions in the narrative.
+
+        Returns:
+            List of detected contradictions as ValidationIssue objects
+        """
+        issues = []
+        issues.extend(self._detect_strength_weakness_overlap())
+        issues.extend(self._detect_conflicting_evaluations())
+        return issues
+
+    def _detect_strength_weakness_overlap(self) -> List[ValidationIssue]:
+        """
+        Detect when the same concept appears as both strength and weakness.
+
+        Returns:
+            List of ValidationIssue objects for contradictions
+        """
+        issues = []
+
+        # Extract strengths and growth areas sections
+        strength_text = self._extract_section(
+            r"strength|did well|excel|excellent|strong|good at",
+            max_length=500
+        )
+        weakness_text = self._extract_section(
+            r"grow|weakness|improve|need|work on|challenge|difficult",
+            max_length=500
+        )
+
+        # Define conceptual keywords grouped by theme
+        concepts = [
+            ("delegation", ["delegat", "assign", "distribute work", "task assignment"]),
+            ("communication", ["communicat", "share", "inform", "report"]),
+            ("teamwork", ["teamwork", "team", "collaborat", "synerg", "cooperative"]),
+            ("leadership", ["lead", "command", "decision", "direct"]),
+            ("initiative", ["initiative", "proactive", "take action", "volunteer"]),
+            ("listening", ["listen", "understand", "empathetic", "ask"]),
+            ("planning", ["plan", "organize", "prepare", "strategy"]),
+        ]
+
+        for concept_name, keywords in concepts:
+            # Check if concept appears in both sections
+            in_strengths = any(kw in strength_text for kw in keywords)
+            in_weaknesses = any(kw in weakness_text for kw in keywords)
+
+            if in_strengths and in_weaknesses:
+                issues.append(ValidationIssue(
+                    issue_type="strength_weakness_contradiction",
+                    description=f"'{concept_name}' listed as both strength and weakness",
+                    severity="error",
+                    original_text=f"{concept_name} (appears in both sections)",
+                    suggestion=(
+                        f"Review data sources. This suggests conflicting metrics. "
+                        f"Low 7-Habits score may be unreliable."
+                    )
+                ))
+
+        return issues
+
+    def _detect_conflicting_evaluations(self) -> List[ValidationIssue]:
+        """
+        Detect other types of contradictory statements.
+
+        Returns:
+            List of ValidationIssue objects
+        """
+        issues = []
+
+        # Pattern: "X is excellent" followed by "X needs work" in close proximity
+        # Split into sentences for easier analysis
+        sentences = re.split(r'[.!?]', self.narrative)
+        sentences = [s.strip() for s in sentences if s.strip()]
+
+        for i, sent1 in enumerate(sentences):
+            for sent2 in sentences[max(0, i-2):i+3]:  # Check nearby sentences
+                if sent1 == sent2:
+                    continue
+
+                # Look for contradictory sentiment on same topic
+                if self._is_contradiction_pair(sent1, sent2):
+                    issues.append(ValidationIssue(
+                        issue_type="contradictory_statements",
+                        description="Contradictory statements about the same topic",
+                        severity="warning",
+                        original_text=f"'{sent1[:50]}...' vs '{sent2[:50]}...'",
+                        suggestion="Review and resolve contradictory claims"
+                    ))
+                    break
+
+        return issues
+
+    def _extract_section(
+        self,
+        pattern: str,
+        max_length: int = 500
+    ) -> str:
+        """
+        Extract section matching pattern from narrative.
+
+        Args:
+            pattern: Regex pattern to find section
+            max_length: Max characters to extract around match
+
+        Returns:
+            Extracted text section
+        """
+        match = re.search(pattern, self.narrative)
+        if not match:
+            return ""
+
+        start = max(0, match.start() - max_length)
+        end = min(len(self.narrative), match.end() + max_length)
+        return self.narrative[start:end]
+
+    def _is_contradiction_pair(self, sent1: str, sent2: str) -> bool:
+        """
+        Check if two sentences contradict each other.
+
+        Args:
+            sent1: First sentence
+            sent2: Second sentence
+
+        Returns:
+            True if contradictory
+        """
+        # Extract key words (nouns, verbs) from both sentences
+        words1 = set(re.findall(r'\b\w+\b', sent1.lower()))
+        words2 = set(re.findall(r'\b\w+\b', sent2.lower()))
+
+        # Check for overlap (same topic)
+        overlap = words1 & words2
+        if len(overlap) < 2:
+            return False
+
+        # Check for contradictory sentiment words
+        positive = {"excellent", "great", "good", "strong", "well", "success"}
+        negative = {"poor", "weak", "bad", "difficult", "struggle", "fail"}
+
+        sent1_positive = bool(positive & words1)
+        sent1_negative = bool(negative & words1)
+        sent2_positive = bool(positive & words2)
+        sent2_negative = bool(negative & words2)
+
+        # Contradiction if one is clearly positive and other is clearly negative
+        return (sent1_positive and sent2_negative) or (sent1_negative and sent2_positive)
+
+
 class OutputValidator:
     """
     Validates LLM-generated content against source data.

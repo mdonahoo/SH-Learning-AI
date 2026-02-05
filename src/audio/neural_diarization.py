@@ -275,7 +275,7 @@ class NeuralSpeakerDiarizer:
 
         # Base similarity threshold - can be adapted dynamically
         self.similarity_threshold = similarity_threshold or float(
-            os.getenv('SPEAKER_EMBEDDING_THRESHOLD', '0.70')  # Lowered from 0.80 for better recall
+            os.getenv('SPEAKER_EMBEDDING_THRESHOLD', '0.60')  # Lowered to fix 6-speaker collapse
         )
 
         # High confidence threshold for definite matches
@@ -688,7 +688,19 @@ class NeuralSpeakerDiarizer:
                     speaker_segments[speaker] = []
                 speaker_segments[speaker].append((turn.start, turn.end))
 
-            logger.info(f"Detected {len(speaker_segments)} speakers in audio file")
+            num_speakers = len(speaker_segments)
+            logger.info(f"Detected {num_speakers} speakers in audio file")
+
+            # Validation warning: detect potential over-merging
+            expected = int(os.getenv('EXPECTED_BRIDGE_CREW', '6'))
+            if num_speakers < expected:
+                logger.warning(
+                    f"UNDER-SEGMENTATION WARNING: Detected {num_speakers} speakers but "
+                    f"expected {expected}. This suggests over-merging of distinct voices. "
+                    f"Consider lowering SPEAKER_EMBEDDING_THRESHOLD (current: {self.similarity_threshold:.2f}). "
+                    f"Try 0.55-0.65 for more distinct speakers."
+                )
+
             return speaker_segments
 
         except Exception as e:

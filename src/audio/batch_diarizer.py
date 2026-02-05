@@ -197,9 +197,9 @@ class BatchSpeakerDiarizer:
 
         # Configuration
         # Lower threshold = voices grouped together more aggressively = fewer speakers
-        # 0.72 works well for bridge crews with similar voices or TTS demos
+        # 0.60 works well for distinct bridge crews (Captain, Helm, Tactical, Science, Engineering, Communications)
         self.similarity_threshold = similarity_threshold or float(
-            os.getenv('SPEAKER_EMBEDDING_THRESHOLD', '0.72')
+            os.getenv('SPEAKER_EMBEDDING_THRESHOLD', '0.60')
         )
         self.min_speakers = min_speakers or int(os.getenv('MIN_EXPECTED_SPEAKERS', '4'))
         # For chunked diarization, allow reasonable number of speakers per chunk

@@ -296,7 +296,12 @@ class AggregateRoleInferenceEngine:
         Resolve conflicts when multiple speakers have same role.
 
         Speaker with highest combined confidence keeps the role.
+        Enforces only ONE Captain (critical for multi-speaker scenarios).
         """
+        # CRITICAL: Enforce only ONE Captain (fix for multi-speaker detection)
+        # This must happen FIRST before other conflict resolution
+        results = self._enforce_single_captain_aggregate(results)
+
         # Group by inferred role
         role_assignments: Dict[BridgeRole, List[AggregateRoleAnalysis]] = defaultdict(list)
         for analysis in results.values():
@@ -344,6 +349,80 @@ class AggregateRoleInferenceEngine:
                 ),
                 evidence_factor=old_analysis.evidence_factor
             )
+
+        return results
+
+    def _enforce_single_captain_aggregate(
+        self,
+        results: Dict[str, AggregateRoleAnalysis]
+    ) -> Dict[str, AggregateRoleAnalysis]:
+        """
+        Enforce that only ONE speaker is assigned as Captain.
+
+        If multiple speakers were promoted to Captain, keep only the
+        highest-confidence one and demote others.
+
+        Args:
+            results: Dictionary of aggregate role analyses
+
+        Returns:
+            Modified results with single captain enforced
+        """
+        # Find all speakers assigned as Captain
+        captain_speakers = [
+            (speaker, analysis)
+            for speaker, analysis in results.items()
+            if analysis.inferred_role == BridgeRole.CAPTAIN
+        ]
+
+        if len(captain_speakers) <= 1:
+            # Zero or one captain - this is correct
+            return results
+
+        # Multiple captains detected - keep highest confidence, demote others
+        logger.warning(
+            f"Multiple captains detected in aggregate engine ({len(captain_speakers)} speakers). "
+            f"Enforcing single captain constraint."
+        )
+
+        # Sort by combined confidence descending
+        captain_speakers.sort(key=lambda x: -x[1].combined_confidence)
+        best_captain_speaker = captain_speakers[0][0]
+        best_captain_analysis = captain_speakers[0][1]
+
+        logger.info(
+            f"Keeping {best_captain_speaker} as Captain "
+            f"(combined confidence: {best_captain_analysis.combined_confidence:.2f})"
+        )
+
+        # Demote other captains
+        for speaker, analysis in captain_speakers[1:]:
+            logger.warning(
+                f"Demoting {speaker} from Captain "
+                f"(combined confidence: {analysis.combined_confidence:.2f})"
+            )
+
+            # Demote to UNKNOWN
+            demoted_analysis = AggregateRoleAnalysis(
+                speaker=analysis.speaker,
+                inferred_role=BridgeRole.UNKNOWN,
+                voice_confidence=analysis.voice_confidence,
+                role_confidence=analysis.role_confidence * 0.5,
+                combined_confidence=analysis.combined_confidence * 0.5,
+                utterance_count=analysis.utterance_count,
+                utterance_percentage=analysis.utterance_percentage,
+                keyword_matches=analysis.keyword_matches,
+                total_keyword_matches=analysis.total_keyword_matches,
+                key_indicators=analysis.key_indicators,
+                example_utterances=analysis.example_utterances,
+                methodology_notes=(
+                    f"{analysis.methodology_notes} "
+                    f"[DEMOTED FROM CAPTAIN: Multi-captain conflict resolution]"
+                ),
+                evidence_factor=analysis.evidence_factor
+            )
+
+            results[speaker] = demoted_analysis
 
         return results
 

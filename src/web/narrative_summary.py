@@ -129,9 +129,71 @@ class NarrativeSummaryGenerator:
             logger.debug(f"Ollama not available: {e}")
             return False
 
+    def _assess_metric_reliability(self, analysis: Dict[str, Any]) -> Dict[str, float]:
+        """
+        Assess reliability of each metric (0.0-1.0).
+
+        Returns reliability scores based on data quality indicators.
+
+        Args:
+            analysis: Full analysis results
+
+        Returns:
+            Dictionary mapping metric names to reliability scores (0.0-1.0)
+        """
+        reliability = {}
+
+        # Seven Habits reliability based on match rate
+        habits = analysis.get('seven_habits', {})
+        if habits:
+            habits_list = habits.get('habits', [])
+            if habits_list:
+                total_obs = sum(
+                    h.get('observation_count', h.get('count', 0))
+                    for h in habits_list
+                )
+                total_utterances = len(analysis.get('transcription', []))
+                match_rate = total_obs / max(total_utterances, 1)
+
+                # Reliability thresholds
+                if match_rate < 0.05:
+                    reliability['seven_habits'] = 0.2  # Very low: sparse observations
+                elif match_rate < 0.15:
+                    reliability['seven_habits'] = 0.6  # Moderate: limited observations
+                else:
+                    reliability['seven_habits'] = 1.0  # High: good coverage
+            else:
+                reliability['seven_habits'] = 0.0
+        else:
+            reliability['seven_habits'] = 0.0
+
+        # Role assignments reliability based on speaker count
+        roles = analysis.get('role_assignments', [])
+        speaker_count = len(analysis.get('speakers', []))
+        if roles and speaker_count > 0:
+            role_coverage = len(roles) / max(speaker_count, 6)
+            reliability['role_assignments'] = 1.0 if role_coverage >= 0.5 else 0.5
+        else:
+            reliability['role_assignments'] = 0.0
+
+        # Transcription confidence
+        conf_dist = analysis.get('confidence_distribution', {})
+        avg_confidence = conf_dist.get('average_confidence', 1.0)
+        if avg_confidence < 0.40:
+            reliability['transcription'] = 0.3
+        elif avg_confidence < 0.60:
+            reliability['transcription'] = 0.7
+        else:
+            reliability['transcription'] = 1.0
+
+        return reliability
+
     def _build_analysis_context(self, analysis: Dict[str, Any]) -> str:
         """
-        Build context string from analysis results.
+        Build context string from analysis results, filtered by reliability.
+
+        Unreliable metrics are excluded or marked with warnings to prevent
+        the LLM from receiving conflicting data.
 
         Args:
             analysis: Full analysis results dictionary
@@ -140,6 +202,9 @@ class NarrativeSummaryGenerator:
             Formatted context string for LLM
         """
         sections = []
+
+        # Assess reliability of all metrics first
+        reliability = self._assess_metric_reliability(analysis)
 
         # Check transcription confidence first
         conf_dist = analysis.get('confidence_distribution', {})
@@ -189,43 +254,56 @@ class NarrativeSummaryGenerator:
                     f"{speaking_time:.1f}s speaking time, {conf*100:.0f}% role confidence"
                 )
 
-        # Seven Habits analysis WITH EVIDENCE
+        # Seven Habits analysis WITH EVIDENCE + RELIABILITY FILTERING
         habits = analysis.get('seven_habits', {})
+        habits_reliability = reliability.get('seven_habits', 0.0)
+
         if habits:
-            sections.append("\n" + "="*50)
-            sections.append("SEVEN HABITS ANALYSIS (with evidence)")
-            sections.append("="*50)
+            # Add reliability warning if low
+            if habits_reliability < 0.6:
+                sections.append("\n" + "⚠️ LOW DATA QUALITY WARNING ⚠️")
+                sections.append("Seven Habits scores have LIMITED RELIABILITY.")
+                sections.append("Root cause: Few observable demonstrations of habits in transcript.")
+                sections.append("→ USE TRANSCRIPT EVIDENCE AS PRIMARY SOURCE")
+                sections.append("→ IGNORE contradictory scores if metrics show <5% frequency")
+                sections.append("")
 
-            # Get habits list - could be 'habits' or 'habit_scores'
-            habits_list = habits.get('habits', habits.get('habit_scores', []))
-            for h in habits_list:
-                name = h.get('youth_friendly_name') or h.get('name', 'Unknown')
-                score = h.get('score', 0)
-                interpretation = h.get('interpretation', '')
-                sections.append(f"\n{name}: {score}/5")
-                sections.append(f"  Assessment: {interpretation}")
+            if habits_reliability >= 0.5:
+                # Show full habits section only if moderate+ reliability
+                sections.append("\n" + "="*50)
+                sections.append("SEVEN HABITS ANALYSIS (with evidence)")
+                sections.append("="*50)
 
-                # Include actual examples as evidence
-                examples = h.get('examples', [])
-                if examples:
-                    sections.append("  EVIDENCE FROM TRANSCRIPT:")
-                    for ex in examples[:3]:
-                        if isinstance(ex, dict):
-                            speaker = ex.get('speaker', 'Unknown')
-                            text = ex.get('text', '')
-                            role = role_map.get(speaker, {}).get('role', speaker)
-                            sections.append(f"    - [{role}]: \"{text}\"")
-                        elif isinstance(ex, str):
-                            sections.append(f"    - \"{ex}\"")
+                # Get habits list - could be 'habits' or 'habit_scores'
+                habits_list = habits.get('habits', habits.get('habit_scores', []))
+                for h in habits_list:
+                    name = h.get('youth_friendly_name') or h.get('name', 'Unknown')
+                    score = h.get('score', 0)
+                    interpretation = h.get('interpretation', '')
+                    sections.append(f"\n{name}: {score}/5")
+                    sections.append(f"  Assessment: {interpretation}")
 
-                # Include development tip
-                tip = h.get('development_tip', '')
-                if tip:
-                    sections.append(f"  Growth tip: {tip}")
+                    # Include actual examples as evidence
+                    examples = h.get('examples', [])
+                    if examples:
+                        sections.append("  EVIDENCE FROM TRANSCRIPT:")
+                        for ex in examples[:3]:
+                            if isinstance(ex, dict):
+                                speaker = ex.get('speaker', 'Unknown')
+                                text = ex.get('text', '')
+                                role = role_map.get(speaker, {}).get('role', speaker)
+                                sections.append(f"    - [{role}]: \"{text}\"")
+                            elif isinstance(ex, str):
+                                sections.append(f"    - \"{ex}\"")
 
-            # Overall score
-            overall = habits.get('overall_score', 0)
-            sections.append(f"\nOVERALL TEAM SCORE: {overall}/5")
+                    # Include development tip
+                    tip = h.get('development_tip', '')
+                    if tip:
+                        sections.append(f"  Growth tip: {tip}")
+
+                # Overall score
+                overall = habits.get('overall_score', 0)
+                sections.append(f"\nOVERALL TEAM SCORE: {overall}/5")
 
         # Communication quality WITH EVIDENCE
         quality = analysis.get('communication_quality', {})
@@ -450,7 +528,7 @@ Your goal: make feedback feel like friendly advice, not evaluation.
 
     def _compute_mission_grade(self, analysis: Dict[str, Any]) -> str:
         """
-        Compute mission grade from data using explicit criteria.
+        Compute mission grade from data using explicit criteria with reliability weighting.
 
         Grade criteria:
         - A: ≥80% objectives complete AND avg scorecard ≥4.0 AND avg habits ≥4.0
@@ -460,14 +538,18 @@ Your goal: make feedback feel like friendly advice, not evaluation.
         - F: <20% objectives AND avg scorecard <2.0
 
         When objectives data is unavailable, grade is based on scorecard
-        and habits scores only.
+        and habits scores only. Habits score is weighted by its reliability.
 
         Args:
             analysis: Full analysis results
 
         Returns:
-            Grade string with justification, e.g. "B (scorecard 3.4/5, habits 3.2/5)"
+            Grade string with justification, e.g. "B (scorecard 3.4/5, habits 3.2/5*)"
         """
+        # Assess metric reliability
+        reliability = self._assess_metric_reliability(analysis)
+        habits_reliability = reliability.get('seven_habits', 0.0)
+
         # Objective completion rate
         game_context = analysis.get('game_context') or {}
         objectives = game_context.get('objectives', [])
@@ -489,13 +571,22 @@ Your goal: make feedback feel like friendly advice, not evaluation.
         else:
             avg_scorecard = 0
 
-        # Average habits score
+        # Average habits score (with reliability weighting)
         habits = analysis.get('seven_habits') or {}
         avg_habits = habits.get('overall_score', 0)
         if isinstance(avg_habits, (int, float)):
             avg_habits = float(avg_habits)
         else:
             avg_habits = 0
+
+        # Apply reliability weighting to habits score
+        # Low reliability habits shouldn't drag down the grade as much
+        if habits_reliability < 0.6:
+            # De-weight unreliable habits - use scorecard as primary source
+            avg_perf_for_grade = avg_scorecard
+        else:
+            # Normal weighting when habits are reliable
+            avg_perf_for_grade = (avg_scorecard + avg_habits) / 2 if (avg_scorecard and avg_habits) else max(avg_scorecard, avg_habits)
 
         # Determine grade
         if obj_rate is not None:
@@ -511,14 +602,13 @@ Your goal: make feedback feel like friendly advice, not evaluation.
                 grade = "F"
         else:
             # No objectives — grade on team performance only
-            avg_perf = (avg_scorecard + avg_habits) / 2 if (avg_scorecard and avg_habits) else max(avg_scorecard, avg_habits)
-            if avg_perf >= 4.0:
+            if avg_perf_for_grade >= 4.0:
                 grade = "A"
-            elif avg_perf >= 3.0:
+            elif avg_perf_for_grade >= 3.0:
                 grade = "B"
-            elif avg_perf >= 2.5:
+            elif avg_perf_for_grade >= 2.5:
                 grade = "C"
-            elif avg_perf >= 2.0:
+            elif avg_perf_for_grade >= 2.0:
                 grade = "D"
             else:
                 grade = "F"
@@ -528,7 +618,12 @@ Your goal: make feedback feel like friendly advice, not evaluation.
         if obj_rate is not None:
             parts.append(f"objectives {obj_rate*100:.0f}%")
         parts.append(f"scorecard {avg_scorecard:.1f}/5")
-        parts.append(f"habits {avg_habits:.1f}/5")
+
+        # Add asterisk to habits if low reliability
+        habits_str = f"habits {avg_habits:.1f}/5"
+        if habits_reliability < 0.6:
+            habits_str += "*"
+        parts.append(habits_str)
 
         return f"{grade} ({', '.join(parts)})"
 
@@ -716,7 +811,10 @@ Generate the structured debrief now:"""
 
             # Validate output if requested and module available
             validation_issues = []
+            contradiction_count = 0
             if validate_output and HALLUCINATION_PREVENTION_AVAILABLE:
+                from src.llm.hallucination_prevention import ContradictionDetector
+
                 transcripts = analysis.get('transcription', [])
                 narrative, validation_issues = clean_hallucinations(
                     narrative,
@@ -727,12 +825,22 @@ Generate the structured debrief now:"""
                 if validation_issues:
                     logger.warning(f"Validation found {len(validation_issues)} issues")
 
+                # Detect contradictions
+                detector = ContradictionDetector(narrative, analysis)
+                contradictions = detector.detect_contradictions()
+                if contradictions:
+                    contradiction_count = len(contradictions)
+                    logger.warning(f"Contradiction detector found {contradiction_count} contradictions")
+                    for c in contradictions:
+                        logger.warning(f"  - {c.description}: {c.original_text}")
+
             return {
                 'narrative': narrative,
                 'model': self.ollama_model,
                 'style': self.style,
                 'generated': True,
                 'validation_issues': len(validation_issues) if validation_issues else 0,
+                'contradictions_detected': contradiction_count,
                 'llm_metrics': llm_metrics,
             }
 

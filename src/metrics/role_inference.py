@@ -43,6 +43,13 @@ from dataclasses import dataclass, field
 from collections import defaultdict, Counter
 from enum import Enum
 
+# For compatibility across Python versions
+try:
+    from typing import Pattern
+except ImportError:
+    # Python 3.9+ removed Pattern from typing, use re.Pattern instead
+    Pattern = type(re.compile(""))
+
 logger = logging.getLogger(__name__)
 
 
@@ -146,53 +153,84 @@ class RolePatterns:
     ])
 
     HELM_PATTERNS: List[str] = field(default_factory=lambda: [
+        # Primary helm indicators
         r"(?i)\b(course laid in|course set|heading|bearing)\b",
-        r"(?i)\b(impulse|warp|full stop|all stop)\b",
+        r"(?i)\b(impulse|warp|full stop|all stop|thruster)\b",
         r"(?i)\b(eta|arrival|distance to|kilometers away)\b",
         r"(?i)\b(approach|approaching|orbit|docking)\b",
-        r"(?i)\b(evasive|maneuver|turn|rotate)\b",
+        r"(?i)\b(evasive|maneuver|turn|rotate|pitch|yaw|roll)\b",
         r"(?i)\b(navigation|nav|plotting|plot course)\b",
         # Starship Horizons game-specific helm actions
         r"(?i)\b(head to|headed to|heading to|heading for)\b",
         r"(?i)\b(stick around|moving to|move to|fly to)\b",
         r"(?i)\b(outpost|waypoint|sector)\s+\w",
+        # Expanded helm-specific keywords
+        r"(?i)\b(ready|standing by|aye.*helm|helm report)\b",
+        r"(?i)\b(maneuvering|lateral|forward|reverse|starboard|port)\b",
+        r"(?i)\b(speed|velocity|warp factor|impulse factor|throttle)\b",
+        r"(?i)\b(course|trajectory|vector|coordinates)\b",
+        r"(?i)\b(helm confirm|helm confirm|all stop|hold position)\b",
     ])
 
     TACTICAL_PATTERNS: List[str] = field(default_factory=lambda: [
-        r"(?i)\b(targeting|target locked|acquiring|locked on)\b",
-        r"(?i)\b(weapons|torpedoes|phasers|missiles)\b",
-        r"(?i)\b(shields|shield status|shields at|hull)\b",
-        r"(?i)\b(firing|fire|launch|launching)\b",
-        r"(?i)\b(enemy|hostile|threat|contact|bogey)\b",
-        r"(?i)\b(damage|hit|impact|taking fire)\b",
+        # Primary tactical indicators
+        r"(?i)\b(targeting|target locked|acquiring|locked on|target acquired)\b",
+        r"(?i)\b(weapons|torpedoes|phasers|missiles|photons?|quantum)\b",
+        r"(?i)\b(shields|shield status|shields at|hull|armor)\b",
+        r"(?i)\b(firing|fire|launch|launching|launch tubes?|fore tubes?|aft tubes?)\b",
+        r"(?i)\b(enemy|hostile|threat|contact|bogey|intruder)\b",
+        r"(?i)\b(damage|hit|impact|taking fire|casualty|breach)\b",
         # Starship Horizons game-specific tactical
-        r"(?i)\b(turret|sentry|deploy)\b",
-        r"(?i)\b(combat|attack|defend)\b",
+        r"(?i)\b(turret|sentry|deploy|defense turret)\b",
+        r"(?i)\b(combat|attack|defend|evasive maneuver)\b",
+        # Expanded tactical keywords
+        r"(?i)\b(tactical\s+(report|status|green|yellow|red)|tactical ready)\b",
+        r"(?i)\b(weapons (hot|online|charged|ready)|weapons systems|weapons report)\b",
+        r"(?i)\b(shield.*percent|shield.*nominal|shield.*down|shield.*up)\b",
+        r"(?i)\b(torpedo|phaser|beam|weapon) (ready|loaded|online|charged|fired|launched)\b",
+        r"(?i)\b(all systems green|systems green|green across the board)\b",
+        r"(?i)\b(charge|charging|charged up|power?\s+weapons?)\b",
+        r"(?i)\b(target.*confirm|confirm.*lock|lock.*confirm)\b",
     ])
 
     SCIENCE_PATTERNS: List[str] = field(default_factory=lambda: [
-        r"(?i)\b(scanning|scan complete|sensors|detecting)\b",
-        r"(?i)\b(reading|readings|analysis|analyzing)\b",
-        r"(?i)\b(anomaly|signal|signature|emissions)\b",
-        r"(?i)\b(life signs|life forms|biosigns)\b",
-        r"(?i)\b(composition|spectrum|radiation)\b",
-        r"(?i)\b(data|research|scientific)\b",
+        # Primary science indicators (more specific)
+        r"(?i)\b(scanning|scan complete|scan results|scans? show)\b",
+        r"(?i)\b(sensors|sensor (readout|analysis|data)|sensor array)\b",
+        r"(?i)\b(detecting|detection|detected|discovery)\b",
+        r"(?i)\b(reading|readings|data analysis|analyzing)\b",
+        r"(?i)\b(anomaly|anomalies|strange reading|unusual)\b",
+        r"(?i)\b(life signs|life forms|biosigns|biological)\b",
+        r"(?i)\b(composition|spectrum|radiation|spectral)\b",
+        r"(?i)\b(research|scientific|analysis|findings?)\b",
         # Starship Horizons game-specific science
-        r"(?i)\b(scan|ended scan|boost.*(sensor|scan))\b",
-        r"(?i)\b(sciences?\s+(has|have|granted|completed))\b",
+        r"(?i)\b(science (report|status|confirms?|finds?|shows|grants?|completed))\b",
+        r"(?i)\b(sensor boost|boost.*sensor|boost.*scan|ended scan)\b",
+        # Science-specific technical terms (but not general "systems")
+        r"(?i)\b(particle|subspace|quantum signature|energy signature)\b",
+        r"(?i)\b(probe|analysis|interpret|phenomenon)\b",
     ])
 
     ENGINEERING_PATTERNS: List[str] = field(default_factory=lambda: [
-        r"(?i)\b(reactor|power levels|power at|warp core)\b",
+        # Primary engineering indicators
+        r"(?i)\b(reactor|power levels|power at|warp core|power core)\b",
         r"(?i)\b(rerouting|diverting|transferring) power\b",
-        r"(?i)\b(damage control|repairs|repairing)\b",
-        r"(?i)\b(systems|subsystems|online|offline)\b",
-        r"(?i)\b(coolant|overload|overheating|venting)\b",
-        r"(?i)\b(efficiency|output|capacity)\b",
+        r"(?i)\b(damage control|repairs|repairing|repair status)\b",
+        r"(?i)\b(systems|subsystems|online|offline|nominal)\b",
+        r"(?i)\b(coolant|overload|overheating|venting|bleed off)\b",
+        r"(?i)\b(efficiency|output|capacity|distribution)\b",
         # Starship Horizons game-specific engineering
-        r"(?i)\b(warp core breach|restart|lattice|alignment)\b",
+        r"(?i)\b(warp core breach|restart|lattice|alignment|dilithium)\b",
         r"(?i)\b(boost|power).*(engines?|shields?|sensors?)\b",
-        r"(?i)\b(mini[- ]?game|puzzle)\b",
+        r"(?i)\b(mini[- ]?game|puzzle|engineering report)\b",
+        # Expanded engineering keywords
+        r"(?i)\b(all systems nominal|systems nominal|all green|fully operational)\b",
+        r"(?i)\b(power (distribution|management|allocation|output)|power levels?)\b",
+        r"(?i)\b(engine(s|ing)? (report|status|ready|online)|engine power)\b",
+        r"(?i)\b(warp drive|impulse drive|thrusters?)\s+(ready|online|nominal|engaged)\b",
+        r"(?i)\b(energy (flow|distribution|output|levels?)|power flow)\b",
+        r"(?i)\b(shield.*boost|divert.*power|reroute|transfer.*power)\b",
+        r"(?i)\b(stabilize|stabilizing|equilibrium|balance)\b",
     ])
 
     OPERATIONS_PATTERNS: List[str] = field(default_factory=lambda: [
@@ -204,6 +242,14 @@ class RolePatterns:
         # Starship Horizons game-specific operations
         r"(?i)\b(credits?|alliance|resources?)\b",
         r"(?i)\b(capture|captured|outpost)\b",
+        # Expanded operations keywords (especially communications-related)
+        r"(?i)\b(hail(ing)?|hail.*order|standing by.*hail)\b",
+        r"(?i)\b(channel (open|ready|standing by)|open channel)\b",
+        r"(?i)\b(communications? (report|status|ready|standing by))\b",
+        r"(?i)\b(on (your|the captain) order|on (your|the captain) command)\b",
+        r"(?i)\b(waiting.*order|awaiting.*command|standing by.*order)\b",
+        r"(?i)\b(ready to hail|ready to engage|ready on your order)\b",
+        r"(?i)\b(all channels? (clear|open)|protocols? active)\b",
     ])
 
     COMMUNICATIONS_PATTERNS: List[str] = field(default_factory=lambda: [
@@ -212,6 +258,12 @@ class RolePatterns:
         r"(?i)\b(message|incoming|outgoing)\b",
         r"(?i)\b(audio|visual|subspace)\b",
         r"(?i)\b(broadcast|distress|mayday)\b",
+        # Expanded communications keywords
+        r"(?i)\b(comms? (report|status|ready|open|standing by))\b",
+        r"(?i)\b(channel.*open|open.*channel|channel.*ready)\b",
+        r"(?i)\b(frequency.*set|set.*frequency|tuned to)\b",
+        r"(?i)\b(hail.*ready|ready.*hail|standing by.*hail)\b",
+        r"(?i)\b(signal.*strong|signal.*clear|receiving.*loud and clear)\b",
     ])
 
     # Self-identification patterns: when a speaker claims or confirms their station
@@ -346,11 +398,11 @@ class RoleInferenceEngine:
             BridgeRole.EXECUTIVE_OFFICER: self.patterns.EXECUTIVE_OFFICER_PATTERNS,
         }
 
-    def _build_addressing_patterns(self) -> List[re.Pattern]:
+    def _build_addressing_patterns(self) -> List[Pattern]:
         """Build compiled patterns for detecting when someone is addressing authority."""
         return [re.compile(p) for p in self.patterns.ADDRESSING_AUTHORITY_PATTERNS]
 
-    def _build_self_identification_patterns(self) -> Dict[BridgeRole, List[re.Pattern]]:
+    def _build_self_identification_patterns(self) -> Dict[BridgeRole, List[Pattern]]:
         """Build compiled patterns for detecting self-identification with a role."""
         role_name_map = {
             "Captain/Command": BridgeRole.CAPTAIN,
@@ -361,7 +413,7 @@ class RoleInferenceEngine:
             "Operations/Monitoring": BridgeRole.OPERATIONS,
             "Communications": BridgeRole.COMMUNICATIONS,
         }
-        result: Dict[BridgeRole, List[re.Pattern]] = {}
+        result: Dict[BridgeRole, List[Pattern]] = {}
         for role_name, patterns in self.patterns.SELF_IDENTIFICATION_PATTERNS.items():
             bridge_role = role_name_map.get(role_name)
             if bridge_role:
@@ -394,6 +446,9 @@ class RoleInferenceEngine:
 
         # Apply addressing pattern penalties
         results = self._apply_addressing_penalties(results, speaker_utterances)
+
+        # CRITICAL: Enforce only ONE captain (fix for multi-speaker detection)
+        results = self._enforce_single_captain(results)
 
         return results
 
@@ -1161,6 +1216,95 @@ class RoleInferenceEngine:
             }
         }
 
+    def _enforce_single_captain(
+        self,
+        results: Dict[str, SpeakerRoleAnalysis]
+    ) -> Dict[str, SpeakerRoleAnalysis]:
+        """
+        Enforce that only ONE speaker is assigned as Captain.
+
+        If multiple speakers were promoted to Captain (can happen with 6+ speakers),
+        keep only the highest-confidence one and demote others.
+
+        Args:
+            results: Dictionary of speaker role analyses
+
+        Returns:
+            Modified results with single captain enforced
+        """
+        # Find all speakers assigned as Captain
+        captain_speakers = [
+            (speaker, analysis)
+            for speaker, analysis in results.items()
+            if analysis.inferred_role == BridgeRole.CAPTAIN
+        ]
+
+        if len(captain_speakers) <= 1:
+            # Zero or one captain - this is correct
+            return results
+
+        # Multiple captains detected - keep highest confidence, demote others
+        logger.warning(
+            f"Multiple captains detected ({len(captain_speakers)} speakers). "
+            f"Enforcing single captain constraint."
+        )
+
+        # Sort by confidence descending
+        captain_speakers.sort(key=lambda x: -x[1].confidence)
+        best_captain_speaker = captain_speakers[0][0]
+        best_captain_analysis = captain_speakers[0][1]
+
+        logger.info(
+            f"Keeping {best_captain_speaker} as Captain "
+            f"(confidence: {best_captain_analysis.confidence:.2f})"
+        )
+
+        # Demote other captains
+        for speaker, analysis in captain_speakers[1:]:
+            logger.warning(
+                f"Demoting {speaker} from Captain "
+                f"(confidence: {analysis.confidence:.2f}) due to multi-captain conflict"
+            )
+
+            # Demote to UNKNOWN and let fallback logic handle it
+            alternative_role = BridgeRole.UNKNOWN
+
+            # Try to infer what they should be based on their keywords
+            if analysis.keyword_matches >= 15:
+                # Has significant keywords - try to match them
+                if "helm" in analysis.methodology_notes.lower():
+                    alternative_role = BridgeRole.HELM
+                elif "tactical" in analysis.methodology_notes.lower():
+                    alternative_role = BridgeRole.TACTICAL
+                elif "science" in analysis.methodology_notes.lower():
+                    alternative_role = BridgeRole.SCIENCE
+                elif "engineering" in analysis.methodology_notes.lower():
+                    alternative_role = BridgeRole.ENGINEERING
+                elif "communications" in analysis.methodology_notes.lower():
+                    alternative_role = BridgeRole.COMMUNICATIONS
+
+            # Update analysis with demoted role
+            demoted_analysis = SpeakerRoleAnalysis(
+                speaker=analysis.speaker,
+                inferred_role=alternative_role,
+                confidence=max(0.3, analysis.confidence * 0.5),  # Lower confidence for demoted role
+                utterance_count=analysis.utterance_count,
+                utterance_percentage=analysis.utterance_percentage,
+                keyword_matches=analysis.keyword_matches,
+                total_keyword_matches=analysis.total_keyword_matches,
+                key_indicators=analysis.key_indicators,
+                example_utterances=analysis.example_utterances,
+                methodology_notes=(
+                    f"{analysis.methodology_notes} "
+                    f"[DEMOTED FROM CAPTAIN: Multi-captain conflict resolution. "
+                    f"Reassigned to {alternative_role.value}]"
+                )
+            )
+
+            results[speaker] = demoted_analysis
+
+        return results
+
 
 @dataclass
 class VoicePatternMetrics:
@@ -1432,6 +1576,120 @@ class VoicePatternAnalyzer:
         return hints
 
 
+class UtteranceLevelRoleDetector:
+    """
+    Detects bridge roles at the utterance level rather than speaker level.
+
+    Essential for scenarios like Starship Horizons where one speaker narrates
+    multiple crew members. Each utterance is classified independently based on
+    its content keywords.
+    """
+
+    def __init__(self, patterns: Optional[RolePatterns] = None):
+        """Initialize utterance-level detector."""
+        self.patterns = patterns or RolePatterns()
+        self._role_pattern_map = self._build_role_pattern_map()
+
+    def _build_role_pattern_map(self) -> Dict[BridgeRole, List[Pattern]]:
+        """Build mapping of roles to their compiled patterns."""
+        return {
+            BridgeRole.CAPTAIN: [re.compile(p) for p in self.patterns.CAPTAIN_PATTERNS],
+            BridgeRole.HELM: [re.compile(p) for p in self.patterns.HELM_PATTERNS],
+            BridgeRole.TACTICAL: [re.compile(p) for p in self.patterns.TACTICAL_PATTERNS],
+            BridgeRole.SCIENCE: [re.compile(p) for p in self.patterns.SCIENCE_PATTERNS],
+            BridgeRole.ENGINEERING: [re.compile(p) for p in self.patterns.ENGINEERING_PATTERNS],
+            BridgeRole.OPERATIONS: [re.compile(p) for p in self.patterns.OPERATIONS_PATTERNS],
+            BridgeRole.COMMUNICATIONS: [re.compile(p) for p in self.patterns.COMMUNICATIONS_PATTERNS],
+        }
+
+    def detect_role_for_utterance(self, text: str) -> Tuple[BridgeRole, float, List[str]]:
+        """
+        Detect the most likely role for a single utterance.
+
+        Args:
+            text: The utterance text to analyze
+
+        Returns:
+            Tuple of (role, confidence, matched_keywords)
+        """
+        role_scores: Dict[BridgeRole, Tuple[int, set]] = {}  # score, matched_keywords
+
+        # Count keyword matches per role
+        for role, patterns in self._role_pattern_map.items():
+            matches = set()
+            match_count = 0
+
+            for pattern in patterns:
+                found = pattern.findall(text)
+                if found:
+                    match_count += len(found)
+                    for match in found:
+                        match_text = match if isinstance(match, str) else match[0]
+                        matches.add(match_text.lower())
+
+            if match_count > 0:
+                role_scores[role] = (match_count, matches)
+                logger.debug(
+                    f"[DETECT] '{text[:60]}' has {match_count} {role.value} matches: {matches}"
+                )
+
+        # If no matches, return UNKNOWN
+        if not role_scores:
+            return BridgeRole.UNKNOWN, 0.0, []
+
+        # Find the role with the most matches
+        sorted_roles = sorted(
+            role_scores.items(),
+            key=lambda x: (-x[1][0], -len(x[1][1]))  # Sort by match count, then keyword diversity
+        )
+
+        best_role, (best_count, best_keywords) = sorted_roles[0]
+        second_count = sorted_roles[1][1][0] if len(sorted_roles) > 1 else 0
+
+        # Calculate confidence based on match count and dominance
+        # Higher match count = higher confidence
+        # Clear winner (big gap between 1st and 2nd) = higher confidence
+        base_confidence = min(0.9, best_count / 5)  # Normalize to ~0.9 at 5 matches
+        dominance = (best_count - second_count) / max(best_count, 1) if best_count > second_count else 0
+        confidence = min(0.95, base_confidence * 0.6 + dominance * 0.4)
+
+        # Log detection with all role scores for debugging
+        logger.debug(
+            f"[ROLE_DETECT] '{text[:80]}' → {best_role.value} (conf={confidence:.3f}, "
+            f"matches={best_count}, vs 2nd={second_count}, keywords={best_keywords[:3]})"
+        )
+
+        return best_role, confidence, sorted(best_keywords)
+
+    def annotate_transcripts(
+        self,
+        transcripts: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        Add role and role_confidence fields to each transcript segment.
+
+        Args:
+            transcripts: List of transcript dictionaries
+
+        Returns:
+            Updated transcripts with role annotations
+        """
+        updated = []
+        for segment in transcripts:
+            text = segment.get('text', '')
+            role, confidence, keywords = self.detect_role_for_utterance(text)
+
+            # Add role information to segment
+            segment_copy = segment.copy()
+            segment_copy['detected_role'] = role.value if role != BridgeRole.UNKNOWN else None
+            segment_copy['detected_role_confidence'] = round(confidence, 3)
+            segment_copy['detected_role_keywords'] = keywords
+
+            updated.append(segment_copy)
+
+        return updated
+
+
 class EnhancedRoleInferenceEngine(RoleInferenceEngine):
     """
     Enhanced role inference using both keywords and voice patterns.
@@ -1529,6 +1787,100 @@ class EnhancedRoleInferenceEngine(RoleInferenceEngine):
                                 example_utterances=analysis.example_utterances,
                                 methodology_notes=new_methodology
                             )
+
+        # CRITICAL: Enforce only ONE captain (fix for multi-speaker detection)
+        results = self._enforce_single_captain(results)
+
+        return results
+
+    def _enforce_single_captain(
+        self,
+        results: Dict[str, SpeakerRoleAnalysis]
+    ) -> Dict[str, SpeakerRoleAnalysis]:
+        """
+        Enforce that only ONE speaker is assigned as Captain.
+
+        If multiple speakers were promoted to Captain (can happen with 6+ speakers),
+        keep only the highest-confidence one and demote others.
+
+        Args:
+            results: Dictionary of speaker role analyses
+
+        Returns:
+            Modified results with single captain enforced
+        """
+        # Find all speakers assigned as Captain
+        captain_speakers = [
+            (speaker, analysis)
+            for speaker, analysis in results.items()
+            if analysis.inferred_role == BridgeRole.CAPTAIN
+        ]
+
+        if len(captain_speakers) <= 1:
+            # Zero or one captain - this is correct
+            return results
+
+        # Multiple captains detected - keep highest confidence, demote others
+        logger.warning(
+            f"Multiple captains detected ({len(captain_speakers)} speakers). "
+            f"Enforcing single captain constraint."
+        )
+
+        # Sort by confidence descending
+        captain_speakers.sort(key=lambda x: -x[1].confidence)
+        best_captain_speaker = captain_speakers[0][0]
+        best_captain_analysis = captain_speakers[0][1]
+
+        logger.info(
+            f"Keeping {best_captain_speaker} as Captain "
+            f"(confidence: {best_captain_analysis.confidence:.2f})"
+        )
+
+        # Demote other captains
+        for speaker, analysis in captain_speakers[1:]:
+            logger.warning(
+                f"Demoting {speaker} from Captain "
+                f"(confidence: {analysis.confidence:.2f}) due to multi-captain conflict"
+            )
+
+            # Try to find the second-best role for this speaker
+            # Re-analyze this speaker to find alternative role
+            # For now, assign to UNKNOWN and let fallback logic handle it
+            alternative_role = BridgeRole.UNKNOWN
+
+            # Try to infer what they should be based on their keywords
+            if analysis.keyword_matches >= 15:
+                # Has significant keywords - try to match them
+                if "helm" in analysis.methodology_notes.lower():
+                    alternative_role = BridgeRole.HELM
+                elif "tactical" in analysis.methodology_notes.lower():
+                    alternative_role = BridgeRole.TACTICAL
+                elif "science" in analysis.methodology_notes.lower():
+                    alternative_role = BridgeRole.SCIENCE
+                elif "engineering" in analysis.methodology_notes.lower():
+                    alternative_role = BridgeRole.ENGINEERING
+                elif "communications" in analysis.methodology_notes.lower():
+                    alternative_role = BridgeRole.COMMUNICATIONS
+
+            # Update analysis with demoted role
+            demoted_analysis = SpeakerRoleAnalysis(
+                speaker=analysis.speaker,
+                inferred_role=alternative_role,
+                confidence=max(0.3, analysis.confidence * 0.5),  # Lower confidence for demoted role
+                utterance_count=analysis.utterance_count,
+                utterance_percentage=analysis.utterance_percentage,
+                keyword_matches=analysis.keyword_matches,
+                total_keyword_matches=analysis.total_keyword_matches,
+                key_indicators=analysis.key_indicators,
+                example_utterances=analysis.example_utterances,
+                methodology_notes=(
+                    f"{analysis.methodology_notes} "
+                    f"[DEMOTED FROM CAPTAIN: Multi-captain conflict resolution. "
+                    f"Original role assignment {alternative_role.value}]"
+                )
+            )
+
+            results[speaker] = demoted_analysis
 
         return results
 

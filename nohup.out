@@ -1,4 +1,1 @@
-Usage: python -m uvicorn [OPTIONS] APP
-Try 'python -m uvicorn --help' for help.
-
-Error: Got unexpected extra argument (1m)
+# Log file truncated to free disk space

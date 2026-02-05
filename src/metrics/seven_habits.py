@@ -69,13 +69,13 @@ class HabitIndicators:
     # Habit 4: Think Win-Win - Mutual benefit, cooperation
     # Note: Removed bare "we/us/our" — nearly every collaborative utterance
     # contains these, inflating scores to near-max. Kept words that signal
-    # deliberate cooperation and mutual benefit.
+    # deliberate cooperation and mutual benefit. Also require explicit object
+    # to show real cooperation, not just mentioning the concept.
     THINK_WIN_WIN_PATTERNS: List[str] = field(default_factory=lambda: [
-        r"(?i)\b(together|as a team)\b",
-        r"(?i)\b(help|assist|support|backup)\b",
-        r"(?i)\b(share|collaborate|cooperate)\b",
-        r"(?i)\b(everyone|all of us)\b",
-        r"(?i)\b(fair|equal|balance)\b",
+        r"(?i)\b(together|as a team|teamwork)\b",
+        r"(?i)\b(help\s+(out|them|you|me|each other)|assist|support)\b",
+        r"(?i)\b(share|collaborate|cooperate|mutual|win-win)\b",
+        r"(?i)\b(everyone|all of us|one another)\b",
     ])
 
     # Habit 5: Seek First to Understand - Active listening, questions
@@ -91,14 +91,14 @@ class HabitIndicators:
     ])
 
     # Habit 6: Synergize - Creative cooperation, building on ideas
-    # Note: Removed "together" (overlaps Habit 4). Tightened to patterns
-    # indicating creative brainstorming and building on others' ideas.
+    # Note: Relaxed to capture more brainstorming language. Includes "what if"
+    # without requiring "we", collaborative action words, and team effort language.
     SYNERGIZE_PATTERNS: List[str] = field(default_factory=lambda: [
-        r"(?i)\b(idea|suggest|option|alternative)\b",
-        r"(?i)\b(what if we|how about we|could we try|let's try)\b",
-        r"(?i)\b(build on|add to|combine)\b",
-        r"(?i)\b(solution|solve|figure out)\b",
-        r"(?i)\b(coordinate|work with|teamwork)\b",
+        r"(?i)\b(idea|suggest|option|alternative|thought|proposal)\b",
+        r"(?i)\b(what if|how about|could (we|you|i|they)|let's|shall we|try|attempt)\b",
+        r"(?i)\b(build on|add to|combine|merge|blend|integrate)\b",
+        r"(?i)\b(solution|solve|figure out|work (it|this) out|answer)\b",
+        r"(?i)\b(coordinate|collaborate|teamwork|brainstorm|creative|synerg)\b",
     ])
 
     # Habit 7: Sharpen the Saw - Learning, improvement, reflection
@@ -246,7 +246,7 @@ class SevenHabitsAnalyzer:
                         break  # Count each utterance once per habit
 
             frequency = count / total_utterances
-            score = self._calculate_score(frequency)
+            score = self._calculate_score(frequency, count)
             interpretation = self._interpret_score(habit, score, count)
 
             # Calculate gap to next score
@@ -290,18 +290,46 @@ class SevenHabitsAnalyzer:
             f"(target: {target_freq*100:.0f}% frequency)"
         )
 
-    def _calculate_score(self, frequency: float) -> int:
-        """Convert frequency to 1-5 score."""
-        if frequency >= 0.30:
-            return 5
-        elif frequency >= 0.20:
-            return 4
-        elif frequency >= 0.10:
-            return 3
-        elif frequency >= 0.05:
-            return 2
+    def _calculate_score(self, frequency: float, count: int = 0) -> int:
+        """
+        Convert frequency to 1-5 score using hybrid count+frequency approach.
+
+        Handles both large sessions (where frequency matters) and small sessions
+        (where absolute count is more meaningful).
+
+        Args:
+            frequency: Frequency as fraction (0.0-1.0)
+            count: Absolute count of observations
+
+        Returns:
+            Score 1-5
+        """
+        # Absolute count thresholds (works well for small sessions)
+        if count >= 15:
+            count_score = 5
+        elif count >= 8:
+            count_score = 4
+        elif count >= 4:
+            count_score = 3
+        elif count >= 2:
+            count_score = 2
         else:
-            return 1
+            count_score = 1
+
+        # Frequency thresholds (for large samples)
+        if frequency >= 0.30:
+            freq_score = 5
+        elif frequency >= 0.20:
+            freq_score = 4
+        elif frequency >= 0.10:
+            freq_score = 3
+        elif frequency >= 0.05:
+            freq_score = 2
+        else:
+            freq_score = 1
+
+        # Return the higher score (favors evidence)
+        return max(count_score, freq_score)
 
     def _interpret_score(self, habit: SevenHabit, score: int, count: int) -> str:
         """Generate interpretation of habit score."""

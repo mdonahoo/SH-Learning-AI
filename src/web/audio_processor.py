@@ -86,12 +86,30 @@ except ImportError:
 
 # New detailed analysis imports
 try:
+    logger.info("[IMPORT] Attempting to import RoleInferenceEngine and EnhancedRoleInferenceEngine...")
     from src.metrics.role_inference import RoleInferenceEngine, EnhancedRoleInferenceEngine
+    logger.info("[IMPORT] Base role inference imports successful")
     ROLE_INFERENCE_AVAILABLE = True
-except ImportError:
+except (ImportError, Exception) as e:
     ROLE_INFERENCE_AVAILABLE = False
     RoleInferenceEngine = None
     EnhancedRoleInferenceEngine = None
+    logger.error(f"[IMPORT] Role inference base imports failed: {e}", exc_info=True)
+
+# Try to import UtteranceLevelRoleDetector separately to see if it's the issue
+try:
+    logger.info("[IMPORT] Attempting to import UtteranceLevelRoleDetector...")
+    from src.metrics.role_inference import UtteranceLevelRoleDetector
+    logger.info("[IMPORT] UtteranceLevelRoleDetector import successful")
+except (ImportError, Exception) as e:
+    logger.error(f"[IMPORT] UtteranceLevelRoleDetector import failed: {e}", exc_info=True)
+    UtteranceLevelRoleDetector = None
+
+# Log overall import status
+logger.info(
+    f"[IMPORT] Import status: ROLE_INFERENCE_AVAILABLE={ROLE_INFERENCE_AVAILABLE}, "
+    f"UtteranceLevelRoleDetector={'available' if UtteranceLevelRoleDetector else 'NOT AVAILABLE'}"
+)
 
 # Aggregate role inference with diarization confidence
 try:
@@ -1553,6 +1571,68 @@ class AudioProcessor:
             ]
             results['full_text'] = ' '.join(s['text'] for s in segments)
 
+            # Apply utterance-level role detection (critical for narrator scenarios)
+            # This detects roles for each utterance independently based on content keywords
+            # Overrides speaker_role with detected_role when available
+            logger.info(
+                f"[PIPELINE] Utterance detection check: ROLE_INFERENCE_AVAILABLE={ROLE_INFERENCE_AVAILABLE}, "
+                f"UtteranceLevelRoleDetector={UtteranceLevelRoleDetector}"
+            )
+            if ROLE_INFERENCE_AVAILABLE and UtteranceLevelRoleDetector:
+                try:
+                    logger.info("[PIPELINE] ENTERING utterance-level role detection block")
+                    update_progress("roles", "Detecting utterance-level roles", progress)
+                    step_start = time.time()
+                    utterance_detector = UtteranceLevelRoleDetector()
+                    logger.info("[PIPELINE] UtteranceLevelRoleDetector instantiated successfully")
+
+                    assigned_count = 0
+                    for i, seg in enumerate(results['transcription']):
+                        text = seg.get('text', '')
+                        if text.strip():
+                            role, confidence, keywords = utterance_detector.detect_role_for_utterance(text)
+                            seg['detected_role'] = role.value if role.value != 'Crew Member' else None
+                            seg['detected_role_confidence'] = round(confidence, 3)
+
+                            logger.debug(
+                                f"[DETECTED] Line {i}: '{text[:70]}' → {role.value} (conf={confidence:.3f}, "
+                                f"saved_as_detected_role={seg['detected_role']})"
+                            )
+
+                            # Use detected role in preference to speaker role if confidence is reasonable
+                            # Threshold of 0.4 allows technical role keywords to override speaker-level assignments
+                            if confidence >= 0.4 and seg['detected_role']:
+                                old_role = seg['speaker_role']
+                                seg['speaker_role'] = seg['detected_role']
+                                assigned_count += 1
+                                logger.info(
+                                    f"[ASSIGNED] Line {i}: '{text[:60]}' → {seg['detected_role']} "
+                                    f"(conf={confidence:.3f}, overrode={old_role})"
+                                )
+                            else:
+                                logger.debug(
+                                    f"[SKIPPED] Line {i}: confidence={confidence:.3f} < 0.4 or no detected_role, "
+                                    f"speaker_role stays as {seg['speaker_role']}"
+                                )
+
+                    step_timings['utterance_role_detection'] = round(time.time() - step_start, 2)
+
+                    # Verify output was written
+                    detected_in_output = sum(1 for s in results['transcription'] if s.get('detected_role'))
+                    # Count how many segments had their speaker_role updated by detected_role
+                    assigned_in_output = sum(1 for s in results['transcription'] if s.get('detected_role') and s.get('speaker_role') == s.get('detected_role'))
+
+                    logger.info(
+                        f"[PIPELINE] Utterance-level role detection COMPLETE: "
+                        f"{len(results['transcription'])} segments analyzed, "
+                        f"{detected_in_output} with detected_role in output, "
+                        f"{assigned_count} assigned roles (conf>=0.4) "
+                        f"in {step_timings['utterance_role_detection']:.2f}s"
+                    )
+                    logger.info(f"[TIMING_RECORDED] utterance_role_detection: {step_timings['utterance_role_detection']}s")
+                except Exception as e:
+                    logger.error(f"[ERROR] Utterance-level role detection failed: {e}", exc_info=True)
+
             # Build transcripts list for analysis modules
             transcripts = self._build_transcripts_list(segments)
 
@@ -1638,6 +1718,38 @@ class AudioProcessor:
                                         f"Role override for {speaker_id}: "
                                         f"{ra['original_role']} -> {update.role} (Captain detection)"
                                     )
+
+                        # CRITICAL: Enforce single Captain after telemetry overrides
+                        # Telemetry correlation can promote multiple speakers to Captain
+                        # Only keep the highest-confidence one
+                        captain_speakers = [
+                            ra for ra in results['role_assignments']
+                            if ra['role'] == 'Captain/Command'
+                        ]
+                        if len(captain_speakers) > 1:
+                            logger.warning(
+                                f"Multiple Captains after telemetry correlation ({len(captain_speakers)}). "
+                                f"Enforcing single captain."
+                            )
+                            # Sort by confidence descending
+                            captain_speakers.sort(key=lambda x: -x.get('confidence', 0))
+                            best_captain = captain_speakers[0]
+                            logger.info(
+                                f"Keeping {best_captain['speaker_id']} as Captain "
+                                f"(confidence: {best_captain.get('confidence', 0):.2f})"
+                            )
+
+                            # Demote secondary captains back to their original role
+                            for secondary in captain_speakers[1:]:
+                                logger.warning(
+                                    f"Demoting {secondary['speaker_id']} from Captain "
+                                    f"due to multi-captain conflict (telemetry boost)"
+                                )
+                                if secondary.get('original_role'):
+                                    secondary['role'] = secondary['original_role']
+                                else:
+                                    secondary['role'] = 'Crew Member'
+                                secondary['confidence'] = max(0.3, secondary.get('confidence', 0) * 0.6)
 
                         # Add correlation summary to results
                         results['telemetry_correlation'] = correlator.get_smart_correlation_summary()

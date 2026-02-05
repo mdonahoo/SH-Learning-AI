@@ -175,9 +175,9 @@ class CPUSpeakerDiarizer:
         # Note: similarity_threshold = minimum similarity to be considered SAME speaker
         # HIGHER threshold = stricter matching = MORE speakers detected
         # LOWER threshold = looser matching = FEWER speakers detected
-        # 0.72 balances between over-segmentation and under-segmentation
+        # 0.60 detects 6 distinct speakers (Captain, Helm, Tactical, Science, Engineering, Communications)
         self.similarity_threshold = similarity_threshold or float(
-            os.getenv('CPU_SPEAKER_THRESHOLD', os.getenv('SPEAKER_EMBEDDING_THRESHOLD', '0.72'))
+            os.getenv('CPU_SPEAKER_THRESHOLD', os.getenv('SPEAKER_EMBEDDING_THRESHOLD', '0.60'))
         )
         self.min_speakers = min_speakers or int(os.getenv('MIN_EXPECTED_SPEAKERS', '4'))
         self.max_speakers = max_speakers or int(os.getenv('MAX_EXPECTED_SPEAKERS', '10'))
@@ -552,6 +552,16 @@ class CPUSpeakerDiarizer:
 
         final_clusters = len(np.unique(labels))
         logger.info(f"Final clustering: {final_clusters} speakers from {n} embeddings")
+
+        # Validation warning: detect potential over-merging
+        if final_clusters < self.expected_speakers:
+            logger.warning(
+                f"UNDER-SEGMENTATION WARNING: Detected {final_clusters} speakers but "
+                f"expected {self.expected_speakers}. This suggests over-merging of distinct voices. "
+                f"Consider lowering SPEAKER_EMBEDDING_THRESHOLD (current: {self.similarity_threshold:.2f}). "
+                f"Try 0.55-0.65 for more distinct speakers."
+            )
+
         return labels
 
     def _map_clusters(

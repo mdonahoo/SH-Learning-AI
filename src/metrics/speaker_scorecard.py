@@ -698,6 +698,17 @@ class SpeakerScorecardGenerator:
         Returns:
             SpeakerScore or None if insufficient data
         """
+        # CRITICAL: Don't score if there's no speech-action data at all
+        # This prevents assigning default scores to scenarios without telemetry
+        logger.debug(
+            f"[GAME_EFF] Checking {speaker}: speech_action_data={bool(self.speech_action_data)}, "
+            f"type={type(self.speech_action_data)}, "
+            f"content_keys={list(self.speech_action_data.keys()) if self.speech_action_data else 'N/A'}"
+        )
+        if not self.speech_action_data:
+            logger.info(f"[GAME_EFF] {speaker} → NONE (no speech_action_data available)")
+            return None  # No telemetry data available - can't score
+
         threshold_info = (
             "Score 5: ≥70% alignment | Score 4: ≥50% | "
             "Score 3: ≥30% | Score 2: ≥10% | Score 1: <10%"
@@ -716,6 +727,7 @@ class SpeakerScorecardGenerator:
         # If this speaker had no detectable intentions, check if they had
         # telemetry-correlated events at all
         if total_speaker_intentions == 0:
+            logger.debug(f"[GAME_EFF] {speaker}: no intentions detected, checking nearby_events")
             # Check if there were events near this speaker's utterances
             nearby_events = 0
             for u in utterances:
@@ -728,7 +740,10 @@ class SpeakerScorecardGenerator:
                             break
 
             if nearby_events == 0:
+                logger.info(f"[GAME_EFF] {speaker} → NONE (no intentions, no nearby events)")
                 return None  # Not enough data to score
+            else:
+                logger.debug(f"[GAME_EFF] {speaker}: {nearby_events} nearby events found")
 
             # Score based on activity presence only
             activity_rate = nearby_events / max(len(utterances), 1)
@@ -799,6 +814,11 @@ class SpeakerScorecardGenerator:
         else:
             score = 1
             evidence = f"Weak follow-through ({len(speaker_aligned)}/{total_speaker_intentions} aligned)"
+
+        logger.info(
+            f"[GAME_EFF] {speaker} → SCORE {score}/5 (alignment={alignment_rate*100:.0f}%, "
+            f"aligned={len(speaker_aligned)}/{total_speaker_intentions})"
+        )
 
         return SpeakerScore(
             metric_name="game_effectiveness",
