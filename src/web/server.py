@@ -1067,10 +1067,20 @@ async def analyze_audio_stream(
 
     async def event_stream():
         """Generate SSE events."""
-        # Send initial padding to force proxy buffers to flush.
-        # VS Code port forwarding and other proxies buffer small
-        # responses; a 2KB comment forces them to start streaming.
-        yield ": " + " " * 2048 + "\n\n"
+        import time as _time
+
+        # Send large initial padding to force proxy buffers to flush.
+        # Azure reverse proxies, VS Code port forwarding, and cloud
+        # load balancers buffer small responses; 16KB forces them to
+        # start streaming immediately.
+        yield ": " + " " * 16384 + "\n\n"
+
+        # Track time since last yield to send periodic heartbeats.
+        # Long-running steps (transcription, LLM cleanup, narrative)
+        # can be silent for minutes; without heartbeats, Azure proxies
+        # buffer all events and deliver them only at the end.
+        last_yield = _time.monotonic()
+        HEARTBEAT_INTERVAL = 15  # seconds
 
         while True:
             try:
@@ -1078,10 +1088,16 @@ async def analyze_audio_stream(
                 try:
                     msg = progress_queue.get_nowait()
                 except queue.Empty:
+                    # Send heartbeat comment to keep proxy flushing
+                    now = _time.monotonic()
+                    if now - last_yield >= HEARTBEAT_INTERVAL:
+                        yield ": heartbeat\n\n"
+                        last_yield = now
                     await asyncio.sleep(0.1)
                     continue
 
                 yield f"data: {json.dumps(msg)}\n\n"
+                last_yield = _time.monotonic()
 
                 # Stop on result or error
                 if msg['type'] in ('result', 'error'):

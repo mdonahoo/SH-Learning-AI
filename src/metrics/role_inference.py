@@ -1000,28 +1000,47 @@ class RoleInferenceEngine:
         if not cached_scores:
             return BridgeRole.UNKNOWN
 
-        # Sort candidate roles by score (excluding the lost role)
+        # Sort candidate roles by score, using keyword diversity as tiebreaker
+        # for close scores (within 5%). This prevents a role with 8 keywords
+        # from beating one with 15 keywords on a 0.015 score difference.
         candidates = sorted(
             ((role, score) for role, score in cached_scores.items()
              if role != lost_role and role != BridgeRole.UNKNOWN),
-            key=lambda x: -x[1]
+            key=lambda x: (-x[1], -len(cached_keywords.get(x[0], set())))
         )
 
+        # Filter to viable candidates
+        viable = []
         for role, score in candidates:
-            # Must have at least 1 distinct keyword for this role
             distinct_count = len(cached_keywords.get(role, set()))
             if distinct_count < self.MIN_KEYWORD_TYPES:
                 continue
-
-            # Must have a meaningful score
             if score < 0.15:
                 continue
+            viable.append((role, score, distinct_count))
 
-            logger.debug(
-                f"  Fallback candidate for {speaker}: {role.value} "
-                f"(score={score:.3f}, distinct={distinct_count})"
-            )
-            return role
+        if not viable:
+            return BridgeRole.UNKNOWN
+
+        # If top candidates have close scores (within 5%), prefer more keywords
+        best_role, best_score, best_distinct = viable[0]
+        for role, score, distinct_count in viable[1:]:
+            score_gap = best_score - score
+            if score_gap < 0.05 and distinct_count > best_distinct * 1.5:
+                logger.debug(
+                    f"  Fallback override for {speaker}: {role.value} "
+                    f"(score={score:.3f}, distinct={distinct_count}) beats "
+                    f"{best_role.value} (score={best_score:.3f}, distinct={best_distinct}) "
+                    f"on keyword diversity"
+                )
+                best_role, best_score, best_distinct = role, score, distinct_count
+                break  # Only consider one override
+
+        logger.debug(
+            f"  Fallback candidate for {speaker}: {best_role.value} "
+            f"(score={best_score:.3f}, distinct={best_distinct})"
+        )
+        return best_role
 
         return BridgeRole.UNKNOWN
 
