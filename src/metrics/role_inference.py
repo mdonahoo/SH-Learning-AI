@@ -915,33 +915,27 @@ class RoleInferenceEngine:
                     f"(confidence: {primary.confidence:.0%}, prominence: {primary.utterance_percentage:.0f}%)"
                 )
 
-                # Others: try next-best role, then XO, then unknown
+                # Others: try next-best specific role first, then XO only if no alternative
                 for secondary in sorted_speakers[1:]:
-                    confidence_gap = primary.confidence - secondary.confidence
-                    prominence_gap = primary.utterance_percentage - secondary.utterance_percentage
+                    # Always try finding a specific fallback role first
+                    fallback_role = self._find_fallback_role(
+                        secondary.speaker, role, reassignments
+                    )
 
-                    # Close match with good prominence -> XO
-                    if confidence_gap < 0.15 and secondary.utterance_percentage > 15:
-                        reassignments[secondary.speaker] = BridgeRole.EXECUTIVE_OFFICER
+                    if fallback_role != BridgeRole.UNKNOWN:
+                        # Found a specific role - prefer it over XO catch-all
+                        reassignments[secondary.speaker] = fallback_role
                         logger.debug(
-                            f"  {secondary.speaker} -> XO (close confidence, good prominence)"
+                            f"  {secondary.speaker} -> {fallback_role.value} (fallback from {role.value})"
                         )
-                    # High prominence but lower confidence -> XO
-                    elif secondary.utterance_percentage > 20:
+                    elif secondary.utterance_percentage > 15:
+                        # No specific role available but prominent speaker -> XO
                         reassignments[secondary.speaker] = BridgeRole.EXECUTIVE_OFFICER
                         logger.debug(
-                            f"  {secondary.speaker} -> XO (high prominence: {secondary.utterance_percentage:.0f}%)"
+                            f"  {secondary.speaker} -> XO (no fallback, prominence: {secondary.utterance_percentage:.0f}%)"
                         )
                     else:
-                        # Try next-best role from cached scores
-                        fallback_role = self._find_fallback_role(
-                            secondary.speaker, role, reassignments
-                        )
-                        reassignments[secondary.speaker] = fallback_role
-                        if fallback_role != BridgeRole.UNKNOWN:
-                            logger.debug(
-                                f"  {secondary.speaker} -> {fallback_role.value} (fallback from {role.value})"
-                            )
+                        reassignments[secondary.speaker] = BridgeRole.UNKNOWN
 
         # Collect roles already claimed by primary winners (not in reassignments)
         claimed_roles: set = set()
@@ -1040,22 +1034,29 @@ class RoleInferenceEngine:
             r'\bcaptain[,\s]+(?:we|i|the|shields|weapons|engines)',
         ],
         BridgeRole.HELM: [
-            r'^helm[,\s]',
-            r'^navigation[,\s]',
+            # Only match vocative/addressing form: "Helm, set course!" or "Helm! Evasive!"
+            # NOT self-reports like "Helm ready" or "Helm set course for..."
+            r'^helm\s*[,!]\s',
+            r'^navigation\s*[,!]\s',
         ],
         BridgeRole.TACTICAL: [
-            r'^tactical[,\s]',
-            r'^weapons[,\s]',
+            # Only match vocative/addressing form: "Tactical, fire!" or "Tactical! Status?"
+            # NOT status reports like "Tactical systems green" or "Weapons on standby"
+            r'^tactical\s*[,!]\s',
+            # "Weapons," as vocative only - NOT "Weapons hot/range/on/systems/charged"
+            r'^weapons\s*[,!]\s',
         ],
         BridgeRole.ENGINEERING: [
-            r'^engineer(?:ing)?[,\s]',
+            # Only match vocative form: "Engineering, divert power!"
+            # NOT "Engineering reports all systems nominal"
+            r'^engineer(?:ing)?\s*[,!]\s',
         ],
         BridgeRole.SCIENCE: [
-            r'^science[,\s]',
+            r'^science\s*[,!]\s',
         ],
         BridgeRole.COMMUNICATIONS: [
-            r'^comms?[,\s]',
-            r'^communications[,\s]',
+            r'^comms?\s*[,!]\s',
+            r'^communications\s*[,!]\s',
         ],
     }
 
@@ -1656,7 +1657,7 @@ class UtteranceLevelRoleDetector:
         # Log detection with all role scores for debugging
         logger.debug(
             f"[ROLE_DETECT] '{text[:80]}' → {best_role.value} (conf={confidence:.3f}, "
-            f"matches={best_count}, vs 2nd={second_count}, keywords={best_keywords[:3]})"
+            f"matches={best_count}, vs 2nd={second_count}, keywords={sorted(best_keywords)[:3]})"
         )
 
         return best_role, confidence, sorted(best_keywords)

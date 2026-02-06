@@ -382,6 +382,10 @@ class TranscriptLLMCleaner:
                 num_str = parts[0].strip().rstrip('.').rstrip(':')
                 line_num = int(num_str)
                 corrected = parts[1].strip()
+                # LLM sometimes outputs "original text|corrected text" after the
+                # line number. Take only the last pipe-separated segment.
+                if '|' in corrected:
+                    corrected = corrected.split('|')[-1].strip()
                 if corrected and line_num > 0:
                     corrections[line_num] = corrected
             except ValueError:

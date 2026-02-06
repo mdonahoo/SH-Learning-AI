@@ -2159,7 +2159,7 @@ class ResultsRenderer {
             if (effectivePatterns.length > 0) {
                 md += `### Effective Patterns\n\n`;
                 for (const p of effectivePatterns) {
-                    md += `- **${p.name}** (${p.count} instances): ${p.description || ''}\n`;
+                    md += `- **${p.pattern_name || p.name}** (${p.count} instances): ${p.description || ''}\n`;
                     if (p.examples?.length > 0) {
                         for (const ex of p.examples.slice(0, 2)) {
                             md += `  - "${ex.text?.substring(0, 100)}${ex.text?.length > 100 ? '...' : ''}"\n`;
@@ -2172,7 +2172,7 @@ class ResultsRenderer {
             if (improvementPatterns.length > 0) {
                 md += `### Areas for Improvement\n\n`;
                 for (const p of improvementPatterns) {
-                    md += `- **${p.name}** (${p.count} instances): ${p.description || ''}\n`;
+                    md += `- **${p.pattern_name || p.name}** (${p.count} instances): ${p.description || ''}\n`;
                     if (p.examples?.length > 0) {
                         for (const ex of p.examples.slice(0, 2)) {
                             md += `  - "${ex.text?.substring(0, 100)}${ex.text?.length > 100 ? '...' : ''}"\n`;
@@ -2275,9 +2275,9 @@ class ResultsRenderer {
             if (training.discussion_topics?.length > 0) {
                 md += `### Discussion Topics\n\n`;
                 for (const topic of training.discussion_topics) {
-                    md += `- **${topic.title}:** ${topic.opening_question || ''}\n`;
-                    if (topic.connection) {
-                        md += `  - Connection: ${topic.connection}\n`;
+                    md += `- **${topic.topic || topic.title}:** ${topic.question || topic.opening_question || ''}\n`;
+                    if (topic.scout_connection || topic.connection) {
+                        md += `  - Connection: ${topic.scout_connection || topic.connection}\n`;
                     }
                 }
                 md += `\n`;

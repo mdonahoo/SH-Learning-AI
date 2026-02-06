@@ -1558,18 +1558,27 @@ class AudioProcessor:
                     logger.warning(f"LLM transcript cleanup failed: {e}")
 
             # Format transcription segments for response
+            # Strip markdown artifacts (bold/italic) that LLM cleanup may introduce
+            def _strip_markdown(text: str) -> str:
+                """Remove markdown bold/italic markers from transcript text."""
+                if '**' in text or '__' in text:
+                    text = text.replace('**', '').replace('__', '')
+                return text
+
             results['transcription'] = [
                 {
                     'start_time': s['start'],
                     'end_time': s['end'],
-                    'text': s['text'],
+                    'text': _strip_markdown(s['text']),
                     'confidence': min(1.0, max(0.0, (s.get('confidence', 0) + 1) / 2)),
                     'speaker_id': s.get('speaker_id'),
                     'speaker_role': s.get('speaker_role')
                 }
                 for s in segments
             ]
-            results['full_text'] = ' '.join(s['text'] for s in segments)
+            results['full_text'] = ' '.join(
+                _strip_markdown(s['text']) for s in segments
+            )
 
             # Apply utterance-level role detection (critical for narrator scenarios)
             # This detects roles for each utterance independently based on content keywords
@@ -1634,7 +1643,12 @@ class AudioProcessor:
                     logger.error(f"[ERROR] Utterance-level role detection failed: {e}", exc_info=True)
 
             # Build transcripts list for analysis modules
-            transcripts = self._build_transcripts_list(segments)
+            # Use results['transcription'] (which has utterance-level detected roles)
+            # rather than raw segments (which lack role annotations)
+            transcripts = self._build_transcripts_list(
+                results.get('transcription', []),
+                from_formatted=True
+            )
 
             # Filter transcripts for pattern analysis (exclude low-confidence segments)
             # This prevents garbled/unclear speech from being analyzed as meaningful patterns
@@ -1795,6 +1809,35 @@ class AudioProcessor:
 
             if include_detailed and ROLE_INFERENCE_AVAILABLE and transcripts:
                 step_timings['role_inference'] = round(time.time() - step_start, 2)
+
+            # Back-propagate aggregate roles to transcription entries and speakers array
+            # Utterance-level detection only covers lines with keywords; for the rest,
+            # fill in the speaker's aggregate role from role_assignments
+            if results.get('role_assignments'):
+                role_map = {
+                    ra['speaker_id']: ra['role']
+                    for ra in results['role_assignments']
+                    if ra.get('speaker_id') and ra.get('role')
+                }
+
+                # Fill null speaker_role on transcription entries
+                backfill_count = 0
+                for seg in results.get('transcription', []):
+                    if not seg.get('speaker_role') and seg.get('speaker_id') in role_map:
+                        seg['speaker_role'] = role_map[seg['speaker_id']]
+                        backfill_count += 1
+
+                # Update speakers array with assigned roles
+                for speaker in results.get('speakers', []):
+                    sid = speaker.get('speaker_id')
+                    if sid in role_map:
+                        speaker['role'] = role_map[sid]
+
+                logger.info(
+                    f"[PIPELINE] Role back-propagation: {backfill_count} transcription entries "
+                    f"filled from aggregate roles, {len(role_map)} speakers updated"
+                )
+
             progress = 60
 
             # Step 5: Communication quality analysis (uses FILTERED transcripts)
@@ -2069,21 +2112,48 @@ class AudioProcessor:
 
     def _build_transcripts_list(
         self,
-        segments: List[Dict[str, Any]]
+        segments: List[Dict[str, Any]],
+        from_formatted: bool = False
     ) -> List[Dict[str, Any]]:
-        """Build transcripts list in format expected by analysis modules."""
-        return [
-            {
-                'text': s['text'],
-                'speaker': s.get('speaker_id', 'unknown'),
-                'speaker_id': s.get('speaker_id', 'unknown'),
-                'confidence': min(1.0, max(0.0, (s.get('confidence', 0) + 1) / 2)),
-                'timestamp': s['start'],
-                'start_time': s['start'],
-                'end_time': s['end']
-            }
-            for s in segments
-        ]
+        """
+        Build transcripts list in format expected by analysis modules.
+
+        Args:
+            segments: List of segment dicts (raw or formatted)
+            from_formatted: If True, segments come from results['transcription']
+                which already has normalized confidence and role annotations
+        """
+        result = []
+        for s in segments:
+            if from_formatted:
+                entry = {
+                    'text': s.get('text', ''),
+                    'speaker': s.get('speaker_id', 'unknown'),
+                    'speaker_id': s.get('speaker_id', 'unknown'),
+                    'confidence': s.get('confidence', 0),
+                    'timestamp': s.get('start_time', 0),
+                    'start_time': s.get('start_time', 0),
+                    'end_time': s.get('end_time', 0),
+                }
+                # Propagate utterance-level role detection data
+                if s.get('speaker_role'):
+                    entry['speaker_role'] = s['speaker_role']
+                if s.get('detected_role'):
+                    entry['detected_role'] = s['detected_role']
+                if 'detected_role_confidence' in s:
+                    entry['detected_role_confidence'] = s['detected_role_confidence']
+            else:
+                entry = {
+                    'text': s['text'],
+                    'speaker': s.get('speaker_id', 'unknown'),
+                    'speaker_id': s.get('speaker_id', 'unknown'),
+                    'confidence': min(1.0, max(0.0, (s.get('confidence', 0) + 1) / 2)),
+                    'timestamp': s['start'],
+                    'start_time': s['start'],
+                    'end_time': s['end'],
+                }
+            result.append(entry)
+        return result
 
     def _filter_transcripts_for_analysis(
         self,
@@ -2421,16 +2491,20 @@ class AudioProcessor:
 
             # Extract Bloom's taxonomy
             blooms = results.get('blooms_taxonomy', {})
-            blooms_level = blooms.get('highest_level', 'Remember')
-            blooms_score = blooms.get('score', 50)
+            blooms_level = blooms.get('highest_level_demonstrated', 'remember')
+            # Compute numeric score from cognitive level
+            blooms_level_scores = {
+                'remember': 17, 'understand': 33, 'apply': 50,
+                'analyze': 67, 'evaluate': 83, 'create': 100
+            }
+            blooms_score = blooms_level_scores.get(blooms_level.lower(), 17)
 
             # Extract NASA teamwork
             nasa = results.get('nasa_teamwork', {})
-            nasa_score = nasa.get('overall_score', 50) / 100  # Convert to 0-1 range
+            nasa_score = nasa.get('overall_teamwork_score', 50) / 100  # Convert to 0-1 range
 
-            # Calculate overall engagement from participation
-            mission = results.get('mission_specific', {})
-            engagement = mission.get('communication_frequency', {}).get('score', 50) / 100
+            # Calculate engagement from NASA communication score
+            engagement = nasa.get('communication', {}).get('score', 50) / 100
 
             # Calculate overall score
             overall = sum(l['score'] for l in levels) / 4 if levels else 50
@@ -2468,14 +2542,14 @@ class AudioProcessor:
             equity = level_data.get('participation_equity_score', 50)
             return min(100, max(0, equity))
         elif level_num == 2:
-            # Learning: based on knowledge demonstrated
-            return level_data.get('knowledge_score', 50)
+            # Learning: based on protocol adherence
+            return level_data.get('protocol_adherence_score', 50)
         elif level_num == 3:
-            # Behavior: based on response times
-            return level_data.get('behavior_score', 50)
+            # Behavior: based on coordination quality
+            return level_data.get('coordination_score', 50)
         elif level_num == 4:
-            # Results: mission success
-            return level_data.get('results_score', 50)
+            # Results: mission completion rate
+            return level_data.get('mission_completion_rate', 50)
         return 50
 
     def _add_speaker_info(

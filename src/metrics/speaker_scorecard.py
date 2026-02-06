@@ -482,49 +482,55 @@ class SpeakerScorecardGenerator:
                         pass
                     break
 
-        if not response_times:
-            # No command-response pairs detected — mark as insufficient data
-            # rather than scoring on an unrelated heuristic (engagement rate)
+        if len(response_times) < 3:
+            # Too few command-response pairs for reliable scoring
+            pair_count = len(response_times)
             calculation_details = (
-                f"No command-response pairs detected for this speaker. "
-                f"Cannot measure response time without paired command/acknowledgment data. "
+                f"Only {pair_count} command-response pair(s) detected for this speaker. "
+                f"Minimum 3 pairs required for reliable scoring. "
                 f"Speaker had {len(utterances)} utterances total."
             )
 
             return SpeakerScore(
                 metric_name="response_time",
                 score=0,  # 0 = insufficient data, excluded from overall average
-                evidence=f"Insufficient data — no command-response pairs detected ({len(utterances)} utterances)",
+                evidence=f"Insufficient data — only {pair_count} command-response pair(s) ({len(utterances)} utterances)",
                 raw_value=0,
-                supporting_quotes=[],
-                threshold_info="Insufficient data — requires command-response pairs to score",
-                pattern_breakdown={"utterance_count": len(utterances), "command_response_pairs": 0},
+                supporting_quotes=response_examples[:3],
+                threshold_info="Insufficient data — requires ≥3 command-response pairs to score",
+                pattern_breakdown={"utterance_count": len(utterances), "command_response_pairs": pair_count},
                 calculation_details=calculation_details
             )
 
-        avg_response = sum(response_times) / len(response_times)
+        # Use median instead of mean to resist outlier inflation
+        response_times.sort()
+        mid = len(response_times) // 2
+        if len(response_times) % 2 == 0:
+            avg_response = (response_times[mid - 1] + response_times[mid]) / 2
+        else:
+            avg_response = response_times[mid]
 
         calculation_details = (
             f"Measured {len(response_times)} command-response pairs. "
             f"Response times: min={min(response_times):.1f}s, max={max(response_times):.1f}s, "
-            f"avg={avg_response:.1f}s"
+            f"median={avg_response:.1f}s (using median to resist outliers)"
         )
 
         if avg_response < 3:
             score = 5
-            evidence = f"Quick responses (avg {avg_response:.1f}s)"
+            evidence = f"Quick responses (median {avg_response:.1f}s)"
         elif avg_response < 5:
             score = 4
-            evidence = f"Good response times (avg {avg_response:.1f}s)"
+            evidence = f"Good response times (median {avg_response:.1f}s)"
         elif avg_response < 8:
             score = 3
-            evidence = f"Adequate responses (avg {avg_response:.1f}s)"
+            evidence = f"Adequate responses (median {avg_response:.1f}s)"
         elif avg_response < 12:
             score = 2
-            evidence = f"Slow responses (avg {avg_response:.1f}s)"
+            evidence = f"Slow responses (median {avg_response:.1f}s)"
         else:
             score = 1
-            evidence = f"Very slow responses (avg {avg_response:.1f}s)"
+            evidence = f"Very slow responses (median {avg_response:.1f}s)"
 
         return SpeakerScore(
             metric_name="response_time",
@@ -708,6 +714,17 @@ class SpeakerScorecardGenerator:
         if not self.speech_action_data:
             logger.info(f"[GAME_EFF] {speaker} → NONE (no speech_action_data available)")
             return None  # No telemetry data available - can't score
+
+        # Don't score when there are zero game actions to compare against
+        # Speech intentions exist but no telemetry events means we can't measure effectiveness
+        total_game_actions = self.speech_action_data.get('total_game_actions', 0)
+        total_aligned = len(self.speech_action_data.get('aligned', []))
+        if total_game_actions == 0 and total_aligned == 0:
+            logger.info(
+                f"[GAME_EFF] {speaker} → NONE (0 game actions captured - "
+                f"cannot measure effectiveness without telemetry)"
+            )
+            return None
 
         threshold_info = (
             "Score 5: ≥70% alignment | Score 4: ≥50% | "

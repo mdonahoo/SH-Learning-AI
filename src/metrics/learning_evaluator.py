@@ -137,12 +137,19 @@ class LearningEvaluator:
             # Only count if different speakers (actual response, not monologue)
             if prev_t['speaker'] != curr_t['speaker']:
                 try:
-                    prev_time = datetime.fromisoformat(prev_t['timestamp'])
-                    curr_time = datetime.fromisoformat(curr_t['timestamp'])
-                    gap = (curr_time - prev_time).total_seconds()
-                    if gap < 30:  # Reasonable response time
+                    prev_ts = prev_t.get('timestamp', prev_t.get('start_time'))
+                    curr_ts = curr_t.get('timestamp', curr_t.get('start_time'))
+                    # Handle float/int timestamps (seconds from session start)
+                    if isinstance(prev_ts, (int, float)) and isinstance(curr_ts, (int, float)):
+                        gap = curr_ts - prev_ts
+                    elif isinstance(prev_ts, str) and isinstance(curr_ts, str):
+                        gap = (datetime.fromisoformat(prev_ts) - datetime.fromisoformat(curr_ts)).total_seconds()
+                        gap = abs(gap)
+                    else:
+                        continue
+                    if 0 < gap < 30:  # Reasonable response time
                         response_times.append(gap)
-                except:
+                except (ValueError, TypeError):
                     pass
 
         avg_response_time = sum(response_times) / len(response_times) if response_times else 0
