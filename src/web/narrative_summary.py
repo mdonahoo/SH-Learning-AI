@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 OLLAMA_HOST = os.getenv('OLLAMA_HOST', 'http://localhost:11434')
 OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'qwen2.5:14b-instruct')
 OLLAMA_TIMEOUT = float(os.getenv('OLLAMA_TIMEOUT', '600'))  # 10 minutes for large models
+OLLAMA_NUM_CTX = int(os.getenv('OLLAMA_NUM_CTX', '32768'))
 LLM_REPORT_STYLE = os.getenv('LLM_REPORT_STYLE', 'entertaining')
 
 # Import hallucination prevention if available
@@ -45,14 +46,14 @@ except ImportError:
         "top_p": 0.9,
         "top_k": 40,
         "repeat_penalty": 1.1,
-        "num_predict": 500,
+        "num_predict": 1500,
     }
     STORY_PARAMS = {
         "temperature": 0.5,
         "top_p": 0.9,
         "top_k": 50,
         "repeat_penalty": 1.1,
-        "num_predict": 1200,
+        "num_predict": 4000,
     }
 
 # Telemetry timeline builder for story event grouping
@@ -454,25 +455,25 @@ class NarrativeSummaryGenerator:
                     role = role_map.get(speaker, {}).get('role', speaker)
                     text = t.get('text', '').strip()
                     if len(text) > 10:  # Skip very short utterances
-                        sections.append(f"  [{role}]: \"{text[:250]}\"")
+                        sections.append(f"  [{role}]: \"{text}\"")
                         shown += 1
 
             # Include representative transcript sample for context
             # For long recordings, sample from beginning, middle, and end
-            MAX_CONTEXT_SEGMENTS = 100
+            MAX_CONTEXT_SEGMENTS = 300
             total_count = len(transcripts)
 
             if total_count > MAX_CONTEXT_SEGMENTS:
-                # Sample: 30 from start, 40 from middle (high confidence), 30 from end
-                beginning = transcripts[:30]
-                ending = transcripts[-30:]
-                middle_pool = transcripts[30:-30]
+                # Sample: 60 from start, 180 from middle (high confidence), 60 from end
+                beginning = transcripts[:60]
+                ending = transcripts[-60:]
+                middle_pool = transcripts[60:-60]
                 # Take highest confidence from middle
                 middle_sorted = sorted(
                     middle_pool,
                     key=lambda x: x.get('confidence', 0.5),
                     reverse=True
-                )[:40]
+                )[:180]
                 # Re-sort by time (using start_time)
                 middle_sorted.sort(key=lambda x: x.get('start_time', 0) if isinstance(x.get('start_time'), (int, float)) else 0)
                 context_sample = beginning + middle_sorted + ending
@@ -486,7 +487,7 @@ class NarrativeSummaryGenerator:
                 role = role_map.get(speaker, {}).get('role', speaker)
                 text = t.get('text', '').strip()
                 if text:
-                    sections.append(f"  [{role}]: \"{text[:200]}\"")
+                    sections.append(f"  [{role}]: \"{text}\"")
 
         return '\n'.join(sections)
 
@@ -773,7 +774,8 @@ Generate the structured debrief now:"""
                     "stream": False,
                     "options": {
                         "temperature": ANTI_HALLUCINATION_PARAMS["temperature"],
-                        "num_predict": 1024,  # ~600 words
+                        "num_predict": 2500,
+                        "num_ctx": OLLAMA_NUM_CTX,
                         "top_p": ANTI_HALLUCINATION_PARAMS["top_p"],
                         "top_k": ANTI_HALLUCINATION_PARAMS["top_k"],
                         "repeat_penalty": ANTI_HALLUCINATION_PARAMS["repeat_penalty"],
@@ -889,7 +891,8 @@ Generate the structured debrief now:"""
                     "stream": True,
                     "options": {
                         "temperature": ANTI_HALLUCINATION_PARAMS["temperature"],
-                        "num_predict": 1024,
+                        "num_predict": 2500,
+                        "num_ctx": OLLAMA_NUM_CTX,
                         "top_p": ANTI_HALLUCINATION_PARAMS["top_p"],
                         "top_k": ANTI_HALLUCINATION_PARAMS["top_k"],
                         "repeat_penalty": ANTI_HALLUCINATION_PARAMS["repeat_penalty"],
@@ -1142,13 +1145,13 @@ Write your narrative nonfiction story now:"""
 
         transcripts = analysis.get('transcription', [])
         if transcripts:
-            MAX_TRANSCRIPT_SEGMENTS = 200
+            MAX_TRANSCRIPT_SEGMENTS = 500
             total_count = len(transcripts)
 
             if total_count > MAX_TRANSCRIPT_SEGMENTS:
                 # Sample: beginning (scene setting), middle (high confidence), end (resolution)
-                beginning_count = 40
-                end_count = 40
+                beginning_count = 80
+                end_count = 80
                 middle_count = MAX_TRANSCRIPT_SEGMENTS - beginning_count - end_count
 
                 beginning = transcripts[:beginning_count]
@@ -1333,6 +1336,7 @@ Write your narrative nonfiction story now:"""
                     "options": {
                         "temperature": STORY_PARAMS["temperature"],
                         "num_predict": STORY_PARAMS["num_predict"],
+                        "num_ctx": OLLAMA_NUM_CTX,
                         "top_p": STORY_PARAMS["top_p"],
                         "top_k": STORY_PARAMS["top_k"],
                         "repeat_penalty": STORY_PARAMS["repeat_penalty"],

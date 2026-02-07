@@ -112,7 +112,7 @@ def build_hybrid_narrative_prompt(structured_data: Dict[str, Any], style: str = 
     comms_text = "\n".join([
         f"[{c['timestamp'].split('T')[1][:8] if 'T' in c['timestamp'] else c['timestamp']}] "
         f"{c['speaker']}: \"{c['text']}\" (confidence: {c['confidence']:.2f})"
-        for c in top_comms[:10]
+        for c in top_comms[:20]
     ])
 
     # Kirk patrick summary
@@ -351,12 +351,12 @@ def _build_telemetry_prompt_section(telemetry_summary: Dict[str, Any]) -> str:
     key_events = telemetry_summary.get('key_events', [])
     if key_events:
         sections.append("### Key Game Events (reference these in the narrative)")
-        for event in key_events[:20]:
+        for event in key_events[:40]:
             sections.append(
                 f"- [{event.get('time_formatted', '?')}] {event.get('description', 'Unknown')}"
             )
-        if len(key_events) > 20:
-            sections.append(f"  ... and {len(key_events) - 20} more events")
+        if len(key_events) > 40:
+            sections.append(f"  ... and {len(key_events) - 40} more events")
         sections.append("")
 
     return '\n'.join(sections)
@@ -427,14 +427,14 @@ def build_enhanced_report_prompt(
 
     # Build effective communications table
     effective_table = "| Timestamp | Speaker | Communication | Assessment |\n| --- | --- | --- | --- |\n"
-    for ex in effective_examples[:5]:
-        text = ex.get('text', '')[:50] + "..." if len(ex.get('text', '')) > 50 else ex.get('text', '')
+    for ex in effective_examples[:10]:
+        text = ex.get('text', '')
         effective_table += f"| {ex.get('timestamp', '')} | {ex.get('speaker', '')} | \"{text}\" | {ex.get('assessment', '')} |\n"
 
     # Build improvement communications table
     improvement_table = "| Timestamp | Speaker | Communication | Issue |\n| --- | --- | --- | --- |\n"
-    for ex in improvement_examples[:5]:
-        text = ex.get('text', '')[:50] + "..." if len(ex.get('text', '')) > 50 else ex.get('text', '')
+    for ex in improvement_examples[:10]:
+        text = ex.get('text', '')
         improvement_table += f"| {ex.get('timestamp', '')} | {ex.get('speaker', '')} | \"{text}\" | {ex.get('issue', '')} |\n"
 
     # Format training implications
@@ -958,14 +958,14 @@ def build_concise_debrief_prompt(
     if key_moments:
         moments_text = "\n".join([
             f"[{m.get('timestamp', 'N/A')}] {m.get('speaker', 'Unknown')}: \"{m.get('text', '')}\""
-            for m in key_moments[:10]
+            for m in key_moments[:20]
         ])
     else:
         # Fall back to top communications from enhanced data
         top_comms = enhanced_data.get('top_communications', [])
         moments_text = "\n".join([
             f"[{c.get('timestamp', 'N/A')}] {c.get('speaker', 'Unknown')}: \"{c.get('text', '')}\""
-            for c in top_comms[:10]
+            for c in top_comms[:20]
         ])
 
     if not moments_text:

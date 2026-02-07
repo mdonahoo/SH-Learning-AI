@@ -251,6 +251,20 @@ except ImportError:
     PERFORMANCE_TRACKER_AVAILABLE = False
     PerformanceTracker = None
 
+# Parallel analysis pipeline
+try:
+    from src.hardware.parallel_pipeline import (
+        ParallelAnalysisPipeline,
+        MetricStepConfig,
+    )
+    from src.hardware.detector import HardwareDetector
+    PARALLEL_PIPELINE_AVAILABLE = True
+except ImportError:
+    PARALLEL_PIPELINE_AVAILABLE = False
+    ParallelAnalysisPipeline = None
+    MetricStepConfig = None
+    HardwareDetector = None
+
 
 # Progress step definitions
 ANALYSIS_STEPS = [
@@ -348,8 +362,10 @@ class AudioProcessor:
             and BATCH_DIARIZATION_AVAILABLE
         )
 
-        # Log diarization mode
-        if self.use_cpu_diarization and CPU_DIARIZATION_AVAILABLE:
+        # Log diarization mode (must match priority order used in _diarize_segments)
+        if self.use_batch_diarization and BATCH_DIARIZATION_AVAILABLE:
+            logger.info("Speaker diarization: Two-pass batch mode (resemblyzer)")
+        elif self.use_cpu_diarization and CPU_DIARIZATION_AVAILABLE:
             logger.info("Speaker diarization: CPU-optimized mode (resemblyzer)")
         elif self.use_neural_diarization and NEURAL_DIARIZATION_AVAILABLE:
             logger.info("Speaker diarization: Neural mode (pyannote)")
@@ -377,6 +393,13 @@ class AudioProcessor:
                 f"Analysis confidence filter: {self.analysis_confidence_threshold:.0%} "
                 "(segments below this excluded from pattern analysis)"
             )
+
+        # Parallel analysis configuration
+        self._parallel_enabled = (
+            os.getenv('ENABLE_PARALLEL_ANALYSIS', 'true').lower() == 'true'
+            and PARALLEL_PIPELINE_AVAILABLE
+        )
+        self._hardware_detector: Optional[HardwareDetector] = None
 
         # Initialize archive manager and title generator
         # Use shared archive_manager if provided, otherwise create new instance
@@ -1840,87 +1863,125 @@ class AudioProcessor:
 
             progress = 60
 
-            # Step 5: Communication quality analysis (uses FILTERED transcripts)
-            if include_quality and QUALITY_ANALYZER_AVAILABLE and filtered_transcripts:
-                update_progress("quality", "Analyzing communication quality", progress)
-                step_start = time.time()
-                # Build filtered segments for quality analyzer
-                filtered_segments = [
-                    s for s in segments
-                    if min(1.0, max(0.0, (s.get('confidence', 0) + 1) / 2)) >= self.analysis_confidence_threshold
-                ] if self.analysis_confidence_threshold > 0 else segments
-                results['communication_quality'] = self._analyze_quality(filtered_segments)
-                step_timings['communication_quality'] = round(time.time() - step_start, 2)
-            progress = 70
+            # Build filtered segments for quality analyzer
+            filtered_segments = [
+                s for s in segments
+                if min(1.0, max(0.0, (s.get('confidence', 0) + 1) / 2)) >= self.analysis_confidence_threshold
+            ] if self.analysis_confidence_threshold > 0 else segments
 
-            # Step 6: Speaker scorecards (uses FILTERED transcripts)
-            if include_detailed and SCORECARD_AVAILABLE and filtered_transcripts:
-                update_progress("scorecards", "Generating speaker scorecards", progress)
+            # Steps 5-9b: CPU metric analysis (parallel or sequential)
+            if include_detailed and self._parallel_enabled:
+                # Parallel execution of independent metric steps
+                update_progress("metrics_parallel", "Analyzing metrics in parallel...", progress)
                 step_start = time.time()
-                # Pass role assignments and telemetry data so scorecards include game metrics
-                results['speaker_scorecards'] = self._generate_scorecards(
-                    filtered_transcripts,
-                    results.get('role_assignments', []),
-                    telemetry_events=events,
-                    speech_action_data=speech_action_data
+
+                pipeline = ParallelAnalysisPipeline(
+                    progress_callback=progress_callback
                 )
-                step_timings['scorecards'] = round(time.time() - step_start, 2)
-            progress = 85
 
-            # Step 7: Confidence distribution (uses ALL transcripts - shows full distribution)
-            if include_detailed and CONFIDENCE_ANALYZER_AVAILABLE and transcripts:
-                update_progress("confidence", "Analyzing confidence distribution", progress)
-                step_start = time.time()
-                results['confidence_distribution'] = self._analyze_confidence(transcripts)
-                step_timings['confidence'] = round(time.time() - step_start, 2)
-            progress = 90
-
-            # Step 8: Learning evaluation (uses FILTERED transcripts)
-            if include_detailed and LEARNING_EVALUATOR_AVAILABLE and filtered_transcripts:
-                update_progress("learning", "Evaluating learning metrics", progress)
-                step_start = time.time()
-                results['learning_evaluation'] = self._evaluate_learning(
-                    filtered_transcripts,
-                    speech_action_data=speech_action_data
+                metric_results = self._run_metrics_parallel(
+                    pipeline=pipeline,
+                    segments=segments,
+                    filtered_segments=filtered_segments,
+                    filtered_transcripts=filtered_transcripts,
+                    transcripts=transcripts,
+                    results=results,
+                    events=events,
+                    speech_action_data=speech_action_data,
                 )
-                step_timings['learning'] = round(time.time() - step_start, 2)
-            progress = 80
 
-            # Step 9: 7 Habits analysis (uses FILTERED transcripts)
-            if include_detailed and SEVEN_HABITS_AVAILABLE and filtered_transcripts:
-                update_progress("habits", "Analyzing 7 Habits framework", progress)
-                step_start = time.time()
-                results['seven_habits'] = self._analyze_seven_habits(filtered_transcripts)
-                step_timings['seven_habits'] = round(time.time() - step_start, 2)
-            progress = 90
+                # Merge metric results into main results
+                for key in ['communication_quality', 'speaker_scorecards',
+                            'confidence_distribution', 'learning_evaluation',
+                            'seven_habits', 'captain_leadership']:
+                    if key in metric_results:
+                        results[key] = metric_results[key]
 
-            # Step 9b: Captain leadership assessment (uses FILTERED transcripts + roles)
-            if include_detailed and CAPTAIN_LEADERSHIP_AVAILABLE and filtered_transcripts:
-                try:
+                # Merge step timings
+                parallel_timings = metric_results.get('_step_timings', {})
+                for k, v in parallel_timings.items():
+                    step_timings[k] = round(v, 2)
+
+                step_timings['metrics_parallel_total'] = round(time.time() - step_start, 2)
+                logger.info(
+                    f"Parallel metrics completed in {step_timings['metrics_parallel_total']:.2f}s "
+                    f"(steps: {parallel_timings})"
+                )
+
+            else:
+                # Sequential execution (original behavior)
+                # Step 5: Communication quality analysis
+                if include_quality and QUALITY_ANALYZER_AVAILABLE and filtered_transcripts:
+                    update_progress("quality", "Analyzing communication quality", progress)
                     step_start = time.time()
-                    # Build role map from role_assignments list
-                    role_map = {}
-                    for ra in results.get('role_assignments', []):
-                        if ra.get('speaker_id') and ra.get('role'):
-                            role_map[ra['speaker_id']] = ra['role']
+                    results['communication_quality'] = self._analyze_quality(filtered_segments)
+                    step_timings['communication_quality'] = round(time.time() - step_start, 2)
 
-                    captain_assessor = CaptainLeadershipAssessor(
+                # Step 6: Speaker scorecards
+                if include_detailed and SCORECARD_AVAILABLE and filtered_transcripts:
+                    update_progress("scorecards", "Generating speaker scorecards", progress)
+                    step_start = time.time()
+                    results['speaker_scorecards'] = self._generate_scorecards(
                         filtered_transcripts,
-                        role_assignments=role_map,
-                        telemetry_events=events
+                        results.get('role_assignments', []),
+                        telemetry_events=events,
+                        speech_action_data=speech_action_data
                     )
-                    captain_results = captain_assessor.get_structured_results()
-                    if captain_results:
-                        results['captain_leadership'] = captain_results
-                        logger.info(
-                            f"Captain leadership assessment complete: "
-                            f"overall {captain_results.get('overall_score', 0)}/5"
+                    step_timings['scorecards'] = round(time.time() - step_start, 2)
+
+                # Step 7: Confidence distribution
+                if include_detailed and CONFIDENCE_ANALYZER_AVAILABLE and transcripts:
+                    update_progress("confidence", "Analyzing confidence distribution", progress)
+                    step_start = time.time()
+                    results['confidence_distribution'] = self._analyze_confidence(transcripts)
+                    step_timings['confidence'] = round(time.time() - step_start, 2)
+
+                # Step 8: Learning evaluation
+                if include_detailed and LEARNING_EVALUATOR_AVAILABLE and filtered_transcripts:
+                    update_progress("learning", "Evaluating learning metrics", progress)
+                    step_start = time.time()
+                    results['learning_evaluation'] = self._evaluate_learning(
+                        filtered_transcripts,
+                        speech_action_data=speech_action_data
+                    )
+                    step_timings['learning'] = round(time.time() - step_start, 2)
+
+                # Step 9: 7 Habits analysis
+                if include_detailed and SEVEN_HABITS_AVAILABLE and filtered_transcripts:
+                    update_progress("habits", "Analyzing 7 Habits framework", progress)
+                    step_start = time.time()
+                    results['seven_habits'] = self._analyze_seven_habits(filtered_transcripts)
+                    step_timings['seven_habits'] = round(time.time() - step_start, 2)
+
+                # Step 9b: Captain leadership assessment
+                if include_detailed and CAPTAIN_LEADERSHIP_AVAILABLE and filtered_transcripts:
+                    try:
+                        step_start = time.time()
+                        role_map = {}
+                        for ra in results.get('role_assignments', []):
+                            if ra.get('speaker_id') and ra.get('role'):
+                                role_map[ra['speaker_id']] = ra['role']
+
+                        captain_assessor = CaptainLeadershipAssessor(
+                            filtered_transcripts,
+                            role_assignments=role_map,
+                            telemetry_events=events
                         )
-                    step_timings['captain_leadership'] = round(time.time() - step_start, 2)
-                except Exception as e:
-                    logger.warning(f"Captain leadership assessment failed: {e}")
+                        captain_results = captain_assessor.get_structured_results()
+                        if captain_results:
+                            results['captain_leadership'] = captain_results
+                            logger.info(
+                                f"Captain leadership assessment complete: "
+                                f"overall {captain_results.get('overall_score', 0)}/5"
+                            )
+                        step_timings['captain_leadership'] = round(time.time() - step_start, 2)
+                    except Exception as e:
+                        logger.warning(f"Captain leadership assessment failed: {e}")
+
+            progress = 95
 
             # Step 10: Training recommendations (uses FILTERED transcripts)
+            # Runs AFTER metrics because it needs quality, confidence, habits, learning results
             if include_detailed and TRAINING_RECOMMENDATIONS_AVAILABLE and filtered_transcripts:
                 update_progress("training", "Generating training recommendations", progress)
                 step_start = time.time()
@@ -1967,21 +2028,9 @@ class AudioProcessor:
                 step_timings['training_recommendations'] = round(time.time() - step_start, 2)
             progress = 95
 
-            # Generate title ONCE before any saves (ensures consistency across pre-LLM and final)
-            if not results.get('auto_title') and self._title_generator:
-                try:
-                    from src.web.title_generator import generate_title_sync
-                    full_text = results.get('full_text', '')
-                    speakers = results.get('speakers', [])
-                    duration = results.get('duration_seconds', 0)
-                    results['auto_title'] = generate_title_sync(full_text, speakers, duration)
-                    logger.info(f"Generated title: {results['auto_title']}")
-                except Exception as e:
-                    logger.warning(f"Title generation failed: {e}")
-
             # Pre-LLM checkpoint removed — only the final report is saved
 
-            # Step 11: LLM Team Analysis Narrative
+            # Steps 11-12: LLM Generation (title + narrative + story)
             # Skip LLM for very long recordings to avoid context overflow
             # Default increased to 180 min (3 hours) to support longer missions
             recording_duration_min = results.get('duration_seconds', 0) / 60
@@ -2000,81 +2049,155 @@ class AudioProcessor:
                 include_narrative = False
                 include_story = False
 
-            if include_detailed and include_narrative and NARRATIVE_GENERATOR_AVAILABLE and transcripts:
-                update_progress("narrative", "Generating team analysis (this may take 1-2 minutes)...", progress)
-                try:
-                    llm_start = time.time()
-                    logger.info("Starting LLM team analysis generation...")
+            want_title = not results.get('auto_title') and self._title_generator
+            want_narrative = include_detailed and include_narrative and NARRATIVE_GENERATOR_AVAILABLE and transcripts
+            want_story = include_detailed and include_story and NARRATIVE_GENERATOR_AVAILABLE and generate_story_sync and transcripts
 
-                    if perf_tracker:
-                        with perf_tracker.track_dependency(
-                            'ollama_narrative', 'LLM'
-                        ) as _narr_meta:
+            if (want_narrative or want_story) and self._parallel_enabled:
+                # Parallel LLM execution (title + narrative + story all at once)
+                update_progress("llm_parallel", "Generating title, narrative and story...", progress)
+                llm_start = time.time()
+
+                # Create pipeline (reuse or create new for LLM phase)
+                llm_pipeline = ParallelAnalysisPipeline(
+                    progress_callback=progress_callback
+                )
+
+                llm_results = self._run_llm_parallel(
+                    pipeline=llm_pipeline,
+                    results=results,
+                    include_title=want_title,
+                    include_narrative=want_narrative,
+                    include_story=want_story,
+                    perf_tracker=perf_tracker,
+                )
+
+                llm_total_duration = time.time() - llm_start
+
+                # Merge title result
+                title_result = llm_results.get('auto_title')
+                if title_result:
+                    results['auto_title'] = title_result
+                    title_time = llm_results.get('_step_timings', {}).get('llm_title', 0)
+                    step_timings['llm_title'] = round(title_time, 2)
+                    logger.info(f"Generated title in {title_time:.1f}s: {title_result}")
+
+                # Merge narrative result
+                narrative_result = llm_results.get('narrative_summary')
+                if narrative_result:
+                    narr_time = llm_results.get('_step_timings', {}).get('llm_narrative', llm_total_duration)
+                    results['narrative_summary'] = narrative_result
+                    results['narrative_summary']['generation_time'] = round(narr_time, 1)
+                    step_timings['llm_narrative'] = round(narr_time, 2)
+                    logger.info(f"Generated team analysis in {narr_time:.1f}s")
+                elif want_narrative:
+                    logger.info("Team analysis skipped (Ollama unavailable)")
+
+                # Merge story result
+                story_result = llm_results.get('story_narrative')
+                if story_result:
+                    story_time = llm_results.get('_step_timings', {}).get('llm_story', llm_total_duration)
+                    results['story_narrative'] = story_result
+                    results['story_narrative']['generation_time'] = round(story_time, 1)
+                    step_timings['llm_story'] = round(story_time, 2)
+                    logger.info(f"Generated story narrative in {story_time:.1f}s")
+                elif want_story:
+                    logger.info("Story narrative skipped (Ollama unavailable)")
+
+                step_timings['llm_parallel_total'] = round(llm_total_duration, 2)
+                logger.info(
+                    f"Parallel LLM completed in {llm_total_duration:.1f}s "
+                    f"(saved ~{max(step_timings.get('llm_narrative', 0), step_timings.get('llm_story', 0)):.0f}s)"
+                )
+
+            else:
+                # Sequential LLM execution (original behavior)
+                # Generate title first (fast, ~2s)
+                if want_title:
+                    try:
+                        from src.web.title_generator import generate_title_sync
+                        full_text = results.get('full_text', '')
+                        speakers = results.get('speakers', [])
+                        duration = results.get('duration_seconds', 0)
+                        results['auto_title'] = generate_title_sync(full_text, speakers, duration)
+                        logger.info(f"Generated title: {results['auto_title']}")
+                    except Exception as e:
+                        logger.warning(f"Title generation failed: {e}")
+
+                if want_narrative:
+                    update_progress("narrative", "Generating team analysis (this may take 1-2 minutes)...", progress)
+                    try:
+                        llm_start = time.time()
+                        logger.info("Starting LLM team analysis generation...")
+
+                        if perf_tracker:
+                            with perf_tracker.track_dependency(
+                                'ollama_narrative', 'LLM'
+                            ) as _narr_meta:
+                                narrative_result = generate_summary_sync(results)
+                                if narrative_result:
+                                    llm_metrics = narrative_result.get('llm_metrics', {})
+                                    _narr_meta['model'] = narrative_result.get('model', '')
+                                    _narr_meta['prompt_tokens'] = llm_metrics.get('prompt_tokens', 0)
+                                    _narr_meta['completion_tokens'] = llm_metrics.get('completion_tokens', 0)
+                                    _narr_meta['total_tokens'] = llm_metrics.get('total_tokens', 0)
+                                    _narr_meta['tokens_per_second'] = llm_metrics.get('tokens_per_second', 0)
+                                    _narr_meta['prompt_size_chars'] = llm_metrics.get('prompt_size_chars', 0)
+                        else:
                             narrative_result = generate_summary_sync(results)
-                            if narrative_result:
-                                llm_metrics = narrative_result.get('llm_metrics', {})
-                                _narr_meta['model'] = narrative_result.get('model', '')
-                                _narr_meta['prompt_tokens'] = llm_metrics.get('prompt_tokens', 0)
-                                _narr_meta['completion_tokens'] = llm_metrics.get('completion_tokens', 0)
-                                _narr_meta['total_tokens'] = llm_metrics.get('total_tokens', 0)
-                                _narr_meta['tokens_per_second'] = llm_metrics.get('tokens_per_second', 0)
-                                _narr_meta['prompt_size_chars'] = llm_metrics.get('prompt_size_chars', 0)
-                    else:
-                        narrative_result = generate_summary_sync(results)
 
-                    llm_duration = time.time() - llm_start
-                    step_timings['llm_narrative'] = round(llm_duration, 2)
-                    if narrative_result:
-                        results['narrative_summary'] = narrative_result
-                        results['narrative_summary']['generation_time'] = round(llm_duration, 1)
-                        logger.info(f"Generated team analysis in {llm_duration:.1f}s")
-                    else:
-                        logger.info("Team analysis skipped (Ollama unavailable)")
-                except Exception as e:
-                    logger.warning(f"Team analysis generation failed: {e}")
-                    results['narrative_error'] = str(e)
-            elif not include_narrative:
-                logger.info("Team analysis skipped (disabled by user or long recording)")
-            progress = 97
+                        llm_duration = time.time() - llm_start
+                        step_timings['llm_narrative'] = round(llm_duration, 2)
+                        if narrative_result:
+                            results['narrative_summary'] = narrative_result
+                            results['narrative_summary']['generation_time'] = round(llm_duration, 1)
+                            logger.info(f"Generated team analysis in {llm_duration:.1f}s")
+                        else:
+                            logger.info("Team analysis skipped (Ollama unavailable)")
+                    except Exception as e:
+                        logger.warning(f"Team analysis generation failed: {e}")
+                        results['narrative_error'] = str(e)
+                elif not include_narrative:
+                    logger.info("Team analysis skipped (disabled by user or long recording)")
+                progress = 97
 
-            # Step 12: LLM Story Narrative
-            if include_detailed and include_story and NARRATIVE_GENERATOR_AVAILABLE and generate_story_sync and transcripts:
-                update_progress("story", "Generating mission story (this may take 1-2 minutes)...", progress)
-                try:
-                    story_start = time.time()
-                    logger.info("Starting LLM story generation...")
+                if want_story:
+                    update_progress("story", "Generating mission story (this may take 1-2 minutes)...", progress)
+                    try:
+                        story_start = time.time()
+                        logger.info("Starting LLM story generation...")
 
-                    if perf_tracker:
-                        with perf_tracker.track_dependency(
-                            'ollama_story', 'LLM'
-                        ) as _story_meta:
+                        if perf_tracker:
+                            with perf_tracker.track_dependency(
+                                'ollama_story', 'LLM'
+                            ) as _story_meta:
+                                story_result = generate_story_sync(results)
+                                if story_result:
+                                    llm_metrics = story_result.get('llm_metrics', {})
+                                    _story_meta['model'] = story_result.get('model', '')
+                                    _story_meta['prompt_tokens'] = llm_metrics.get('prompt_tokens', 0)
+                                    _story_meta['completion_tokens'] = llm_metrics.get('completion_tokens', 0)
+                                    _story_meta['total_tokens'] = llm_metrics.get('total_tokens', 0)
+                                    _story_meta['tokens_per_second'] = llm_metrics.get('tokens_per_second', 0)
+                                    _story_meta['prompt_size_chars'] = llm_metrics.get('prompt_size_chars', 0)
+                        else:
                             story_result = generate_story_sync(results)
-                            if story_result:
-                                llm_metrics = story_result.get('llm_metrics', {})
-                                _story_meta['model'] = story_result.get('model', '')
-                                _story_meta['prompt_tokens'] = llm_metrics.get('prompt_tokens', 0)
-                                _story_meta['completion_tokens'] = llm_metrics.get('completion_tokens', 0)
-                                _story_meta['total_tokens'] = llm_metrics.get('total_tokens', 0)
-                                _story_meta['tokens_per_second'] = llm_metrics.get('tokens_per_second', 0)
-                                _story_meta['prompt_size_chars'] = llm_metrics.get('prompt_size_chars', 0)
-                    else:
-                        story_result = generate_story_sync(results)
 
-                    story_duration = time.time() - story_start
-                    step_timings['llm_story'] = round(story_duration, 2)
-                    if story_result:
-                        results['story_narrative'] = story_result
-                        results['story_narrative']['generation_time'] = round(story_duration, 1)
-                        logger.info(f"Generated story narrative in {story_duration:.1f}s")
-                    else:
-                        logger.info("Story narrative skipped (Ollama unavailable)")
-                except Exception as e:
-                    logger.warning(f"Story generation failed: {e}")
-                    results['story_error'] = str(e)
-            elif not include_story:
-                logger.info("Story narrative skipped (disabled by user)")
+                        story_duration = time.time() - story_start
+                        step_timings['llm_story'] = round(story_duration, 2)
+                        if story_result:
+                            results['story_narrative'] = story_result
+                            results['story_narrative']['generation_time'] = round(story_duration, 1)
+                            logger.info(f"Generated story narrative in {story_duration:.1f}s")
+                        else:
+                            logger.info("Story narrative skipped (Ollama unavailable)")
+                    except Exception as e:
+                        logger.warning(f"Story generation failed: {e}")
+                        results['story_error'] = str(e)
+                elif not include_story:
+                    logger.info("Story narrative skipped (disabled by user)")
+
             progress = 100
-
             update_progress("complete", "Analysis complete", progress)
 
         finally:
@@ -2756,6 +2879,214 @@ class AudioProcessor:
             }
             for sid, data in speaker_data.items()
         ]
+
+    def _run_metrics_parallel(
+        self,
+        pipeline: 'ParallelAnalysisPipeline',
+        segments: List[Dict[str, Any]],
+        filtered_segments: List[Dict[str, Any]],
+        filtered_transcripts: List[Dict[str, Any]],
+        transcripts: List[Dict[str, Any]],
+        results: Dict[str, Any],
+        events: Optional[List[Dict[str, Any]]],
+        speech_action_data: Optional[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """
+        Run CPU metric analysis steps in parallel via the pipeline.
+
+        Steps run simultaneously:
+        - Communication quality analysis
+        - Speaker scorecards
+        - Confidence distribution
+        - Learning evaluation
+        - 7 Habits analysis
+        - Captain leadership assessment
+
+        Args:
+            pipeline: ParallelAnalysisPipeline instance
+            segments: Raw transcription segments
+            filtered_segments: Confidence-filtered raw segments
+            filtered_transcripts: Confidence-filtered formatted transcripts
+            transcripts: All formatted transcripts
+            results: Current analysis results dict
+            events: Telemetry events
+            speech_action_data: Speech-action correlation data
+
+        Returns:
+            Dict with metric results and _step_timings
+        """
+        # Build role map for captain leadership and scorecards
+        role_map = {}
+        for ra in results.get('role_assignments', []):
+            if ra.get('speaker_id') and ra.get('role'):
+                role_map[ra['speaker_id']] = ra['role']
+
+        metric_steps = [
+            MetricStepConfig(
+                name='communication_quality',
+                weight=7,
+                func=self._analyze_quality,
+                args=(filtered_segments,),
+                result_key='communication_quality',
+                available=QUALITY_ANALYZER_AVAILABLE and bool(filtered_transcripts),
+            ),
+            MetricStepConfig(
+                name='scorecards',
+                weight=9,
+                func=self._generate_scorecards,
+                args=(filtered_transcripts,),
+                kwargs={
+                    'role_assignments': results.get('role_assignments', []),
+                    'telemetry_events': events,
+                    'speech_action_data': speech_action_data,
+                },
+                result_key='speaker_scorecards',
+                available=SCORECARD_AVAILABLE and bool(filtered_transcripts),
+            ),
+            MetricStepConfig(
+                name='confidence',
+                weight=5,
+                func=self._analyze_confidence,
+                args=(transcripts,),
+                result_key='confidence_distribution',
+                available=CONFIDENCE_ANALYZER_AVAILABLE and bool(transcripts),
+            ),
+            MetricStepConfig(
+                name='learning',
+                weight=6,
+                func=self._evaluate_learning,
+                args=(filtered_transcripts,),
+                kwargs={'speech_action_data': speech_action_data},
+                result_key='learning_evaluation',
+                available=LEARNING_EVALUATOR_AVAILABLE and bool(filtered_transcripts),
+            ),
+            MetricStepConfig(
+                name='seven_habits',
+                weight=9,
+                func=self._analyze_seven_habits,
+                args=(filtered_transcripts,),
+                result_key='seven_habits',
+                available=SEVEN_HABITS_AVAILABLE and bool(filtered_transcripts),
+            ),
+            MetricStepConfig(
+                name='captain_leadership',
+                weight=5,
+                func=self._assess_captain_leadership,
+                args=(filtered_transcripts, role_map, events),
+                result_key='captain_leadership',
+                available=CAPTAIN_LEADERSHIP_AVAILABLE and bool(filtered_transcripts),
+            ),
+        ]
+
+        return pipeline.run_metrics_parallel(metric_steps)
+
+    def _assess_captain_leadership(
+        self,
+        filtered_transcripts: List[Dict[str, Any]],
+        role_map: Dict[str, str],
+        events: Optional[List[Dict[str, Any]]]
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Run captain leadership assessment as a standalone callable.
+
+        Args:
+            filtered_transcripts: Confidence-filtered transcripts
+            role_map: Mapping of speaker_id to role name
+            events: Telemetry events
+
+        Returns:
+            Captain leadership assessment results or None
+        """
+        try:
+            captain_assessor = CaptainLeadershipAssessor(
+                filtered_transcripts,
+                role_assignments=role_map,
+                telemetry_events=events
+            )
+            captain_results = captain_assessor.get_structured_results()
+            if captain_results:
+                logger.info(
+                    f"Captain leadership assessment complete: "
+                    f"overall {captain_results.get('overall_score', 0)}/5"
+                )
+            return captain_results
+        except Exception as e:
+            logger.warning(f"Captain leadership assessment failed: {e}")
+            return None
+
+    def _run_llm_parallel(
+        self,
+        pipeline: 'ParallelAnalysisPipeline',
+        results: Dict[str, Any],
+        include_title: bool = False,
+        include_narrative: bool = False,
+        include_story: bool = False,
+        perf_tracker: Optional[Any] = None,
+    ) -> Dict[str, Any]:
+        """
+        Run LLM generation steps in parallel via the pipeline.
+
+        Steps run simultaneously:
+        - Title generation (generate_title_sync) — fast, ~2s
+        - Team analysis narrative (generate_summary_sync)
+        - Mission story (generate_story_sync)
+
+        Args:
+            pipeline: ParallelAnalysisPipeline instance
+            results: Current analysis results dict
+            include_title: Whether to generate title
+            include_narrative: Whether to generate narrative
+            include_story: Whether to generate story
+            perf_tracker: Optional PerformanceTracker
+
+        Returns:
+            Dict with LLM results and _step_timings
+        """
+        llm_steps = []
+
+        if include_title:
+            try:
+                from src.web.title_generator import generate_title_sync
+
+                def _generate_title(res: Dict[str, Any]) -> str:
+                    return generate_title_sync(
+                        res.get('full_text', ''),
+                        res.get('speakers', []),
+                        res.get('duration_seconds', 0),
+                    )
+
+                llm_steps.append(MetricStepConfig(
+                    name='llm_title',
+                    weight=1,
+                    func=_generate_title,
+                    args=(results,),
+                    result_key='auto_title',
+                    available=True,
+                ))
+            except ImportError:
+                logger.warning("Title generator not available for parallel LLM")
+
+        if include_narrative and NARRATIVE_GENERATOR_AVAILABLE and generate_summary_sync:
+            llm_steps.append(MetricStepConfig(
+                name='llm_narrative',
+                weight=5,
+                func=generate_summary_sync,
+                args=(results,),
+                result_key='narrative_summary',
+                available=True,
+            ))
+
+        if include_story and NARRATIVE_GENERATOR_AVAILABLE and generate_story_sync:
+            llm_steps.append(MetricStepConfig(
+                name='llm_story',
+                weight=5,
+                func=generate_story_sync,
+                args=(results,),
+                result_key='story_narrative',
+                available=True,
+            ))
+
+        return pipeline.run_llm_parallel(llm_steps)
 
     def _analyze_quality(
         self,

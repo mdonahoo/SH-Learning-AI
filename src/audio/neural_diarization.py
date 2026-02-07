@@ -30,6 +30,34 @@ from dataclasses import dataclass, field
 from collections import defaultdict
 from dotenv import load_dotenv
 
+# Fix broken package metadata for lightning_utilities / huggingface_hub.
+# A stale numpy dist-info directory can cause importlib.metadata.version()
+# to return None, crashing both lightning_utilities (packaging.version.Version(None))
+# and huggingface_hub (metadata['Version'] on NoneType).
+# We patch importlib.metadata.distribution to fall back to a scan when the
+# default lookup returns a distribution with missing version metadata.
+try:
+    import importlib.metadata as _md
+    if _md.version('numpy') is None:
+        _orig_distribution = _md.distribution
+
+        def _patched_distribution(name: str) -> _md.Distribution:
+            """Fall back to scanning distributions when version is None."""
+            dist = _orig_distribution(name)
+            if dist.metadata and dist.metadata.get('Version') is not None:
+                return dist
+            # Stale dist-info found; scan for a valid one
+            for d in _md.distributions():
+                if (d.metadata
+                        and d.metadata.get('Name', '').lower() == name.lower()
+                        and d.metadata.get('Version') is not None):
+                    return d
+            return dist
+
+        _md.distribution = _patched_distribution
+except Exception:
+    pass
+
 try:
     from pyannote.audio import Pipeline, Model
     from pyannote.audio.core.inference import Inference
@@ -244,7 +272,8 @@ class NeuralSpeakerDiarizer:
         min_speakers: Optional[int] = None,
         max_speakers: Optional[int] = None,
         use_auth_token: Optional[str] = None,
-        similarity_threshold: Optional[float] = None
+        similarity_threshold: Optional[float] = None,
+        device: Optional[Any] = None
     ):
         """
         Initialize neural speaker diarizer.
@@ -255,12 +284,17 @@ class NeuralSpeakerDiarizer:
             max_speakers: Maximum number of speakers expected
             use_auth_token: Hugging Face authentication token (if needed)
             similarity_threshold: Minimum similarity (0-1) to match speakers
+            device: Optional torch.device for multi-GPU setups
+                (e.g., torch.device('cuda:1') to pin to GPU 1)
         """
         if not PYANNOTE_AVAILABLE:
             raise ImportError(
                 "pyannote.audio is not installed. "
                 "Install with: pip install pyannote.audio"
             )
+
+        # Override device for multi-GPU support
+        self._override_device = device
 
         self.model_name = model_name
         self.min_speakers = min_speakers or int(os.getenv('MIN_EXPECTED_SPEAKERS', '1'))
@@ -336,8 +370,8 @@ class NeuralSpeakerDiarizer:
                         use_auth_token=self.use_auth_token
                     )
 
-                # Move pipeline to GPU if available
-                device = _get_device()
+                # Use override device if provided, otherwise auto-detect
+                device = self._override_device if self._override_device is not None else _get_device()
                 if device is not None and device.type == "cuda":
                     self.pipeline = self.pipeline.to(device)
                     logger.info(f"✓ Pyannote pipeline loaded on {device}")
@@ -358,8 +392,8 @@ class NeuralSpeakerDiarizer:
                     token=self.use_auth_token
                 )
 
-                # Move model to GPU if available
-                device = _get_device()
+                # Use override device if provided, otherwise auto-detect
+                device = self._override_device if self._override_device is not None else _get_device()
                 if device is not None and device.type == "cuda":
                     model = model.to(device)
 

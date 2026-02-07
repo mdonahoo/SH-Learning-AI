@@ -1525,9 +1525,9 @@ async def regenerate_narrative_stream(
                     "model": generator.ollama_model,
                     "prompt": prompt,
                     "stream": True,
-                    "options": {"temperature": 0.3, "num_predict": 1024}
+                    "options": {"temperature": 0.3, "num_predict": 2500, "num_ctx": int(os.getenv('OLLAMA_NUM_CTX', '32768'))}
                 },
-                timeout=300.0
+                timeout=float(os.getenv('OLLAMA_TIMEOUT', '600'))
             ) as response:
                 if response.status_code != 200:
                     yield f"data: {json.dumps({'type': 'error', 'message': f'Ollama error: {response.status_code}'})}\n\n"
@@ -1653,10 +1653,11 @@ async def regenerate_story_stream(
                         "top_p": 0.9,
                         "top_k": 50,
                         "repeat_penalty": 1.1,
-                        "num_predict": 2500
+                        "num_predict": 2500,
+                        "num_ctx": int(os.getenv('OLLAMA_NUM_CTX', '32768'))
                     }
                 },
-                timeout=300.0
+                timeout=float(os.getenv('OLLAMA_TIMEOUT', '600'))
             ) as response:
                 if response.status_code != 200:
                     yield f"data: {json.dumps({'type': 'error', 'message': f'Ollama error: {response.status_code}'})}\n\n"

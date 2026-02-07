@@ -42,7 +42,7 @@ def _build_story_telemetry_section(telemetry_summary: Optional[Dict[str, Any]]) 
     # Key events — group consecutive same-type events
     key_events = telemetry_summary.get('key_events', [])
     if key_events:
-        grouped = _group_consecutive_events(key_events, max_events=25)
+        grouped = _group_consecutive_events(key_events, max_events=40)
         sections.append("**Key game events (weave these into the narrative with specific details):**")
         for event in grouped:
             sections.append(
@@ -201,21 +201,21 @@ def build_mission_story_prompt(structured_data: Dict[str, Any]) -> str:
     # IMPORTANT: Scenes are already in chronological order - DO NOT REORDER
     scene_text = "⚠️ **THESE SCENES ARE IN CHRONOLOGICAL ORDER - USE THEM IN THIS EXACT ORDER** ⚠️\n\n"
 
-    # Include first 8 scenes (or fewer if mission is short)
-    max_scenes = min(8, len(scenes))
+    # Include first 15 scenes (or fewer if mission is short)
+    max_scenes = min(15, len(scenes))
 
     for i, scene in enumerate(scenes[:max_scenes]):
         scene_text += f"\n**Scene {i+1}/{len(scenes)}** ({len(scene)} exchanges, chronologically sorted):\n"
         # Show key dialogue from this scene
-        for t in scene[:12]:  # 12 lines per scene
+        for t in scene[:20]:  # 20 lines per scene
             timestamp = t['timestamp'].split('T')[1][:8] if 'T' in t['timestamp'] else t['timestamp']
             speaker = t['speaker']
             text = t['text']
             conf = t['confidence']
             scene_text += f"[{timestamp}] {speaker}: \"{text}\" (confidence: {conf:.2f})\n"
 
-        if len(scene) > 12:
-            scene_text += f"... ({len(scene) - 12} more exchanges in this scene)\n"
+        if len(scene) > 20:
+            scene_text += f"... ({len(scene) - 20} more exchanges in this scene)\n"
 
     if len(scenes) > max_scenes:
         scene_text += f"\n... ({len(scenes) - max_scenes} additional scenes follow chronologically)\n"

@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 # Configuration
 OLLAMA_HOST = os.getenv('OLLAMA_HOST', 'http://localhost:11434')
 OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.2')
+OLLAMA_NUM_CTX = int(os.getenv('OLLAMA_NUM_CTX', '32768'))
 TITLE_MAX_WORDS = int(os.getenv('TITLE_MAX_WORDS', '10'))
 TITLE_MIN_WORDS = int(os.getenv('TITLE_MIN_WORDS', '4'))
 OLLAMA_TIMEOUT = float(os.getenv('OLLAMA_TIMEOUT', '30.0'))
@@ -163,6 +164,7 @@ Title:"""
                     "options": {
                         "temperature": 0.3,  # Low for consistent output
                         "num_predict": 30,   # Short output
+                        "num_ctx": OLLAMA_NUM_CTX,
                         "stop": ["\n", ".", "Title:"]
                     }
                 }

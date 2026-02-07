@@ -13,6 +13,7 @@ import logging
 import os
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import requests
@@ -281,20 +282,48 @@ class TranscriptLLMCleaner:
         total_prompt_tokens = 0
         total_completion_tokens = 0
 
-        # Process in batches
+        # Build all batches upfront
+        batch_items: List[Tuple[int, List[Dict[str, Any]]]] = []
         for batch_start in range(0, len(segments), batch_size):
             batch_end = min(batch_start + batch_size, len(segments))
-            batch = segments[batch_start:batch_end]
+            batch_items.append((batch_start, segments[batch_start:batch_end]))
 
+        max_workers = int(os.getenv('LLM_CLEANUP_WORKERS', '3'))
+
+        def _process_batch(
+            item: Tuple[int, List[Dict[str, Any]]]
+        ) -> Tuple[int, Optional[str], Dict[str, Any]]:
+            """Process a single batch: build prompt, call Ollama, return result."""
+            b_start, batch = item
             prompt = self._build_batch_prompt(batch)
-            batch_metrics: Dict[str, Any] = {}
-            response_text = self._call_ollama(prompt, metrics_out=batch_metrics)
+            metrics: Dict[str, Any] = {}
+            text = self._call_ollama(prompt, metrics_out=metrics)
+            return b_start, text, metrics
 
+        # Process batches in parallel (I/O-bound HTTP calls)
+        results_list: List[Tuple[int, Optional[str], Dict[str, Any]]] = []
+        with ThreadPoolExecutor(
+            max_workers=min(max_workers, len(batch_items)),
+            thread_name_prefix="llm-cleanup"
+        ) as executor:
+            futures = {
+                executor.submit(_process_batch, item): item
+                for item in batch_items
+            }
+            for future in as_completed(futures):
+                try:
+                    results_list.append(future.result())
+                except Exception as e:
+                    logger.warning(f"LLM cleanup batch failed: {e}")
+
+        # Apply corrections in segment order
+        for batch_start, response_text, batch_metrics in sorted(
+            results_list, key=lambda x: x[0]
+        ):
             if response_text:
                 batches_sent += 1
                 corrections = self._parse_corrections(response_text)
 
-                # Accumulate token counts across batches
                 total_prompt_tokens += batch_metrics.get('prompt_eval_count', 0)
                 total_completion_tokens += batch_metrics.get('eval_count', 0)
 
@@ -302,7 +331,6 @@ class TranscriptLLMCleaner:
                     seg_idx = batch_start + line_num - 1  # 1-indexed to 0-indexed
                     if 0 <= seg_idx < len(segments):
                         original = segments[seg_idx].get('text', '')
-                        # Only apply if actually different
                         if corrected_text.strip() and corrected_text.strip() != original.strip():
                             logger.debug(
                                 f"LLM correction [{seg_idx}]: "
@@ -324,7 +352,8 @@ class TranscriptLLMCleaner:
         if corrections_made > 0:
             logger.info(
                 f"LLM transcript cleanup: {corrections_made} corrections "
-                f"in {batches_sent} batches ({elapsed:.1f}s)"
+                f"in {batches_sent} batches ({elapsed:.1f}s, "
+                f"{min(max_workers, len(batch_items))} workers)"
             )
 
         return segments, stats
@@ -416,7 +445,8 @@ class TranscriptLLMCleaner:
                 "options": {
                     "temperature": 0.1,
                     "top_k": 30,
-                    "num_predict": 500
+                    "num_predict": 500,
+                    "num_ctx": int(os.getenv('OLLAMA_NUM_CTX', '32768'))
                 }
             }
 

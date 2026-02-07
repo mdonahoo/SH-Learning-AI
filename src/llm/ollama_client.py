@@ -170,6 +170,7 @@ class OllamaClient:
         self.host = host or os.getenv('OLLAMA_HOST', 'http://localhost:11434')
         self.model = model or os.getenv('OLLAMA_MODEL', 'llama3.2')
         self.timeout = timeout or int(os.getenv('OLLAMA_TIMEOUT', '120'))
+        self.num_ctx = int(os.getenv('OLLAMA_NUM_CTX', '32768'))
 
         # Ensure host doesn't end with slash
         self.host = self.host.rstrip('/')
@@ -235,7 +236,10 @@ class OllamaClient:
             Generated text or None if generation failed
         """
         try:
-            options = {"temperature": temperature}
+            options = {
+                "temperature": temperature,
+                "num_ctx": self.num_ctx,
+            }
 
             # Add optional sampling parameters for hallucination reduction
             if top_p is not None:
@@ -316,7 +320,8 @@ class OllamaClient:
                 "prompt": prompt,
                 "stream": True,
                 "options": {
-                    "temperature": temperature
+                    "temperature": temperature,
+                    "num_ctx": self.num_ctx,
                 }
             }
 
@@ -389,7 +394,8 @@ class OllamaClient:
                 "prompt": prompt,
                 "stream": True,
                 "options": {
-                    "temperature": temperature
+                    "temperature": temperature,
+                    "num_ctx": self.num_ctx,
                 }
             }
 

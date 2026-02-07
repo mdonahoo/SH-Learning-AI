@@ -732,7 +732,8 @@ class WhisperTranscriber:
         device: Optional[str] = None,
         compute_type: Optional[str] = None,
         language: Optional[str] = None,
-        num_workers: Optional[int] = None
+        num_workers: Optional[int] = None,
+        device_index: Optional[int] = None
     ):
         """
         Initialize Whisper transcriber.
@@ -743,12 +744,17 @@ class WhisperTranscriber:
             compute_type: Compute precision (int8, float16, float32)
             language: Language code (en, es, fr, etc.) or 'auto'
             num_workers: Number of transcription worker threads
+            device_index: Optional GPU index for multi-GPU setups
+                (e.g., 0 to use cuda:0 explicitly)
         """
         if not WHISPER_AVAILABLE:
             raise ImportError(
                 "faster-whisper not installed. "
                 "Run: pip install faster-whisper"
             )
+
+        # Multi-GPU support: pin to a specific GPU index
+        self.device_index = device_index
 
         # Load configuration
         # Default to 'large-v3' model for best accuracy (YouTube-quality transcription)
@@ -813,9 +819,13 @@ class WhisperTranscriber:
         self._max_recent_texts = 10  # Track last 10 segments
         self._repetition_threshold = 5  # 5+ similar segments = likely loop
 
+        device_info = self.device
+        if self.device_index is not None:
+            device_info = f"{self.device}:{self.device_index}"
+
         logger.info(
             f"WhisperTranscriber initialized: "
-            f"model={self.model_size}, device={self.device}, "
+            f"model={self.model_size}, device={device_info}, "
             f"compute={self.compute_type}, language={self.language}, "
             f"workers={self.num_workers}, "
             f"prompt_length={len(self.initial_prompt)} chars"
@@ -877,11 +887,17 @@ class WhisperTranscriber:
                 logger.info(f"Loading Whisper model: {self.model_size}")
                 start_time = time.time()
 
+                model_kwargs: Dict[str, Any] = {
+                    'device': self.device,
+                    'compute_type': self.compute_type,
+                    'download_root': str(self.model_path),
+                }
+                if self.device_index is not None:
+                    model_kwargs['device_index'] = self.device_index
+
                 self._model = WhisperModel(
                     self.model_size,
-                    device=self.device,
-                    compute_type=self.compute_type,
-                    download_root=str(self.model_path)
+                    **model_kwargs
                 )
 
                 load_time = time.time() - start_time

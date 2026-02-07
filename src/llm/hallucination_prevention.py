@@ -92,9 +92,9 @@ class ConstrainedContextBuilder:
         speakers = self._extract_speaker_stats()
 
         # Extract pre-selected quotes (verified to exist)
-        positive_quotes = self._extract_top_quotes(category='effective', limit=3)
-        negative_quotes = self._extract_top_quotes(category='improvement', limit=2)
-        key_moments = self._extract_key_moments(limit=10)
+        positive_quotes = self._extract_top_quotes(category='effective', limit=8)
+        negative_quotes = self._extract_top_quotes(category='improvement', limit=5)
+        key_moments = self._extract_key_moments(limit=20)
 
         return {
             # Computed metrics
@@ -158,7 +158,7 @@ class ConstrainedContextBuilder:
                 'speaking_time': round(speaker_times.get(speaker, 0), 1)
             })
 
-        return speakers[:5]  # Top 5 speakers
+        return speakers[:10]  # Top 10 speakers
 
     def _extract_top_quotes(
         self,
@@ -686,7 +686,7 @@ ANTI_HALLUCINATION_PARAMS = {
     "top_p": 0.9,            # Nucleus sampling
     "top_k": 40,             # Limit vocabulary
     "repeat_penalty": 1.1,   # Reduce repetition
-    "num_predict": 500,      # Limit output length for debriefs
+    "num_predict": 1500,     # Output length for debriefs
 }
 
 STORY_PARAMS = {
@@ -694,5 +694,5 @@ STORY_PARAMS = {
     "top_p": 0.9,
     "top_k": 50,
     "repeat_penalty": 1.1,
-    "num_predict": 2500,     # Longer for stories
+    "num_predict": 4000,     # Full-length stories
 }

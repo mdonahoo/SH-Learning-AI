@@ -166,9 +166,9 @@ def build_full_report_prompt(mission_data: Dict[str, Any], style: str = "enterta
     # the pre-computed statistics. Only selected high-confidence quotes are provided.
     objectives_text = extract_objectives(events)
 
-    # Select top quotes by confidence for examples (max 15)
+    # Select top quotes by confidence for examples (max 30)
     sorted_transcripts = sorted(transcripts, key=lambda x: x.get('confidence', 0), reverse=True)
-    top_quotes = sorted_transcripts[:15]
+    top_quotes = sorted_transcripts[:30]
     quotes_text = format_transcripts(top_quotes) if top_quotes else "(No high-confidence quotes available)"
 
     # Extract mission statistics
