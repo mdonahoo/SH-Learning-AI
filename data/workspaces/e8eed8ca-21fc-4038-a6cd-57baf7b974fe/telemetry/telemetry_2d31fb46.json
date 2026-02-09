@@ -1,0 +1,223 @@
+{
+  "session_id": "2d31fb46",
+  "start_time": "2026-02-08T21:42:30.073074",
+  "end_time": "2026-02-08T21:43:41.829222",
+  "duration_seconds": 71.756148,
+  "packet_counts": {
+    "SESSION": 1,
+    "TARGET-SCIENCE": 3,
+    "VESSEL-CLASSES": 1,
+    "DAMAGE": 1,
+    "ALERT": 1,
+    "DAMAGE-TEAMS": 1,
+    "VESSEL-OCCUPANTS": 1,
+    "CONTACTS": 831
+  },
+  "tracked_events": [
+    {
+      "event_type": "science_scan",
+      "category": "science",
+      "timestamp": 45.86958646774292,
+      "data": {
+        "target_id": 9
+      }
+    }
+  ],
+  "tracked_events_count": 1,
+  "vessel_data": {
+    "hull_percentage": 100,
+    "shield_percentage": 100,
+    "shield_frequency": 0,
+    "shield_harmonics": 0,
+    "shield_sections": {
+      "forward": 100,
+      "aft": 100,
+      "port": 100,
+      "starboard": 100,
+      "dorsal": 100,
+      "ventral": 100
+    },
+    "shield_distribution": {
+      "forward": 25,
+      "aft": 25,
+      "port": 25,
+      "starboard": 25
+    },
+    "damage_events": [],
+    "cumulative_damage": 0,
+    "last_damage_time": null,
+    "damage_sources": {},
+    "systems": {
+      "engines": 100,
+      "weapons": 100,
+      "shields": 100,
+      "sensors": 100,
+      "life_support": 100,
+      "warp_drive": 100,
+      "impulse_drive": 100,
+      "communications": 100,
+      "transporters": 100,
+      "tractor_beam": 100
+    },
+    "power": {
+      "total_available": 100,
+      "engines": 0,
+      "weapons": 0,
+      "shields": 0,
+      "auxiliary": 0,
+      "life_support": 0
+    },
+    "engineering": {
+      "reactor_output": 100,
+      "reactor_efficiency": 100,
+      "coolant_level": 100,
+      "coolant_pressure": 0,
+      "repair_teams": [],
+      "damage_control_teams": []
+    },
+    "navigation": {
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "heading": 0,
+      "pitch": 0,
+      "roll": 0,
+      "speed": 0,
+      "warp_speed": 0,
+      "impulse_speed": 0
+    },
+    "combat": {
+      "weapons_armed": false,
+      "weapons_locked": false,
+      "current_target": null,
+      "torpedo_count": {},
+      "phaser_charge": 100
+    },
+    "science_target": 9,
+    "contacts": [
+      {
+        "ID": 7,
+        "BaseType": "Station",
+        "SubType": "Station",
+        "Class": "Star Colony",
+        "Name": "Starbase Omega",
+        "Faction": "Daichi",
+        "Integrity": 25000,
+        "Shields": 0,
+        "Radius": 5724.3423,
+        "Planet": "Borderlands",
+        "StarPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Position": {
+          "X": 300000,
+          "Y": 0,
+          "Z": 0
+        },
+        "Orientation": {
+          "X": 0,
+          "Y": -0.7071,
+          "Z": 0,
+          "W": -0.7071
+        },
+        "Relative": {
+          "X": 0.45,
+          "Y": 0,
+          "Z": -0.89
+        },
+        "Maneuver": "Burst",
+        "Scanning": 0,
+        "Scanned": true,
+        "IFF": 1,
+        "Identified": true,
+        "Model": "Station-Colony",
+        "Scale": "1",
+        "Parent": 0,
+        "Tags": "7, daichi-base",
+        "Children": [],
+        "Properties": {}
+      }
+    ],
+    "all_vessel_status": {
+      "7": {
+        "name": "Starbase Omega",
+        "faction": "Daichi",
+        "type": "Station",
+        "hull": 2500000,
+        "shields": 0
+      }
+    }
+  },
+  "mission_data": {
+    "current_mission": null,
+    "mission_briefing": {},
+    "mission_summary": {},
+    "objectives": [],
+    "player_objectives": [],
+    "gm_objectives": [],
+    "encounters": [],
+    "scenario": {},
+    "npcs": {}
+  },
+  "combat_data": {
+    "ordnance": {},
+    "ordnance_selected": null,
+    "projectiles": [],
+    "drones": {},
+    "drone_targets": {}
+  },
+  "last_packets": {
+    "DAMAGE": null,
+    "ALERT": 3,
+    "CONTACTS": [
+      {
+        "ID": 37,
+        "BaseType": "Drone",
+        "SubType": "Cargo",
+        "Class": "Mark II Shuttle",
+        "Name": "D1-Upward",
+        "Faction": "Alliance",
+        "Integrity": 999.74347,
+        "Shields": 1,
+        "Radius": 12.848152,
+        "Planet": "Borderlands",
+        "StarPosition": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Position": {
+          "X": -274000.34,
+          "Y": -2730.79,
+          "Z": 278
+        },
+        "Orientation": {
+          "X": -0.0035,
+          "Y": 0.7454,
+          "Z": 0.0041,
+          "W": 0.6666
+        },
+        "Relative": {
+          "X": -0.28,
+          "Y": 0,
+          "Z": -0.96
+        },
+        "Maneuver": "Cruise",
+        "Scanning": 0,
+        "Scanned": true,
+        "IFF": 1,
+        "Identified": true,
+        "Model": "Cargo Shuttle",
+        "Scale": "1",
+        "Parent": 0,
+        "Tags": "37",
+        "Children": [],
+        "Properties": {}
+      }
+    ]
+  }
+}

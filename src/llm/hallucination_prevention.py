@@ -686,7 +686,7 @@ ANTI_HALLUCINATION_PARAMS = {
     "top_p": 0.9,            # Nucleus sampling
     "top_k": 40,             # Limit vocabulary
     "repeat_penalty": 1.1,   # Reduce repetition
-    "num_predict": 1500,     # Output length for debriefs
+    "max_tokens": 1500,      # Output length for debriefs
 }
 
 STORY_PARAMS = {
@@ -694,5 +694,5 @@ STORY_PARAMS = {
     "top_p": 0.9,
     "top_k": 50,
     "repeat_penalty": 1.1,
-    "num_predict": 4000,     # Full-length stories
+    "max_tokens": 4000,      # Full-length stories
 }

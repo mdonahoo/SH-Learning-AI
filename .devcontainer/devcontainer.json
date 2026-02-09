@@ -76,6 +76,7 @@
 
   "forwardPorts": [
     8888,     // Jupyter
+    8100,     // vLLM inference server
     11434,    // Ollama
     1864,     // Starship Horizons HTTP API
     1865,     // Starship Horizons WebSocket

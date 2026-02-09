@@ -34,6 +34,13 @@ class BrowserMimicWebSocket:
         self.vessel_id = None
         self.guid = str(uuid.uuid4())
 
+        # Connection health tracking
+        self._connect_params: Optional[Dict[str, Any]] = None
+        self._last_packet_time: Optional[float] = None
+        self._reconnect_count: int = 0
+        self._connection_lost_time: Optional[float] = None
+        self._first_connect_done: bool = False
+
         # Callbacks
         self._callbacks = []
 
@@ -240,22 +247,43 @@ class BrowserMimicWebSocket:
         try:
             logger.info(f"Connecting to {self.ws_url} as {screen_name}")
 
+            # Store connection params for reconnection
+            self._connect_params = {
+                'screen_name': screen_name,
+                'is_main_viewer': is_main_viewer,
+                'user_name': user_name,
+                'call_sign': call_sign,
+            }
+
             def on_message(ws, message):
                 self._handle_message(message)
 
             def on_error(ws, error):
                 logger.error(f"WebSocket error: {error}")
                 self.connected = False
+                if self._connection_lost_time is None:
+                    self._connection_lost_time = time.time()
 
             def on_close(ws, close_code, close_msg):
                 logger.info(f"WebSocket closed: {close_code}")
                 self.connected = False
+                if self._connection_lost_time is None:
+                    self._connection_lost_time = time.time()
 
             def on_open(ws):
-                logger.info("WebSocket connected - mimicking browser protocol")
-                self.connected = True
+                if self._first_connect_done:
+                    self._reconnect_count += 1
+                    logger.info(
+                        f"WebSocket reconnected (reconnect #{self._reconnect_count})"
+                    )
+                else:
+                    logger.info("WebSocket connected - mimicking browser protocol")
+                    self._first_connect_done = True
 
-                # Immediately identify like the browser does
+                self.connected = True
+                self._connection_lost_time = None
+
+                # Re-identify and re-register on every (re)connect
                 self._send_identification(
                     screen_name, is_main_viewer,
                     user_name=user_name, call_sign=call_sign
@@ -277,9 +305,9 @@ class BrowserMimicWebSocket:
                 }
             )
 
-            # Run in thread
+            # Run in thread with auto-reconnect (5s between attempts)
             self.ws_thread = threading.Thread(
-                target=self.ws.run_forever,
+                target=lambda: self.ws.run_forever(reconnect=5),
                 daemon=True
             )
             self.ws_thread.start()
@@ -585,6 +613,20 @@ class BrowserMimicWebSocket:
         except Exception as e:
             logger.error(f"Send failed: {e}")
 
+    @property
+    def connection_health(self) -> Dict[str, Any]:
+        """Return connection health diagnostics."""
+        return {
+            'connected': self.connected,
+            'last_packet_time': self._last_packet_time,
+            'seconds_since_last_packet': (
+                time.time() - self._last_packet_time
+                if self._last_packet_time else None
+            ),
+            'reconnect_count': self._reconnect_count,
+            'connection_lost_time': self._connection_lost_time,
+        }
+
     def _handle_message(self, message):
         """Handle incoming message like browser's ProcessCMD."""
         try:
@@ -596,6 +638,9 @@ class BrowserMimicWebSocket:
 
             if not cmd:
                 return
+
+            # Update health tracking
+            self._last_packet_time = time.time()
 
             # Track packet
             self.packet_counts[cmd] = self.packet_counts.get(cmd, 0) + 1

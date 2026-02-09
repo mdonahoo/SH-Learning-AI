@@ -2951,6 +2951,7 @@ class App {
         this.readOnlyMode = false; // Server config for read-only mode (no analysis/regeneration)
         this.horizonsAvailable = false; // Whether Horizons game server is connected
         this.telemetrySessionId = null; // Active telemetry recording session
+        this.telemetryPollingInterval = null; // Interval for status polling
 
         this.initElements();
         this.bindEvents();
@@ -3091,6 +3092,8 @@ class App {
         this.downloadAudioBtn = document.getElementById('download-audio-btn');
         this.saveAudioBtn = document.getElementById('save-audio-btn');
         this.saveTelemetryBtn = document.getElementById('save-telemetry-btn');
+        this.telemetryStatusEl = document.getElementById('telemetry-status');
+        this.telemetryStatusText = document.getElementById('telemetry-status-text');
         this.archiveList = document.getElementById('archive-list');
         this.refreshArchiveBtn = document.getElementById('refresh-archive-btn');
         this.titleInput = document.getElementById('analysis-title-input');
@@ -3294,6 +3297,7 @@ class App {
             this.recordBtn.innerHTML = '<svg class="icon"><use href="#icon-record"></use></svg><span>Record</span>';
             this.recordBtn.classList.remove('recording');
             clearInterval(this.timerInterval);
+            this.stopTelemetryPolling();
 
             // Stop telemetry recording if active
             if (this.telemetrySessionId) {
@@ -3328,6 +3332,7 @@ class App {
                         this.telemetrySessionId = telemetryResult.session_id;
                         console.log('Telemetry recording started:', this.telemetrySessionId, telemetryResult.message);
                         this.showStatus(telemetryResult.message || 'Game telemetry connected', 'success');
+                        this.startTelemetryPolling();
                     } catch (error) {
                         console.error('Failed to start telemetry:', error);
                         this.showStatus('Warning: Telemetry recording failed to start - ' + error.message, 'warning');
@@ -3367,6 +3372,7 @@ class App {
             } catch (error) {
                 this.showStatus('Failed to access microphone: ' + error.message, 'error');
                 // Clean up telemetry if audio failed
+                this.stopTelemetryPolling();
                 if (this.telemetrySessionId) {
                     try {
                         await this.api.stopTelemetry(this.telemetrySessionId);
@@ -3384,6 +3390,68 @@ class App {
                 telemetryOption.style.opacity = '';
             }
             this.updateTelemetryCheckboxState();
+        }
+    }
+
+    startTelemetryPolling() {
+        this.stopTelemetryPolling(); // Clear any existing interval
+        if (!this.telemetrySessionId) return;
+
+        // Show the indicator immediately as connected
+        this.updateTelemetryIndicator({ connection_health: { connected: true } });
+
+        this.telemetryPollingInterval = setInterval(async () => {
+            if (!this.telemetrySessionId) {
+                this.stopTelemetryPolling();
+                return;
+            }
+            try {
+                const status = await this.api.getTelemetryStatus(this.telemetrySessionId);
+                this.updateTelemetryIndicator(status);
+            } catch (error) {
+                console.warn('Telemetry status poll failed:', error);
+                this.updateTelemetryIndicator({ connection_health: { connected: false } });
+            }
+        }, 10000);
+    }
+
+    stopTelemetryPolling() {
+        if (this.telemetryPollingInterval) {
+            clearInterval(this.telemetryPollingInterval);
+            this.telemetryPollingInterval = null;
+        }
+        if (this.telemetryStatusEl) {
+            this.telemetryStatusEl.classList.add('hidden');
+            this.telemetryStatusEl.classList.remove('connected', 'reconnecting', 'disconnected');
+        }
+    }
+
+    updateTelemetryIndicator(status) {
+        if (!this.telemetryStatusEl || !this.telemetryStatusText) return;
+
+        this.telemetryStatusEl.classList.remove('hidden', 'connected', 'reconnecting', 'disconnected');
+
+        const health = status.connection_health;
+        if (!health) {
+            this.telemetryStatusEl.classList.add('hidden');
+            return;
+        }
+
+        if (health.connected) {
+            this.telemetryStatusEl.classList.add('connected');
+            this.telemetryStatusText.textContent = 'Telemetry: connected';
+        } else if (health.connection_lost_time) {
+            const lostSeconds = health.seconds_since_last_packet || 0;
+            if (lostSeconds > 60) {
+                this.telemetryStatusEl.classList.add('disconnected');
+                this.telemetryStatusText.textContent = 'Telemetry: disconnected';
+            } else {
+                this.telemetryStatusEl.classList.add('reconnecting');
+                this.telemetryStatusText.textContent = 'Telemetry: reconnecting...';
+            }
+        } else {
+            this.telemetryStatusEl.classList.add('disconnected');
+            this.telemetryStatusText.textContent = 'Telemetry: disconnected';
         }
     }
 

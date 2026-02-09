@@ -252,7 +252,7 @@ class TestBatchSpeakerDiarizer:
         samples, sample_rate = sample_audio
         diarizer = BatchSpeakerDiarizer()
 
-        segments = [{'start': 0.0, 'end': 3.0, 'text': 'Only one speaker.'}]
+        segments = [{'start': 0.0, 'end': 2.9, 'text': 'Only one speaker.'}]
         segments, result = diarizer.diarize_complete(samples, segments, sample_rate)
 
         assert len(segments) == 1

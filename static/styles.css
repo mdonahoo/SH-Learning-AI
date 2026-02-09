@@ -4335,3 +4335,62 @@ details[open] .details-icon { transform: rotate(90deg); }
         text-align: center;
     }
 }
+
+/* ===== TELEMETRY STATUS INDICATOR ===== */
+.telemetry-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 10px;
+    border-radius: var(--radius-pill);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.telemetry-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+/* Connected state - green */
+.telemetry-status.connected .telemetry-dot {
+    background: var(--success);
+    box-shadow: 0 0 6px var(--success);
+}
+.telemetry-status.connected {
+    color: var(--success);
+    border-color: rgba(0, 245, 160, 0.3);
+}
+
+/* Reconnecting state - orange pulsing */
+.telemetry-status.reconnecting .telemetry-dot {
+    background: var(--warning);
+    box-shadow: 0 0 6px var(--warning);
+    animation: telemetry-pulse 1.2s ease-in-out infinite;
+}
+.telemetry-status.reconnecting {
+    color: var(--warning);
+    border-color: rgba(255, 107, 53, 0.3);
+}
+
+/* Disconnected state - red */
+.telemetry-status.disconnected .telemetry-dot {
+    background: var(--danger);
+    box-shadow: 0 0 6px var(--danger);
+}
+.telemetry-status.disconnected {
+    color: var(--danger);
+    border-color: rgba(255, 71, 87, 0.3);
+}
+
+@keyframes telemetry-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}

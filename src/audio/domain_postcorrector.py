@@ -16,8 +16,9 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-import requests
 from dotenv import load_dotenv
+
+from src.llm.llm_client import LLMClient
 
 load_dotenv()
 
@@ -216,15 +217,23 @@ class TranscriptLLMCleaner:
             model: Model name (default from OLLAMA_MODEL env var)
             timeout: Request timeout in seconds (default from OLLAMA_TIMEOUT env var)
         """
-        self.host = host or os.getenv('OLLAMA_HOST', 'http://localhost:11434')
-        self.model = model or os.getenv('OLLAMA_MODEL', 'llama3.2')
-        self.timeout = timeout or int(os.getenv('OLLAMA_TIMEOUT', '120'))
         self.enabled = os.getenv(
             'LLM_TRANSCRIPT_CLEANUP', 'true'
         ).lower() == 'true'
 
-        # Ensure host doesn't end with slash
-        self.host = self.host.rstrip('/')
+        # Build LLMClient — only pass overrides when explicitly provided
+        llm_kwargs: Dict[str, Any] = {}
+        if host:
+            llm_kwargs['base_url'] = f"{host.rstrip('/')}/v1"
+        if model:
+            llm_kwargs['model'] = model
+        if timeout:
+            llm_kwargs['timeout'] = timeout
+
+        self._llm = LLMClient(**llm_kwargs) if llm_kwargs else LLMClient()
+        self.host = self._llm.base_url.replace('/v1', '')
+        self.model = self._llm.model
+        self.timeout = self._llm.timeout
 
     def clean_segments(
         self,
@@ -262,18 +271,10 @@ class TranscriptLLMCleaner:
             logger.info("LLM transcript cleanup disabled by environment variable")
             return segments, empty_stats
 
-        # Check Ollama availability
-        try:
-            response = requests.get(
-                f"{self.host}/api/tags", timeout=5
-            )
-            if response.status_code != 200:
-                empty_stats['skipped_reason'] = 'Ollama server not available'
-                logger.warning("LLM transcript cleanup skipped: Ollama not available")
-                return segments, empty_stats
-        except Exception as e:
-            empty_stats['skipped_reason'] = f'Ollama connection failed: {e}'
-            logger.warning(f"LLM transcript cleanup skipped: {e}")
+        # Check LLM backend availability
+        if not self._llm.check_available():
+            empty_stats['skipped_reason'] = 'LLM backend not available'
+            logger.warning("LLM transcript cleanup skipped: backend not available")
             return segments, empty_stats
 
         start_time = time.time()
@@ -428,47 +429,32 @@ class TranscriptLLMCleaner:
         metrics_out: Optional[Dict[str, Any]] = None
     ) -> Optional[str]:
         """
-        Send prompt to Ollama and return response.
+        Send prompt to LLM backend and return response.
 
         Args:
             prompt: The prompt to send
-            metrics_out: Optional dict to populate with Ollama response metrics
+            metrics_out: Optional dict to populate with response metrics
 
         Returns:
             Generated text or None if request failed
         """
-        try:
-            payload = {
-                "model": self.model,
-                "prompt": prompt,
-                "stream": False,
-                "options": {
-                    "temperature": 0.1,
-                    "top_k": 30,
-                    "num_predict": 500,
-                    "num_ctx": int(os.getenv('OLLAMA_NUM_CTX', '32768'))
-                }
-            }
+        result = self._llm.generate(
+            prompt=prompt,
+            temperature=0.1,
+            max_tokens=500,
+            top_k=30,
+        )
 
-            response = requests.post(
-                f"{self.host}/api/generate",
-                json=payload,
-                timeout=self.timeout
-            )
-            response.raise_for_status()
-
-            result = response.json()
-
-            if metrics_out is not None:
-                metrics_out['model'] = self.model
-                for key in (
-                    'prompt_eval_count', 'eval_count', 'total_duration',
-                    'load_duration', 'prompt_eval_duration', 'eval_duration'
-                ):
-                    metrics_out[key] = result.get(key, 0)
-
-            return result.get('response', '')
-
-        except Exception as e:
-            logger.warning(f"Ollama request failed: {e}")
+        if result is None:
             return None
+
+        if metrics_out is not None:
+            metrics_out['model'] = result.model
+            metrics_out['prompt_eval_count'] = result.prompt_tokens
+            metrics_out['eval_count'] = result.completion_tokens
+            metrics_out['total_duration'] = 0
+            metrics_out['load_duration'] = 0
+            metrics_out['prompt_eval_duration'] = 0
+            metrics_out['eval_duration'] = 0
+
+        return result.text

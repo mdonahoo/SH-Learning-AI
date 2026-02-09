@@ -214,23 +214,20 @@ invalid line
         assert corrections[1] == 'corrected one'
         assert corrections[2] == 'corrected two'
 
-    @patch('src.audio.domain_postcorrector.requests')
-    def test_clean_segments_with_mock(self, mock_requests, cleaner):
-        """Test full cleanup flow with mocked Ollama."""
-        # Mock connection check
-        mock_tags_response = Mock()
-        mock_tags_response.status_code = 200
+    def test_clean_segments_with_mock(self, cleaner):
+        """Test full cleanup flow with mocked LLMClient."""
+        from src.llm.llm_client import LLMResponse
 
-        # Mock generation response
-        mock_gen_response = Mock()
-        mock_gen_response.status_code = 200
-        mock_gen_response.json.return_value = {
-            'response': '1|within tolerance the hull is stable'
-        }
-        mock_gen_response.raise_for_status = Mock()
-
-        mock_requests.get.return_value = mock_tags_response
-        mock_requests.post.return_value = mock_gen_response
+        # Mock the internal LLMClient
+        cleaner._llm = MagicMock()
+        cleaner._llm.check_available.return_value = True
+        cleaner._llm.generate.return_value = LLMResponse(
+            text='1|within tolerance the hull is stable',
+            prompt_tokens=50,
+            completion_tokens=10,
+            total_tokens=60,
+            model='llama3.2',
+        )
 
         segments = [
             {'text': 'with intolerance the hull is stable', 'start': 0, 'end': 5},
@@ -255,10 +252,10 @@ invalid line
             assert 'skipped_reason' in stats
             assert result[0]['text'] == 'some text'
 
-    @patch('src.audio.domain_postcorrector.requests')
-    def test_ollama_unavailable(self, mock_requests, cleaner):
-        """Test graceful degradation when Ollama is down."""
-        mock_requests.get.side_effect = ConnectionError("Connection refused")
+    def test_ollama_unavailable(self, cleaner):
+        """Test graceful degradation when LLM backend is down."""
+        cleaner._llm = MagicMock()
+        cleaner._llm.check_available.return_value = False
 
         segments = [
             {'text': 'some text', 'start': 0, 'end': 3}
@@ -275,21 +272,15 @@ invalid line
         assert stats['batches_sent'] == 0
         assert stats['corrections_made'] == 0
 
-    @patch('src.audio.domain_postcorrector.requests')
-    def test_batch_size_splitting(self, mock_requests, cleaner):
+    def test_batch_size_splitting(self, cleaner):
         """Test that large segment lists are batched correctly."""
-        # Mock connection check
-        mock_tags_response = Mock()
-        mock_tags_response.status_code = 200
+        from src.llm.llm_client import LLMResponse
 
-        # Mock generation - return no corrections to simplify
-        mock_gen_response = Mock()
-        mock_gen_response.status_code = 200
-        mock_gen_response.json.return_value = {'response': ''}
-        mock_gen_response.raise_for_status = Mock()
-
-        mock_requests.get.return_value = mock_tags_response
-        mock_requests.post.return_value = mock_gen_response
+        cleaner._llm = MagicMock()
+        cleaner._llm.check_available.return_value = True
+        cleaner._llm.generate.return_value = LLMResponse(
+            text='', model='llama3.2',
+        )
 
         # Create 25 segments, batch_size=10
         segments = [
@@ -299,23 +290,18 @@ invalid line
 
         result, stats = cleaner.clean_segments(segments, batch_size=10)
         # Should have made 3 batches (10 + 10 + 5)
-        assert mock_requests.post.call_count == 3
+        assert cleaner._llm.generate.call_count == 3
 
-    @patch('src.audio.domain_postcorrector.requests')
-    def test_llm_does_not_apply_identical_text(self, mock_requests, cleaner):
+    def test_llm_does_not_apply_identical_text(self, cleaner):
         """Test that corrections identical to original are not counted."""
-        mock_tags_response = Mock()
-        mock_tags_response.status_code = 200
+        from src.llm.llm_client import LLMResponse
 
-        mock_gen_response = Mock()
-        mock_gen_response.status_code = 200
-        mock_gen_response.json.return_value = {
-            'response': '1|aye sir'  # same as original
-        }
-        mock_gen_response.raise_for_status = Mock()
-
-        mock_requests.get.return_value = mock_tags_response
-        mock_requests.post.return_value = mock_gen_response
+        cleaner._llm = MagicMock()
+        cleaner._llm.check_available.return_value = True
+        cleaner._llm.generate.return_value = LLMResponse(
+            text='1|aye sir',  # same as original
+            model='llama3.2',
+        )
 
         segments = [
             {'text': 'aye sir', 'start': 0, 'end': 2}
@@ -323,13 +309,10 @@ invalid line
         result, stats = cleaner.clean_segments(segments)
         assert stats['corrections_made'] == 0
 
-    @patch('src.audio.domain_postcorrector.requests')
-    def test_ollama_returns_error_status(self, mock_requests, cleaner):
-        """Test handling when Ollama tags endpoint returns non-200."""
-        mock_tags_response = Mock()
-        mock_tags_response.status_code = 500
-
-        mock_requests.get.return_value = mock_tags_response
+    def test_llm_backend_unavailable(self, cleaner):
+        """Test handling when LLM backend is unavailable."""
+        cleaner._llm = MagicMock()
+        cleaner._llm.check_available.return_value = False
 
         segments = [
             {'text': 'test text', 'start': 0, 'end': 3}

@@ -15,19 +15,56 @@ import logging
 import os
 from typing import Any, Dict, List, Optional, Tuple
 
-import httpx
 from dotenv import load_dotenv
+
+from src.llm.llm_client import LLMClient, LLMResponse, get_default_client
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 
 # Configuration
-OLLAMA_HOST = os.getenv('OLLAMA_HOST', 'http://localhost:11434')
-OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'qwen2.5:14b-instruct')
-OLLAMA_TIMEOUT = float(os.getenv('OLLAMA_TIMEOUT', '600'))  # 10 minutes for large models
-OLLAMA_NUM_CTX = int(os.getenv('OLLAMA_NUM_CTX', '32768'))
 LLM_REPORT_STYLE = os.getenv('LLM_REPORT_STYLE', 'entertaining')
+
+# Minimum completion tokens below which generation is not attempted
+MIN_COMPLETION_TOKENS = 200
+
+
+def _clamp_max_tokens(prompt: str, desired_max_tokens: int) -> Optional[int]:
+    """
+    Clamp max_tokens so prompt + completion fits within the model context.
+
+    Estimates prompt tokens at ~4 chars/token with a 10% safety margin,
+    then returns the smaller of desired_max_tokens and what remains.
+    Returns None if the remaining budget is below MIN_COMPLETION_TOKENS.
+
+    Args:
+        prompt: The full prompt string
+        desired_max_tokens: The ideal max_tokens value
+
+    Returns:
+        Clamped max_tokens, or None if there's not enough room
+    """
+    max_context = int(os.getenv('VLLM_MAX_MODEL_LEN', '0'))
+    if max_context <= 0:
+        # Not using vLLM or not configured — let the backend decide
+        return desired_max_tokens
+
+    estimated_prompt_tokens = int(len(prompt) / 3.2)  # conservative estimate
+    remaining = max_context - estimated_prompt_tokens
+    if remaining < MIN_COMPLETION_TOKENS:
+        logger.warning(
+            f"Prompt too large for context window: ~{estimated_prompt_tokens} tokens "
+            f"estimated vs {max_context} context. Only {remaining} tokens remaining."
+        )
+        return None
+    clamped = min(desired_max_tokens, remaining)
+    if clamped < desired_max_tokens:
+        logger.info(
+            f"Clamped max_tokens from {desired_max_tokens} to {clamped} "
+            f"(~{estimated_prompt_tokens} prompt tokens, {max_context} context)"
+        )
+    return clamped
 
 # Import hallucination prevention if available
 try:
@@ -46,14 +83,14 @@ except ImportError:
         "top_p": 0.9,
         "top_k": 40,
         "repeat_penalty": 1.1,
-        "num_predict": 1500,
+        "max_tokens": 1500,
     }
     STORY_PARAMS = {
         "temperature": 0.5,
         "top_p": 0.9,
         "top_k": 50,
         "repeat_penalty": 1.1,
-        "num_predict": 4000,
+        "max_tokens": 4000,
     }
 
 # Telemetry timeline builder for story event grouping
@@ -85,50 +122,43 @@ class NarrativeSummaryGenerator:
         Initialize narrative summary generator.
 
         Args:
-            ollama_host: Ollama API host URL
-            ollama_model: Model to use for generation
+            ollama_host: LLM API host URL (kept for backward compat)
+            ollama_model: Model to use for generation (kept for backward compat)
             timeout: Request timeout in seconds
             style: Report style (entertaining, professional, technical, casual)
         """
-        self.ollama_host = ollama_host or OLLAMA_HOST
-        self.ollama_model = ollama_model or OLLAMA_MODEL
-        self.timeout = timeout or OLLAMA_TIMEOUT
         self.style = style or LLM_REPORT_STYLE
-        self._client: Optional[httpx.AsyncClient] = None
 
-    async def _get_client(self) -> httpx.AsyncClient:
-        """Get or create HTTP client."""
-        if self._client is None:
-            self._client = httpx.AsyncClient(timeout=self.timeout)
-        return self._client
+        # Build LLMClient — only pass overrides when explicitly provided
+        llm_kwargs: Dict[str, Any] = {}
+        if ollama_host:
+            llm_kwargs['base_url'] = f"{ollama_host.rstrip('/')}/v1"
+        if ollama_model:
+            llm_kwargs['model'] = ollama_model
+        if timeout:
+            llm_kwargs['timeout'] = int(timeout)
 
-    async def close(self) -> None:
-        """Close HTTP client."""
-        if self._client:
-            await self._client.aclose()
-            self._client = None
+        self._llm = LLMClient(**llm_kwargs) if llm_kwargs else get_default_client()
+        self.model = self._llm.model
 
-    async def check_ollama_available(self) -> bool:
-        """Check if Ollama is available and model is loaded."""
+    async def check_llm_available(self) -> bool:
+        """Check if LLM backend is available and model is loaded."""
         try:
-            client = await self._get_client()
-            response = await client.get(f"{self.ollama_host}/api/tags")
-            if response.status_code != 200:
+            models = await self._llm.alist_models()
+            if not models:
                 return False
 
-            # Check if our model is available
-            data = response.json()
-            models = data.get('models', [])
-            model_names = [m.get('name', '') for m in models]
-            model_base = self.ollama_model.split(':')[0]
-
+            model_base = self.model.split(':')[0]
             return any(
-                self.ollama_model in name or model_base in name
-                for name in model_names
+                self.model in name or model_base in name
+                for name in models
             )
         except Exception as e:
-            logger.debug(f"Ollama not available: {e}")
+            logger.debug(f"LLM backend not available: {e}")
             return False
+
+    # Backward-compat alias
+    check_ollama_available = check_llm_available
 
     def _assess_metric_reliability(self, analysis: Dict[str, Any]) -> Dict[str, float]:
         """
@@ -753,61 +783,48 @@ Generate the structured debrief now:"""
         Returns:
             Dictionary with summary and metadata, or None if generation failed
         """
-        # Check if Ollama is available
-        if not await self.check_ollama_available():
-            logger.warning("Ollama not available for narrative generation")
+        # Check if LLM backend is available
+        if not await self.check_llm_available():
+            logger.warning("LLM backend not available for narrative generation")
             return None
 
         try:
             prompt = self._build_prompt(analysis)
 
-            client = await self._get_client()
-
-            logger.info(f"Generating narrative summary with {self.ollama_model} (anti-hallucination params)...")
-
-            # Use anti-hallucination parameters for factual content
-            response = await client.post(
-                f"{self.ollama_host}/api/generate",
-                json={
-                    "model": self.ollama_model,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {
-                        "temperature": ANTI_HALLUCINATION_PARAMS["temperature"],
-                        "num_predict": 2500,
-                        "num_ctx": OLLAMA_NUM_CTX,
-                        "top_p": ANTI_HALLUCINATION_PARAMS["top_p"],
-                        "top_k": ANTI_HALLUCINATION_PARAMS["top_k"],
-                        "repeat_penalty": ANTI_HALLUCINATION_PARAMS["repeat_penalty"],
-                    }
-                },
-                timeout=self.timeout
-            )
-
-            if response.status_code != 200:
-                logger.error(f"Ollama returned status {response.status_code}")
+            max_tokens = _clamp_max_tokens(prompt, 2500)
+            if max_tokens is None:
+                logger.warning("Prompt too large for available context window")
                 return None
 
-            result = response.json()
-            narrative = result.get('response', '').strip()
+            logger.info(f"Generating narrative summary with {self.model} (anti-hallucination params)...")
+
+            result = await self._llm.agenerate(
+                prompt=prompt,
+                temperature=ANTI_HALLUCINATION_PARAMS["temperature"],
+                max_tokens=max_tokens,
+                top_p=ANTI_HALLUCINATION_PARAMS["top_p"],
+                top_k=ANTI_HALLUCINATION_PARAMS["top_k"],
+                repeat_penalty=ANTI_HALLUCINATION_PARAMS["repeat_penalty"],
+            )
+
+            if result is None:
+                logger.warning("LLM generation returned None")
+                return None
+
+            narrative = result.text.strip()
 
             if not narrative:
-                logger.warning("Empty response from Ollama")
+                logger.warning("Empty response from LLM")
                 return None
 
             logger.info(f"Generated narrative summary: {len(narrative)} characters")
 
-            # Extract LLM token metrics from Ollama response
-            prompt_tokens = result.get('prompt_eval_count', 0)
-            completion_tokens = result.get('eval_count', 0)
-            eval_duration_ns = result.get('eval_duration', 0)
+            # Build LLM token metrics from LLMResponse
             llm_metrics: Dict[str, Any] = {
-                'prompt_tokens': prompt_tokens,
-                'completion_tokens': completion_tokens,
-                'total_tokens': prompt_tokens + completion_tokens,
-                'tokens_per_second': round(
-                    completion_tokens / (eval_duration_ns / 1e9), 2
-                ) if eval_duration_ns > 0 and completion_tokens > 0 else 0.0,
+                'prompt_tokens': result.prompt_tokens,
+                'completion_tokens': result.completion_tokens,
+                'total_tokens': result.total_tokens,
+                'tokens_per_second': result.tokens_per_second,
                 'prompt_size_chars': len(prompt),
             }
 
@@ -838,7 +855,7 @@ Generate the structured debrief now:"""
 
             return {
                 'narrative': narrative,
-                'model': self.ollama_model,
+                'model': self.model,
                 'style': self.style,
                 'generated': True,
                 'validation_issues': len(validation_issues) if validation_issues else 0,
@@ -846,9 +863,6 @@ Generate the structured debrief now:"""
                 'llm_metrics': llm_metrics,
             }
 
-        except httpx.TimeoutException:
-            logger.error(f"Ollama request timed out after {self.timeout}s")
-            return None
         except Exception as e:
             logger.error(f"Narrative generation failed: {e}")
             return None
@@ -868,85 +882,58 @@ Generate the structured debrief now:"""
         Returns:
             Dictionary with summary and metadata, or None if generation failed
         """
-        if not await self.check_ollama_available():
-            logger.warning("Ollama not available for narrative generation")
+        if not await self.check_llm_available():
+            logger.warning("LLM backend not available for narrative generation")
             return None
 
         try:
             prompt = self._build_prompt(analysis)
-            client = await self._get_client()
 
-            logger.info(f"Generating narrative summary with {self.ollama_model} (streaming)...")
+            max_tokens = _clamp_max_tokens(prompt, 2500)
+            if max_tokens is None:
+                logger.warning("Prompt too large for available context window")
+                return None
+
+            logger.info(f"Generating narrative summary with {self.model} (streaming)...")
 
             if progress_callback:
                 progress_callback(0, False)
 
-            # Use streaming to show progress (with anti-hallucination params)
-            async with client.stream(
-                'POST',
-                f"{self.ollama_host}/api/generate",
-                json={
-                    "model": self.ollama_model,
-                    "prompt": prompt,
-                    "stream": True,
-                    "options": {
-                        "temperature": ANTI_HALLUCINATION_PARAMS["temperature"],
-                        "num_predict": 2500,
-                        "num_ctx": OLLAMA_NUM_CTX,
-                        "top_p": ANTI_HALLUCINATION_PARAMS["top_p"],
-                        "top_k": ANTI_HALLUCINATION_PARAMS["top_k"],
-                        "repeat_penalty": ANTI_HALLUCINATION_PARAMS["repeat_penalty"],
-                    }
-                },
-                timeout=self.timeout
-            ) as response:
-                if response.status_code != 200:
-                    logger.error(f"Ollama returned status {response.status_code}")
-                    return None
+            narrative_parts = []
+            chars_generated = 0
 
-                narrative_parts = []
-                chars_generated = 0
-
-                async for line in response.aiter_lines():
-                    if line:
-                        try:
-                            import json
-                            chunk = json.loads(line)
-                            text = chunk.get('response', '')
-                            if text:
-                                narrative_parts.append(text)
-                                chars_generated += len(text)
-
-                                if progress_callback:
-                                    progress_callback(chars_generated, False)
-
-                            # Check if done
-                            if chunk.get('done', False):
-                                break
-                        except json.JSONDecodeError:
-                            continue
-
-                narrative = ''.join(narrative_parts).strip()
+            async for chunk_text in self._llm.agenerate_streaming(
+                prompt=prompt,
+                temperature=ANTI_HALLUCINATION_PARAMS["temperature"],
+                max_tokens=max_tokens,
+                top_p=ANTI_HALLUCINATION_PARAMS["top_p"],
+                top_k=ANTI_HALLUCINATION_PARAMS["top_k"],
+                repeat_penalty=ANTI_HALLUCINATION_PARAMS["repeat_penalty"],
+            ):
+                narrative_parts.append(chunk_text)
+                chars_generated += len(chunk_text)
 
                 if progress_callback:
-                    progress_callback(len(narrative), True)
+                    progress_callback(chars_generated, False)
 
-                if not narrative:
-                    logger.warning("Empty response from Ollama")
-                    return None
+            narrative = ''.join(narrative_parts).strip()
 
-                logger.info(f"Generated narrative summary: {len(narrative)} characters")
+            if progress_callback:
+                progress_callback(len(narrative), True)
 
-                return {
-                    'narrative': narrative,
-                    'model': self.ollama_model,
-                    'style': self.style,
-                    'generated': True
-                }
+            if not narrative:
+                logger.warning("Empty response from LLM")
+                return None
 
-        except httpx.TimeoutException:
-            logger.error(f"Ollama request timed out after {self.timeout}s")
-            return None
+            logger.info(f"Generated narrative summary: {len(narrative)} characters")
+
+            return {
+                'narrative': narrative,
+                'model': self.model,
+                'style': self.style,
+                'generated': True
+            }
+
         except Exception as e:
             logger.error(f"Narrative generation failed: {e}")
             return None
@@ -1316,59 +1303,47 @@ Write your narrative nonfiction story now:"""
         Returns:
             Dictionary with story and metadata, or None if generation failed
         """
-        if not await self.check_ollama_available():
-            logger.warning("Ollama not available for story generation")
+        if not await self.check_llm_available():
+            logger.warning("LLM backend not available for story generation")
             return None
 
         try:
             prompt = self._build_story_prompt(analysis)
-            client = await self._get_client()
 
-            logger.info(f"Generating story narrative with {self.ollama_model} (story params)...")
-
-            # Use story-specific parameters (slightly more creative but still constrained)
-            response = await client.post(
-                f"{self.ollama_host}/api/generate",
-                json={
-                    "model": self.ollama_model,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {
-                        "temperature": STORY_PARAMS["temperature"],
-                        "num_predict": STORY_PARAMS["num_predict"],
-                        "num_ctx": OLLAMA_NUM_CTX,
-                        "top_p": STORY_PARAMS["top_p"],
-                        "top_k": STORY_PARAMS["top_k"],
-                        "repeat_penalty": STORY_PARAMS["repeat_penalty"],
-                    }
-                },
-                timeout=self.timeout
-            )
-
-            if response.status_code != 200:
-                logger.error(f"Ollama returned status {response.status_code}")
+            max_tokens = _clamp_max_tokens(prompt, STORY_PARAMS["max_tokens"])
+            if max_tokens is None:
+                logger.warning("Prompt too large for available context window")
                 return None
 
-            result = response.json()
-            story = result.get('response', '').strip()
+            logger.info(f"Generating story narrative with {self.model} (story params)...")
+
+            result = await self._llm.agenerate(
+                prompt=prompt,
+                temperature=STORY_PARAMS["temperature"],
+                max_tokens=max_tokens,
+                top_p=STORY_PARAMS["top_p"],
+                top_k=STORY_PARAMS["top_k"],
+                repeat_penalty=STORY_PARAMS["repeat_penalty"],
+            )
+
+            if result is None:
+                logger.warning("LLM generation returned None")
+                return None
+
+            story = result.text.strip()
 
             if not story:
-                logger.warning("Empty response from Ollama")
+                logger.warning("Empty response from LLM")
                 return None
 
             logger.info(f"Generated story narrative: {len(story)} characters")
 
-            # Extract LLM token metrics from Ollama response
-            prompt_tokens = result.get('prompt_eval_count', 0)
-            completion_tokens = result.get('eval_count', 0)
-            eval_duration_ns = result.get('eval_duration', 0)
+            # Build LLM token metrics from LLMResponse
             llm_metrics: Dict[str, Any] = {
-                'prompt_tokens': prompt_tokens,
-                'completion_tokens': completion_tokens,
-                'total_tokens': prompt_tokens + completion_tokens,
-                'tokens_per_second': round(
-                    completion_tokens / (eval_duration_ns / 1e9), 2
-                ) if eval_duration_ns > 0 and completion_tokens > 0 else 0.0,
+                'prompt_tokens': result.prompt_tokens,
+                'completion_tokens': result.completion_tokens,
+                'total_tokens': result.total_tokens,
+                'tokens_per_second': result.tokens_per_second,
                 'prompt_size_chars': len(prompt),
             }
 
@@ -1387,7 +1362,7 @@ Write your narrative nonfiction story now:"""
 
             return {
                 'story': story,
-                'model': self.ollama_model,
+                'model': self.model,
                 'style': 'narrative',
                 'generated': True,
                 'validation_issues': len(validation_issues) if validation_issues else 0,
@@ -1417,10 +1392,7 @@ def generate_summary_sync(analysis: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
-    try:
-        return loop.run_until_complete(generator.generate_summary(analysis))
-    finally:
-        loop.run_until_complete(generator.close())
+    return loop.run_until_complete(generator.generate_summary(analysis))
 
 
 def generate_story_sync(analysis: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -1441,7 +1413,4 @@ def generate_story_sync(analysis: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
-    try:
-        return loop.run_until_complete(generator.generate_story(analysis))
-    finally:
-        loop.run_until_complete(generator.close())
+    return loop.run_until_complete(generator.generate_story(analysis))

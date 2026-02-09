@@ -256,6 +256,81 @@ class MetadataUpdate(BaseModel):
     starred: Optional[bool] = None
 
 
+def _save_telemetry_snapshot(session_id: str, session: dict) -> Optional[str]:
+    """
+    Save a periodic snapshot of telemetry data for an active session.
+
+    Overwrites the same file each time so cumulative data is always on disk.
+
+    Args:
+        session_id: The telemetry session identifier.
+        session: The session dict from _telemetry_sessions.
+
+    Returns:
+        Path to the snapshot file, or None on failure.
+    """
+    try:
+        from datetime import datetime
+
+        client = session.get('client')
+        if not client:
+            return None
+
+        ws_mgr = get_workspace_manager()
+        workspace_id = session.get('workspace_id', '')
+        dirs = ws_mgr.ensure_workspace(workspace_id)
+        telemetry_dir = dirs['telemetry']
+
+        telemetry_file = telemetry_dir / f"telemetry_{session_id}.json"
+
+        start_time = session['start_time']
+        now = datetime.now()
+        duration = (now - start_time).total_seconds()
+
+        telemetry_data = {
+            'session_id': session_id,
+            'start_time': start_time.isoformat(),
+            'snapshot_time': now.isoformat(),
+            'duration_seconds': duration,
+            'status': 'recording',
+            'packet_counts': dict(client.packet_counts),
+            'tracked_events': client.get_tracked_events(),
+            'tracked_events_count': len(client.get_tracked_events()),
+            'vessel_data': client.vessel_data,
+            'mission_data': client.mission_data,
+            'combat_data': client.combat_enhanced,
+            'connection_health': client.connection_health,
+            'last_packets': {
+                k: v for k, v in client.last_packets.items()
+                if k in [
+                    'CONTACTS', 'MISSION', 'ALERT',
+                    'DAMAGE', 'PLAYER-OBJECTIVES',
+                ]
+            },
+        }
+
+        with open(telemetry_file, 'w') as f:
+            json.dump(telemetry_data, f, indent=2, default=str)
+
+        session['last_snapshot_time'] = now.isoformat()
+        logger.debug(f"Telemetry snapshot saved for session {session_id}")
+        return str(telemetry_file)
+
+    except Exception as e:
+        logger.warning(f"Telemetry snapshot failed for session {session_id}: {e}")
+        return None
+
+
+async def _telemetry_snapshot_loop() -> None:
+    """Background task: save a telemetry snapshot every 30 seconds."""
+    while True:
+        await asyncio.sleep(30)
+        for sid, session in list(_telemetry_sessions.items()):
+            if session.get('status') == 'recording':
+                # Run synchronous I/O in a thread so we don't block the loop
+                await asyncio.to_thread(_save_telemetry_snapshot, sid, session)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler for model loading."""
@@ -267,9 +342,31 @@ async def lifespan(app: FastAPI):
         logger.info("Preloading Whisper model...")
         processor.load_model()
 
+    # Start periodic telemetry snapshot task
+    snapshot_task = asyncio.create_task(_telemetry_snapshot_loop())
+
     yield
 
     logger.info("Shutting down audio analysis server...")
+
+    # Cancel snapshot task
+    snapshot_task.cancel()
+    try:
+        await snapshot_task
+    except asyncio.CancelledError:
+        pass
+
+    # Save final snapshots and disconnect active telemetry clients
+    for sid, session in list(_telemetry_sessions.items()):
+        if session.get('status') == 'recording':
+            _save_telemetry_snapshot(sid, session)
+            client = session.get('client')
+            if client:
+                try:
+                    client.disconnect()
+                except Exception as e:
+                    logger.warning(f"Error disconnecting telemetry client {sid}: {e}")
+            session['status'] = 'stopped'
 
 
 def create_app() -> FastAPI:
@@ -395,7 +492,7 @@ async def get_services_status():
             details="Install faster-whisper package"
         )
 
-    # Check Ollama status
+    # Check Ollama/LLM status
     ollama_status = ServiceStatus(
         available=False,
         status="Not connected",
@@ -403,57 +500,43 @@ async def get_services_status():
     )
 
     try:
-        ollama_host = os.getenv('OLLAMA_HOST', 'http://localhost:11434')
-        ollama_model = os.getenv('OLLAMA_MODEL', 'llama3.2')
+        from src.llm.llm_client import LLMClient
 
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            # Check if Ollama is running
-            response = await client.get(f"{ollama_host}/api/tags")
-            if response.status_code == 200:
-                tags_data = response.json()
-                models = tags_data.get('models', [])
-                # Get both full names and base names for matching
-                full_names = [m.get('name', '') for m in models]
-                base_names = [name.split(':')[0] for name in full_names]
-                ollama_model_base = ollama_model.split(':')[0]
+        ollama_model = os.getenv('LLM_MODEL') or os.getenv('OLLAMA_MODEL', 'llama3.2')
+        llm = LLMClient(timeout=10)
 
-                # Check if configured model exists (match full name or base name)
-                model_found = (
-                    ollama_model in full_names or
-                    ollama_model_base in base_names or
-                    any(ollama_model in name for name in full_names)
+        model_list = await llm.alist_models()
+        if model_list:
+            # Get both full names and base names for matching
+            full_names = model_list
+            base_names = [name.split(':')[0] for name in full_names]
+            ollama_model_base = ollama_model.split(':')[0]
+
+            # Check if configured model exists (match full name or base name)
+            model_found = (
+                ollama_model in full_names or
+                ollama_model_base in base_names or
+                any(ollama_model in name for name in full_names)
+            )
+
+            if model_found:
+                ollama_status = ServiceStatus(
+                    available=True,
+                    status="Ready",
+                    details=f"Model: {ollama_model} ({len(model_list)} models available)"
                 )
-
-                if model_found:
-                    ollama_status = ServiceStatus(
-                        available=True,
-                        status="Ready",
-                        details=f"Model: {ollama_model} ({len(models)} models available)"
-                    )
-                else:
-                    ollama_status = ServiceStatus(
-                        available=True,
-                        status="Running (model not found)",
-                        details=f"Model '{ollama_model}' not found. Available: {', '.join(full_names[:3])}"
-                    )
             else:
                 ollama_status = ServiceStatus(
-                    available=False,
-                    status="Error",
-                    details=f"HTTP {response.status_code}"
+                    available=True,
+                    status="Running (model not found)",
+                    details=f"Model '{ollama_model}' not found. Available: {', '.join(full_names[:3])}"
                 )
-    except httpx.ConnectError:
-        ollama_status = ServiceStatus(
-            available=False,
-            status="Not running",
-            details=f"Cannot connect to {os.getenv('OLLAMA_HOST', 'http://localhost:11434')}"
-        )
-    except httpx.TimeoutException:
-        ollama_status = ServiceStatus(
-            available=False,
-            status="Timeout",
-            details="Connection timed out"
-        )
+        else:
+            ollama_status = ServiceStatus(
+                available=False,
+                status="Not running",
+                details="No models returned from backend"
+            )
     except Exception as e:
         ollama_status = ServiceStatus(
             available=False,
@@ -811,13 +894,20 @@ async def get_telemetry_status(
 
     client = session.get('client')
 
-    return {
+    response = {
         'session_id': session_id,
         'status': session['status'],
         'start_time': session['start_time'].isoformat(),
         'events_captured': sum(client.packet_counts.values()) if client else 0,
-        'packet_types': len(client.packet_counts) if client else 0
+        'packet_types': len(client.packet_counts) if client else 0,
+        'last_snapshot_time': session.get('last_snapshot_time'),
     }
+
+    # Include connection health when client is available
+    if client and hasattr(client, 'connection_health'):
+        response['connection_health'] = client.connection_health
+
+    return response
 
 
 @app.get("/api/telemetry/{session_id}/download")
@@ -1492,7 +1582,7 @@ async def regenerate_narrative_stream(
 
     async def generate_stream():
         import time
-        import httpx
+        from src.llm.llm_client import LLMClient
 
         start_time = time.time()
         generator = NarrativeSummaryGenerator()
@@ -1504,50 +1594,27 @@ async def regenerate_narrative_stream(
         yield f"data: {json.dumps({'type': 'start', 'message': 'Starting narrative generation...'})}\n\n"
 
         try:
-            # Check Ollama availability
-            if not await generator.check_ollama_available():
-                yield f"data: {json.dumps({'type': 'error', 'message': 'Ollama not available'})}\n\n"
+            # Check LLM availability
+            if not await generator.check_llm_available():
+                yield f"data: {json.dumps({'type': 'error', 'message': 'LLM not available'})}\n\n"
                 return
 
             # Build prompt using results data
             prompt = generator._build_prompt(results_data)
             yield f"data: {json.dumps({'type': 'progress', 'chars': 0, 'message': 'Sending to LLM...'})}\n\n"
 
-            # Stream from Ollama
-            client = await generator._get_client()
+            # Stream from LLM backend
             narrative_parts = []
             chars_generated = 0
 
-            async with client.stream(
-                'POST',
-                f"{generator.ollama_host}/api/generate",
-                json={
-                    "model": generator.ollama_model,
-                    "prompt": prompt,
-                    "stream": True,
-                    "options": {"temperature": 0.3, "num_predict": 2500, "num_ctx": int(os.getenv('OLLAMA_NUM_CTX', '32768'))}
-                },
-                timeout=float(os.getenv('OLLAMA_TIMEOUT', '600'))
-            ) as response:
-                if response.status_code != 200:
-                    yield f"data: {json.dumps({'type': 'error', 'message': f'Ollama error: {response.status_code}'})}\n\n"
-                    return
-
-                async for line in response.aiter_lines():
-                    if line:
-                        try:
-                            chunk = json.loads(line)
-                            text = chunk.get('response', '')
-                            if text:
-                                narrative_parts.append(text)
-                                chars_generated += len(text)
-                                # Send progress every few characters
-                                yield f"data: {json.dumps({'type': 'progress', 'chars': chars_generated, 'message': f'Generating... {chars_generated} chars'})}\n\n"
-
-                            if chunk.get('done', False):
-                                break
-                        except json.JSONDecodeError:
-                            continue
+            async for chunk_text in generator._llm.agenerate_streaming(
+                prompt=prompt,
+                temperature=0.3,
+                max_tokens=2500,
+            ):
+                narrative_parts.append(chunk_text)
+                chars_generated += len(chunk_text)
+                yield f"data: {json.dumps({'type': 'progress', 'chars': chars_generated, 'message': f'Generating... {chars_generated} chars'})}\n\n"
 
             narrative = ''.join(narrative_parts).strip()
             generation_time = round(time.time() - start_time, 1)
@@ -1629,54 +1696,28 @@ async def regenerate_story_stream(
         yield f"data: {json.dumps({'type': 'start', 'message': 'Starting story generation...'})}\n\n"
 
         try:
-            if not await generator.check_ollama_available():
-                yield f"data: {json.dumps({'type': 'error', 'message': 'Ollama not available'})}\n\n"
+            if not await generator.check_llm_available():
+                yield f"data: {json.dumps({'type': 'error', 'message': 'LLM not available'})}\n\n"
                 return
 
             # Build story prompt using results data
             prompt = generator._build_story_prompt(results_data)
             yield f"data: {json.dumps({'type': 'progress', 'chars': 0, 'message': 'Sending to LLM...'})}\n\n"
 
-            client = await generator._get_client()
             story_parts = []
             chars_generated = 0
 
-            async with client.stream(
-                'POST',
-                f"{generator.ollama_host}/api/generate",
-                json={
-                    "model": generator.ollama_model,
-                    "prompt": prompt,
-                    "stream": True,
-                    "options": {
-                        "temperature": 0.5,
-                        "top_p": 0.9,
-                        "top_k": 50,
-                        "repeat_penalty": 1.1,
-                        "num_predict": 2500,
-                        "num_ctx": int(os.getenv('OLLAMA_NUM_CTX', '32768'))
-                    }
-                },
-                timeout=float(os.getenv('OLLAMA_TIMEOUT', '600'))
-            ) as response:
-                if response.status_code != 200:
-                    yield f"data: {json.dumps({'type': 'error', 'message': f'Ollama error: {response.status_code}'})}\n\n"
-                    return
-
-                async for line in response.aiter_lines():
-                    if line:
-                        try:
-                            chunk = json.loads(line)
-                            text = chunk.get('response', '')
-                            if text:
-                                story_parts.append(text)
-                                chars_generated += len(text)
-                                yield f"data: {json.dumps({'type': 'progress', 'chars': chars_generated, 'message': f'Writing... {chars_generated} chars'})}\n\n"
-
-                            if chunk.get('done', False):
-                                break
-                        except json.JSONDecodeError:
-                            continue
+            async for chunk_text in generator._llm.agenerate_streaming(
+                prompt=prompt,
+                temperature=0.5,
+                max_tokens=2500,
+                top_p=0.9,
+                top_k=50,
+                repeat_penalty=1.1,
+            ):
+                story_parts.append(chunk_text)
+                chars_generated += len(chunk_text)
+                yield f"data: {json.dumps({'type': 'progress', 'chars': chars_generated, 'message': f'Writing... {chars_generated} chars'})}\n\n"
 
             story = ''.join(story_parts).strip()
             generation_time = round(time.time() - start_time, 1)

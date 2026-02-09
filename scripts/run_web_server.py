@@ -27,6 +27,43 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _maybe_start_vllm() -> None:
+    """
+    Auto-start vLLM server if VLLM_AUTO_START=true.
+
+    Called before uvicorn to ensure the LLM backend is ready before
+    any HTTP requests arrive. Skips if vLLM is already running.
+    Does not abort the web server if vLLM fails to start.
+    """
+    auto_start = os.getenv('VLLM_AUTO_START', 'false').lower() == 'true'
+    if not auto_start:
+        return
+
+    logger.info("VLLM_AUTO_START=true — checking vLLM server...")
+
+    try:
+        from scripts.vllm_setup import is_vllm_running, start_server
+
+        if is_vllm_running():
+            logger.info("vLLM server already running, skipping auto-start")
+            return
+
+        logger.info("Starting vLLM server (this may take several minutes)...")
+        success = start_server()
+        if success:
+            logger.info("vLLM server started successfully")
+        else:
+            logger.warning(
+                "vLLM server failed to start — web server will continue without it"
+            )
+    except ImportError:
+        logger.warning(
+            "Could not import vllm_setup — vLLM auto-start unavailable"
+        )
+    except Exception as e:
+        logger.warning(f"vLLM auto-start failed: {e} — continuing without vLLM")
+
+
 def main():
     """Start the web server."""
     parser = argparse.ArgumentParser(
@@ -68,6 +105,9 @@ def main():
 
     try:
         import uvicorn
+
+        # Auto-start vLLM if configured (before any HTTP workers spawn)
+        _maybe_start_vllm()
 
         logger.info(f"Starting web server at http://{args.host}:{args.port}")
         logger.info("Press Ctrl+C to stop")

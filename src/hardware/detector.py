@@ -51,6 +51,8 @@ class HardwareProfile:
         ram_available_mb: Available system RAM in MB
         ollama_available: Whether Ollama server is reachable
         ollama_models: List of model names available on Ollama
+        vllm_available: Whether vLLM server is reachable
+        vllm_models: List of model IDs available on vLLM
         detected_at: Timestamp when profile was created
     """
 
@@ -61,6 +63,8 @@ class HardwareProfile:
     ram_available_mb: int = 0
     ollama_available: bool = False
     ollama_models: List[str] = field(default_factory=list)
+    vllm_available: bool = False
+    vllm_models: List[str] = field(default_factory=list)
     detected_at: float = 0.0
 
     @property
@@ -105,6 +109,11 @@ class HardwareProfile:
         else:
             parts.append("Ollama: not available")
 
+        if self.vllm_available:
+            parts.append(f"vLLM: available ({len(self.vllm_models)} models)")
+        else:
+            parts.append("vLLM: not available")
+
         return " | ".join(parts)
 
 
@@ -120,6 +129,7 @@ class HardwareDetector:
         """Initialize hardware detector."""
         self._profile: Optional[HardwareProfile] = None
         self._ollama_host = os.getenv('OLLAMA_HOST', 'http://localhost:11434')
+        self._vllm_port = os.getenv('VLLM_PORT', '8100')
         logger.debug("HardwareDetector initialized")
 
     @property
@@ -160,6 +170,11 @@ class HardwareDetector:
         available, models = self._probe_ollama()
         profile.ollama_available = available
         profile.ollama_models = models
+
+        # Probe vLLM
+        vllm_available, vllm_models = self._probe_vllm()
+        profile.vllm_available = vllm_available
+        profile.vllm_models = vllm_models
 
         self._profile = profile
 
@@ -287,4 +302,35 @@ class HardwareDetector:
 
         except Exception as e:
             logger.debug(f"Ollama probe failed: {e}")
+            return False, []
+
+    def _probe_vllm(self) -> tuple:
+        """
+        Check if vLLM server is reachable and list available models.
+
+        Probes the OpenAI-compatible ``/v1/models`` endpoint.
+
+        Returns:
+            Tuple of (is_available, list_of_model_ids)
+        """
+        try:
+            import urllib.request
+            import json
+
+            url = f"http://localhost:{self._vllm_port}/v1/models"
+            req = urllib.request.Request(url, method='GET')
+            req.add_header('Accept', 'application/json')
+
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                if resp.status == 200:
+                    data = json.loads(resp.read().decode('utf-8'))
+                    models = [
+                        m.get('id', '') for m in data.get('data', [])
+                    ]
+                    return True, models
+
+            return False, []
+
+        except Exception as e:
+            logger.debug(f"vLLM probe failed: {e}")
             return False, []

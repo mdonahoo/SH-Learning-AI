@@ -54,8 +54,11 @@ resemblyzer>=0.1.3
 # HTTP client for API requests (may already be installed)
 requests>=2.31.0
 
-# Ollama Python client for local LLM inference
-ollama>=0.4.0
+# OpenAI-compatible SDK for LLM inference (works with Ollama, vLLM, OpenAI)
+openai>=1.0.0
+
+# High-throughput GPU inference server (optional, requires CUDA GPU)
+vllm>=0.15.0
 
 # ============================================
 # Web Server

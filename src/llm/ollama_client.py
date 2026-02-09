@@ -11,8 +11,10 @@ import sys
 import time
 import threading
 from typing import Dict, Any, List, Optional, Callable, Tuple
-import requests
+
 from dotenv import load_dotenv
+
+from src.llm.llm_client import LLMClient, LLMResponse
 
 load_dotenv()
 
@@ -167,13 +169,21 @@ class OllamaClient:
             model: Model name to use (default from OLLAMA_MODEL env var)
             timeout: Request timeout in seconds (default from OLLAMA_TIMEOUT env var)
         """
-        self.host = host or os.getenv('OLLAMA_HOST', 'http://localhost:11434')
-        self.model = model or os.getenv('OLLAMA_MODEL', 'llama3.2')
-        self.timeout = timeout or int(os.getenv('OLLAMA_TIMEOUT', '120'))
-        self.num_ctx = int(os.getenv('OLLAMA_NUM_CTX', '32768'))
+        # Build LLMClient — only pass overrides when explicitly provided
+        llm_kwargs: Dict[str, Any] = {}
+        if host:
+            llm_kwargs['base_url'] = f"{host.rstrip('/')}/v1"
+        if model:
+            llm_kwargs['model'] = model
+        if timeout:
+            llm_kwargs['timeout'] = timeout
 
-        # Ensure host doesn't end with slash
-        self.host = self.host.rstrip('/')
+        self._llm = LLMClient(**llm_kwargs) if llm_kwargs else LLMClient()
+
+        # Expose resolved values for callers that read them
+        self.host = self._llm.base_url.replace('/v1', '')
+        self.model = self._llm.model
+        self.timeout = self._llm.timeout
 
         logger.info(f"Ollama client initialized: {self.host}, model={self.model}")
 
@@ -184,12 +194,7 @@ class OllamaClient:
         Returns:
             True if server is accessible, False otherwise
         """
-        try:
-            response = requests.get(f"{self.host}/api/tags", timeout=5)
-            return response.status_code == 200
-        except Exception as e:
-            logger.error(f"Failed to connect to Ollama: {e}")
-            return False
+        return self._llm.check_available()
 
     def list_models(self) -> List[str]:
         """
@@ -198,14 +203,7 @@ class OllamaClient:
         Returns:
             List of model names
         """
-        try:
-            response = requests.get(f"{self.host}/api/tags", timeout=5)
-            response.raise_for_status()
-            data = response.json()
-            return [model['name'] for model in data.get('models', [])]
-        except Exception as e:
-            logger.error(f"Failed to list models: {e}")
-            return []
+        return self._llm.list_models()
 
     def generate(
         self,
@@ -229,71 +227,35 @@ class OllamaClient:
             top_p: Nucleus sampling threshold (0.0-1.0)
             top_k: Top-k sampling limit
             repeat_penalty: Penalty for repeating tokens (1.0 = no penalty)
-            metrics_out: Optional dict to populate with Ollama response metrics
-                (prompt_eval_count, eval_count, total_duration, etc.)
+            metrics_out: Optional dict to populate with response metrics
 
         Returns:
             Generated text or None if generation failed
         """
-        try:
-            options = {
-                "temperature": temperature,
-                "num_ctx": self.num_ctx,
-            }
+        result = self._llm.generate(
+            prompt=prompt,
+            system=system,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            top_p=top_p,
+            top_k=top_k,
+            repeat_penalty=repeat_penalty,
+        )
 
-            # Add optional sampling parameters for hallucination reduction
-            if top_p is not None:
-                options["top_p"] = top_p
-            if top_k is not None:
-                options["top_k"] = top_k
-            if repeat_penalty is not None:
-                options["repeat_penalty"] = repeat_penalty
-            if max_tokens:
-                options["num_predict"] = max_tokens
-
-            payload = {
-                "model": self.model,
-                "prompt": prompt,
-                "stream": False,
-                "options": options
-            }
-
-            if system:
-                payload["system"] = system
-
-            logger.info(f"Sending request to Ollama (model={self.model}, temp={temperature})")
-
-            response = requests.post(
-                f"{self.host}/api/generate",
-                json=payload,
-                timeout=self.timeout
-            )
-            response.raise_for_status()
-
-            result = response.json()
-            generated_text = result.get('response', '')
-
-            # Populate caller-provided metrics dict with Ollama response stats
-            if metrics_out is not None:
-                metrics_out['model'] = self.model
-                for key in (
-                    'prompt_eval_count', 'eval_count', 'total_duration',
-                    'load_duration', 'prompt_eval_duration', 'eval_duration'
-                ):
-                    metrics_out[key] = result.get(key, 0)
-
-            logger.info(f"✓ Generated {len(generated_text)} characters")
-            return generated_text
-
-        except requests.exceptions.Timeout:
-            logger.error(f"Ollama request timed out after {self.timeout}s")
+        if result is None:
             return None
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Ollama request failed: {e}")
-            return None
-        except Exception as e:
-            logger.error(f"Unexpected error during generation: {e}")
-            return None
+
+        # Populate caller-provided metrics dict for backward compatibility
+        if metrics_out is not None:
+            metrics_out['model'] = result.model
+            metrics_out['prompt_eval_count'] = result.prompt_tokens
+            metrics_out['eval_count'] = result.completion_tokens
+            metrics_out['total_duration'] = 0
+            metrics_out['load_duration'] = 0
+            metrics_out['prompt_eval_duration'] = 0
+            metrics_out['eval_duration'] = 0
+
+        return result.text
 
     def generate_streaming(
         self,
@@ -315,42 +277,19 @@ class OllamaClient:
             Complete generated text or None if failed
         """
         try:
-            payload = {
-                "model": self.model,
-                "prompt": prompt,
-                "stream": True,
-                "options": {
-                    "temperature": temperature,
-                    "num_ctx": self.num_ctx,
-                }
-            }
-
-            if system:
-                payload["system"] = system
-
-            response = requests.post(
-                f"{self.host}/api/generate",
-                json=payload,
-                timeout=self.timeout,
-                stream=True
-            )
-            response.raise_for_status()
-
             full_response = []
 
-            for line in response.iter_lines():
-                if line:
-                    import json
-                    chunk_data = json.loads(line)
-                    chunk_text = chunk_data.get('response', '')
-
-                    if chunk_text:
-                        full_response.append(chunk_text)
-                        if callback:
-                            callback(chunk_text)
+            for chunk_text in self._llm.generate_streaming(
+                prompt=prompt,
+                system=system,
+                temperature=temperature,
+            ):
+                full_response.append(chunk_text)
+                if callback:
+                    callback(chunk_text)
 
             complete_text = ''.join(full_response)
-            logger.info(f"✓ Streaming complete: {len(complete_text)} characters")
+            logger.info(f"Streaming complete: {len(complete_text)} characters")
             return complete_text
 
         except Exception as e:
@@ -389,65 +328,28 @@ class OllamaClient:
             progress.start()
 
         try:
-            payload = {
-                "model": self.model,
-                "prompt": prompt,
-                "stream": True,
-                "options": {
-                    "temperature": temperature,
-                    "num_ctx": self.num_ctx,
-                }
-            }
-
-            if system:
-                payload["system"] = system
-
-            if max_tokens:
-                payload["options"]["num_predict"] = max_tokens
-
-            logger.info(f"Sending request to Ollama (model={self.model}, temp={temperature})")
-
-            response = requests.post(
-                f"{self.host}/api/generate",
-                json=payload,
-                timeout=self.timeout,
-                stream=True
-            )
-            response.raise_for_status()
-
             full_response = []
 
-            for line in response.iter_lines():
-                if line:
-                    import json
-                    chunk_data = json.loads(line)
-                    chunk_text = chunk_data.get('response', '')
-
-                    if chunk_text:
-                        full_response.append(chunk_text)
-                        if progress:
-                            progress.update(chars=len(chunk_text))
+            for chunk_text in self._llm.generate_streaming(
+                prompt=prompt,
+                system=system,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            ):
+                full_response.append(chunk_text)
+                if progress:
+                    progress.update(chars=len(chunk_text))
 
             complete_text = ''.join(full_response)
-            logger.info(f"✓ Generated {len(complete_text)} characters")
+            logger.info(f"Generated {len(complete_text)} characters")
 
             if progress:
                 progress.stop(success=True)
 
             return complete_text
 
-        except requests.exceptions.Timeout:
-            logger.error(f"Ollama request timed out after {self.timeout}s")
-            if progress:
-                progress.stop(success=False)
-            return None
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Ollama request failed: {e}")
-            if progress:
-                progress.stop(success=False)
-            return None
         except Exception as e:
-            logger.error(f"Unexpected error during generation: {e}")
+            logger.error(f"Generation with progress failed: {e}")
             if progress:
                 progress.stop(success=False)
             return None
@@ -599,7 +501,7 @@ class OllamaClient:
                 prompt,
                 system=system_prompt,
                 temperature=STORY_PARAMS["temperature"],
-                max_tokens=STORY_PARAMS["num_predict"],
+                max_tokens=STORY_PARAMS["max_tokens"],
                 top_p=STORY_PARAMS["top_p"],
                 top_k=STORY_PARAMS["top_k"],
                 repeat_penalty=STORY_PARAMS["repeat_penalty"]
@@ -675,7 +577,7 @@ class OllamaClient:
             prompt,
             system=system_prompt,
             temperature=ANTI_HALLUCINATION_PARAMS["temperature"],
-            max_tokens=ANTI_HALLUCINATION_PARAMS["num_predict"],
+            max_tokens=ANTI_HALLUCINATION_PARAMS["max_tokens"],
             top_p=ANTI_HALLUCINATION_PARAMS["top_p"],
             top_k=ANTI_HALLUCINATION_PARAMS["top_k"],
             repeat_penalty=ANTI_HALLUCINATION_PARAMS["repeat_penalty"]
@@ -731,7 +633,7 @@ class OllamaClient:
                 prompt,
                 system=system_prompt,
                 temperature=STORY_PARAMS["temperature"],
-                max_tokens=STORY_PARAMS["num_predict"],
+                max_tokens=STORY_PARAMS["max_tokens"],
                 top_p=STORY_PARAMS["top_p"],
                 top_k=STORY_PARAMS["top_k"],
                 repeat_penalty=STORY_PARAMS["repeat_penalty"]

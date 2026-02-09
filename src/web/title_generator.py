@@ -11,20 +11,17 @@ import os
 import re
 from typing import Any, Dict, List, Optional
 
-import httpx
 from dotenv import load_dotenv
+
+from src.llm.llm_client import LLMClient, get_default_client
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 
 # Configuration
-OLLAMA_HOST = os.getenv('OLLAMA_HOST', 'http://localhost:11434')
-OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.2')
-OLLAMA_NUM_CTX = int(os.getenv('OLLAMA_NUM_CTX', '32768'))
 TITLE_MAX_WORDS = int(os.getenv('TITLE_MAX_WORDS', '10'))
 TITLE_MIN_WORDS = int(os.getenv('TITLE_MIN_WORDS', '4'))
-OLLAMA_TIMEOUT = float(os.getenv('OLLAMA_TIMEOUT', '30.0'))
 
 
 class TitleGenerator:
@@ -45,41 +42,33 @@ class TitleGenerator:
         Initialize title generator.
 
         Args:
-            ollama_host: Ollama API host URL
-            ollama_model: Model to use for generation
+            ollama_host: LLM API host URL (kept for backward compat)
+            ollama_model: Model to use for generation (kept for backward compat)
             timeout: Request timeout in seconds
         """
-        self.ollama_host = ollama_host or OLLAMA_HOST
-        self.ollama_model = ollama_model or OLLAMA_MODEL
-        self.timeout = timeout or OLLAMA_TIMEOUT
-        self._client: Optional[httpx.AsyncClient] = None
+        # Build LLMClient — only pass overrides when explicitly provided
+        llm_kwargs: Dict[str, Any] = {}
+        if ollama_host:
+            llm_kwargs['base_url'] = f"{ollama_host.rstrip('/')}/v1"
+        if ollama_model:
+            llm_kwargs['model'] = ollama_model
+        # Title generation uses a short timeout by default
+        llm_kwargs['timeout'] = int(timeout) if timeout else 30
 
-    async def _get_client(self) -> httpx.AsyncClient:
-        """Get or create HTTP client."""
-        if self._client is None:
-            self._client = httpx.AsyncClient(timeout=self.timeout)
-        return self._client
+        self._llm = LLMClient(**llm_kwargs)
+        self.model = self._llm.model
 
-    async def close(self) -> None:
-        """Close HTTP client."""
-        if self._client:
-            await self._client.aclose()
-            self._client = None
-
-    async def check_ollama_available(self) -> bool:
+    async def check_llm_available(self) -> bool:
         """
-        Check if Ollama is available.
+        Check if LLM backend is available.
 
         Returns:
-            True if Ollama is responding, False otherwise
+            True if backend is responding, False otherwise
         """
-        try:
-            client = await self._get_client()
-            response = await client.get(f"{self.ollama_host}/api/tags")
-            return response.status_code == 200
-        except Exception as e:
-            logger.debug(f"Ollama not available: {e}")
-            return False
+        return await self._llm.acheck_available()
+
+    # Backward-compat alias
+    check_ollama_available = check_llm_available
 
     def _build_prompt(
         self,
@@ -141,7 +130,7 @@ Title:"""
         duration_seconds: float
     ) -> Optional[str]:
         """
-        Generate title using Ollama LLM.
+        Generate title using LLM.
 
         Args:
             full_text: Full transcript text
@@ -154,28 +143,17 @@ Title:"""
         try:
             prompt = self._build_prompt(full_text, speakers, duration_seconds)
 
-            client = await self._get_client()
-            response = await client.post(
-                f"{self.ollama_host}/api/generate",
-                json={
-                    "model": self.ollama_model,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {
-                        "temperature": 0.3,  # Low for consistent output
-                        "num_predict": 30,   # Short output
-                        "num_ctx": OLLAMA_NUM_CTX,
-                        "stop": ["\n", ".", "Title:"]
-                    }
-                }
+            result = await self._llm.agenerate(
+                prompt=prompt,
+                temperature=0.3,
+                max_tokens=30,
+                stop=["\n", ".", "Title:"],
             )
 
-            if response.status_code != 200:
-                logger.warning(f"Ollama returned status {response.status_code}")
+            if result is None:
                 return None
 
-            data = response.json()
-            title = data.get('response', '').strip()
+            title = result.text.strip()
 
             # Clean up the title
             title = self._clean_title(title)
@@ -187,9 +165,6 @@ Title:"""
                 logger.warning(f"Title validation failed: '{title}'")
                 return None
 
-        except httpx.TimeoutException:
-            logger.warning("Ollama request timed out")
-            return None
         except Exception as e:
             logger.warning(f"LLM title generation failed: {e}")
             return None
@@ -292,7 +267,7 @@ Title:"""
         speakers = speakers or []
 
         # Try LLM first
-        if await self.check_ollama_available():
+        if await self.check_llm_available():
             llm_title = await self.generate_title_with_llm(
                 full_text, speakers, duration_seconds
             )
@@ -321,11 +296,8 @@ def generate_title_sync(
     Returns:
         Generated title string
     """
-    async def _generate_and_close():
+    async def _generate():
         generator = TitleGenerator()
-        try:
-            return await generator.generate_title(full_text, speakers, duration_seconds)
-        finally:
-            await generator.close()
+        return await generator.generate_title(full_text, speakers, duration_seconds)
 
-    return asyncio.run(_generate_and_close())
+    return asyncio.run(_generate())
