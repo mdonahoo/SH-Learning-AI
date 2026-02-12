@@ -111,3 +111,5 @@ examples/screenshots/*.PNG
 data/models/*
 data/recordings/*
 data/screenshots/*
+data/workspaces/*
+data/workspaces/e8eed8ca-21fc-4038-a6cd-57baf7b974fe/archive_index.json

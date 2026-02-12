@@ -1337,7 +1337,9 @@ class AudioProcessor:
         recordings_dir: Optional[str] = None,
         analyses_dir: Optional[str] = None,
         archive_manager: Optional[Any] = None,
-        telemetry_dir: Optional[str] = None
+        telemetry_dir: Optional[str] = None,
+        precomputed_segments: Optional[List[Dict[str, Any]]] = None,
+        precomputed_info: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         Run full audio analysis pipeline.
@@ -1356,6 +1358,8 @@ class AudioProcessor:
             analyses_dir: Optional directory override for workspace isolation
             archive_manager: Optional ArchiveManager override for workspace isolation
             telemetry_dir: Optional directory override for workspace isolation
+            precomputed_segments: Optional pre-computed transcript segments from streaming
+            precomputed_info: Optional transcription info dict from streaming
 
         Returns:
             Complete analysis results dictionary
@@ -1457,26 +1461,49 @@ class AudioProcessor:
 
         try:
             # Step 2: Transcription (with granular progress updates)
-            update_progress("transcribe", "Transcribing audio with Whisper", progress)
             step_start = time.time()
-            if perf_tracker:
-                with perf_tracker.track_dependency(
-                    'whisper_transcription', 'ML_MODEL',
-                    metadata={'model': self.whisper_model_size or 'default'}
-                ) as _whisper_meta:
+            if precomputed_segments is not None and len(precomputed_segments) > 0:
+                # Use pre-computed segments from streaming transcription
+                segments = precomputed_segments
+                info = precomputed_info or {'language': 'en', 'duration': 0}
+                results['duration_seconds'] = info.get('duration', 0)
+                results['language'] = info.get('language', 'en')
+                step_timings['transcription'] = 0.0
+                update_progress(
+                    "transcribe",
+                    "Using streaming transcription",
+                    35
+                )
+                logger.info(
+                    f"Using {len(segments)} pre-computed streaming segments, "
+                    "skipping Whisper transcription"
+                )
+            else:
+                update_progress(
+                    "transcribe",
+                    "Transcribing audio with Whisper",
+                    progress
+                )
+                if perf_tracker:
+                    with perf_tracker.track_dependency(
+                        'whisper_transcription', 'ML_MODEL',
+                        metadata={'model': self.whisper_model_size or 'default'}
+                    ) as _whisper_meta:
+                        segments, info = self.transcribe_with_segments(
+                            wav_path,
+                            progress_callback=progress_callback
+                        )
+                        _whisper_meta['segment_count'] = len(segments)
+                else:
                     segments, info = self.transcribe_with_segments(
                         wav_path,
                         progress_callback=progress_callback
                     )
-                    _whisper_meta['segment_count'] = len(segments)
-            else:
-                segments, info = self.transcribe_with_segments(
-                    wav_path,
-                    progress_callback=progress_callback  # Pass through for granular updates
+                results['duration_seconds'] = info.get('duration', 0)
+                results['language'] = info.get('language', 'unknown')
+                step_timings['transcription'] = round(
+                    time.time() - step_start, 2
                 )
-            results['duration_seconds'] = info.get('duration', 0)
-            results['language'] = info.get('language', 'unknown')
-            step_timings['transcription'] = round(time.time() - step_start, 2)
             progress = 35
 
             # Step 3: Speaker diarization
@@ -1579,6 +1606,9 @@ class AudioProcessor:
                         )
                 except Exception as e:
                     logger.warning(f"LLM transcript cleanup failed: {e}")
+
+            # Ensure segments are in chronological order before formatting
+            segments.sort(key=lambda s: s.get('start', s.get('start_time', 0)))
 
             # Format transcription segments for response
             # Strip markdown artifacts (bold/italic) that LLM cleanup may introduce

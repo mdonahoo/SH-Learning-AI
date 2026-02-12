@@ -117,6 +117,26 @@
         </div>
     </section>
 
+    <!-- LLM & GPU Configuration -->
+    <section class="lcars-panel" id="gpu-llm-section">
+        <div class="lcars-panel-bar green"></div>
+        <div class="lcars-panel-body">
+            <div class="section-header">
+                <h2>LLM &amp; GPU Configuration</h2>
+                <button class="btn btn-secondary btn-sm" onclick="adminApp.loadGpuLlmConfig()">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 4v6h6M23 20v-6h-6" stroke-linecap="round"/>
+                        <path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" stroke-linecap="round"/>
+                    </svg>
+                    Refresh
+                </button>
+            </div>
+            <div id="gpu-llm-content">
+                <p class="empty-state">Loading LLM &amp; GPU configuration...</p>
+            </div>
+        </div>
+    </section>
+
     <!-- Workspaces Table View -->
     <section class="lcars-panel" id="workspaces-section">
         <div class="lcars-panel-bar gold"></div>

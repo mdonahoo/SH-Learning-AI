@@ -88,6 +88,7 @@ from src.metrics.training_recommendations import (
     SkillCategory,
 )
 from src.metrics.performance_tracker import PerformanceTracker, DependencyCall
+from src.metrics.live_metrics import LiveMetricsComputer
 
 __all__ = [
     # Core modules
@@ -147,4 +148,6 @@ __all__ = [
     # Performance tracking
     'PerformanceTracker',
     'DependencyCall',
+    # Live metrics
+    'LiveMetricsComputer',
 ]

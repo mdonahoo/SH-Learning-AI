@@ -15,6 +15,14 @@ class AudioRecorder {
         this.isRecording = false;
         this.startTime = null;
         this.timerInterval = null;
+
+        // Streaming transcription state
+        this.streamingWs = null;
+        this.streamingSessionId = null;
+        this.liveSegments = [];
+        this.onTranscriptUpdate = null;
+        this.onMetricsUpdate = null;
+        this.onAnalysisUpdate = null;
     }
 
     async start() {
@@ -46,10 +54,19 @@ class AudioRecorder {
             const options = selectedMimeType ? { mimeType: selectedMimeType } : {};
             this.mediaRecorder = new MediaRecorder(stream, options);
             this.audioChunks = [];
+            this.liveSegments = [];
+            this.streamingSessionId = null;
+
+            // Open streaming WebSocket (graceful — if it fails, we proceed without it)
+            this._openStreamingWebSocket();
 
             this.mediaRecorder.ondataavailable = (event) => {
                 if (event.data.size > 0) {
                     this.audioChunks.push(event.data);
+                    // Send chunk to streaming WebSocket if connected
+                    if (this.streamingWs && this.streamingWs.readyState === WebSocket.OPEN) {
+                        this.streamingWs.send(event.data);
+                    }
                 }
             };
 
@@ -64,6 +81,65 @@ class AudioRecorder {
         }
     }
 
+    _openStreamingWebSocket() {
+        try {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const workspaceId = localStorage.getItem('sh-workspace-id') || 'default';
+            const wsUrl = `${protocol}//${window.location.host}/ws/transcribe-stream?workspace_id=${workspaceId}`;
+
+            this.streamingWs = new WebSocket(wsUrl);
+
+            this.streamingWs.onopen = () => {
+                console.log('Streaming transcription WebSocket connected');
+            };
+
+            this.streamingWs.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'session_start') {
+                        this.streamingSessionId = data.session_id;
+                        console.log('Streaming session started:', data.session_id);
+                    } else if (data.type === 'transcript') {
+                        if (data.segments && data.segments.length > 0) {
+                            this.liveSegments.push(...data.segments);
+                            if (this.onTranscriptUpdate) {
+                                this.onTranscriptUpdate(data.segments, this.liveSegments);
+                            }
+                        }
+                    } else if (data.type === 'live_metrics') {
+                        if (this.onMetricsUpdate) {
+                            this.onMetricsUpdate(data.metrics);
+                        }
+                    } else if (data.type === 'live_analysis') {
+                        if (this.onAnalysisUpdate) {
+                            this.onAnalysisUpdate(data.analysis);
+                        }
+                    } else if (data.type === 'error') {
+                        console.warn('Streaming transcription error:', data.message);
+                    } else if (data.type === 'session_end') {
+                        console.log('Streaming session ended');
+                    }
+                } catch (e) {
+                    console.warn('Failed to parse streaming message:', e);
+                }
+            };
+
+            this.streamingWs.onerror = (error) => {
+                console.warn('Streaming WebSocket error (falling back to normal transcription):', error);
+                this.streamingWs = null;
+                this.streamingSessionId = null;
+            };
+
+            this.streamingWs.onclose = () => {
+                console.log('Streaming WebSocket closed');
+            };
+        } catch (error) {
+            console.warn('Failed to open streaming WebSocket:', error);
+            this.streamingWs = null;
+            this.streamingSessionId = null;
+        }
+    }
+
     stop() {
         return new Promise((resolve) => {
             if (!this.mediaRecorder) {
@@ -71,15 +147,81 @@ class AudioRecorder {
                 return;
             }
 
+            // Wait for both: MediaRecorder blob + streaming session end
+            let blob = null;
+            let recorderDone = false;
+            let streamingDone = false;
+            // If no active streaming WS, mark streaming as already done
+            const hasStreaming = this.streamingWs && this.streamingWs.readyState === WebSocket.OPEN;
+            if (!hasStreaming) {
+                streamingDone = true;
+            }
+
+            const tryResolve = () => {
+                if (recorderDone && streamingDone) {
+                    resolve(blob);
+                }
+            };
+
+            // Timeout: don't wait forever for session_end
+            let streamingTimeout = null;
+            if (hasStreaming) {
+                streamingTimeout = setTimeout(() => {
+                    if (!streamingDone) {
+                        console.warn('Streaming session_end timed out, proceeding');
+                        streamingDone = true;
+                        tryResolve();
+                    }
+                }, 10000);
+            }
+
+            // Intercept session_end from the streaming WebSocket
+            if (hasStreaming) {
+                const originalOnMessage = this.streamingWs.onmessage;
+                this.streamingWs.onmessage = (event) => {
+                    // Call the original handler first
+                    if (originalOnMessage) {
+                        originalOnMessage.call(this.streamingWs, event);
+                    }
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.type === 'session_end') {
+                            streamingDone = true;
+                            if (streamingTimeout) clearTimeout(streamingTimeout);
+                            // Close streaming WebSocket now
+                            setTimeout(() => {
+                                if (this.streamingWs) {
+                                    try { this.streamingWs.close(); } catch (e) {}
+                                    this.streamingWs = null;
+                                }
+                            }, 500);
+                            tryResolve();
+                        }
+                    } catch (e) {
+                        // ignore parse errors
+                    }
+                };
+
+                // Send stop command
+                try {
+                    this.streamingWs.send(JSON.stringify({ type: 'stop' }));
+                } catch (e) {
+                    console.warn('Failed to send stop to streaming WS:', e);
+                    streamingDone = true;
+                    if (streamingTimeout) clearTimeout(streamingTimeout);
+                }
+            }
+
             this.mediaRecorder.onstop = () => {
                 const mimeType = this.mediaRecorder.mimeType || 'audio/webm';
-                const blob = new Blob(this.audioChunks, { type: mimeType });
+                blob = new Blob(this.audioChunks, { type: mimeType });
                 this.isRecording = false;
 
                 // Stop all tracks
                 this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
 
-                resolve(blob);
+                recorderDone = true;
+                tryResolve();
             };
 
             this.mediaRecorder.stop();
@@ -178,6 +320,9 @@ class ApiClient {
             }
             if (options.telemetrySessionId) {
                 params.append('telemetry_session_id', options.telemetrySessionId);
+            }
+            if (options.streamingSessionId) {
+                params.append('streaming_session_id', options.streamingSessionId);
             }
             const queryString = params.toString();
             const url = queryString
@@ -3315,10 +3460,13 @@ class App {
             const blob = await this.recorder.stop();
             if (blob) {
                 this.currentBlob = blob;
+                this.streamingSessionId_forAnalysis = this.recorder.streamingSessionId;
                 this.showAudioPreview(blob);
                 // Show save button for recorded audio
                 this.saveAudioBtn.classList.remove('hidden');
             }
+
+            // Keep live dashboard visible after recording stops
         } else {
             // Start recording
             try {
@@ -3342,18 +3490,34 @@ class App {
                     this.telemetrySessionId = null;
                 }
 
+                // Wire up live transcript and metrics callbacks
+                this.recorder.onTranscriptUpdate = (newSegments, allSegments) => {
+                    this._updateLiveTranscript(newSegments, allSegments);
+                };
+                this.recorder.onMetricsUpdate = (metrics) => {
+                    this._updateLiveMetrics(metrics);
+                };
+                this.recorder.onAnalysisUpdate = (analysis) => {
+                    this._updateGMInsights(analysis);
+                };
+
                 await this.recorder.start();
                 SHTelemetry.trackEvent('record_start', { telemetry_enabled: String(includeTelemetry) });
                 this.recordBtn.innerHTML = '<svg class="icon"><use href="#icon-stop"></use></svg><span>Stop</span>';
                 this.recordBtn.classList.add('recording');
+
+                // Show live dashboard
+                this._showDashboard();
 
                 // Update timer
                 this.timerInterval = setInterval(() => {
                     const elapsed = this.recorder.getElapsedTime();
                     const mins = Math.floor(elapsed / 60);
                     const secs = elapsed % 60;
-                    this.recordTime.textContent =
-                        `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                    const timeStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                    this.recordTime.textContent = timeStr;
+                    const dashDur = document.getElementById('dashboard-duration');
+                    if (dashDur) dashDur.textContent = timeStr;
                 }, 1000);
 
                 this.fileName.textContent = '';
@@ -3424,6 +3588,13 @@ class App {
             this.telemetryStatusEl.classList.add('hidden');
             this.telemetryStatusEl.classList.remove('connected', 'reconnecting', 'disconnected');
         }
+        // Hide game objectives panel
+        const gameObj = document.getElementById('game-objectives');
+        if (gameObj) {
+            gameObj.classList.add('hidden');
+            const list = document.getElementById('game-objectives-list');
+            if (list) list.innerHTML = '<div class="game-obj-empty">Waiting for game data...</div>';
+        }
     }
 
     updateTelemetryIndicator(status) {
@@ -3452,6 +3623,611 @@ class App {
         } else {
             this.telemetryStatusEl.classList.add('disconnected');
             this.telemetryStatusText.textContent = 'Telemetry: disconnected';
+        }
+
+        // Update game objectives panel if game state is present
+        if (status.game_state) {
+            this._updateGameState(status.game_state);
+        }
+    }
+
+    _updateGameState(gameState) {
+        const container = document.getElementById('game-objectives');
+        if (!container) return;
+
+        // Show the panel
+        container.classList.remove('hidden');
+
+        // Update alert badge
+        const badge = document.getElementById('game-alert-badge');
+        if (badge) {
+            const alertName = gameState.alert_name || 'Green';
+            badge.textContent = alertName;
+            badge.className = 'game-alert-badge';
+            const alertClass = 'alert-' + alertName.toLowerCase().replace(/\s+/g, '');
+            badge.classList.add(alertClass);
+        }
+
+        // Render objectives list
+        const list = document.getElementById('game-objectives-list');
+        if (!list) return;
+
+        const objectives = gameState.objectives || [];
+        if (objectives.length === 0) {
+            const label = gameState.mission_name || 'No objectives received';
+            list.innerHTML = `<div class="game-obj-empty">${this._escapeHtml(label)}</div>`;
+            return;
+        }
+
+        list.innerHTML = '';
+        for (const obj of objectives) {
+            const el = document.createElement('div');
+
+            if (typeof obj === 'string') {
+                el.className = 'game-obj-item';
+                el.textContent = obj;
+            } else {
+                const name = obj.Name || obj.name || obj.text || '';
+                const desc = obj.Description || obj.description || '';
+                const done = obj.Complete === true || obj.complete === true || obj.completed === true;
+                const rank = obj.Rank || obj.rank || '';
+                const count = obj.Count ?? null;
+                const current = obj.CurrentCount ?? 0;
+
+                el.className = 'game-obj-item' + (done ? ' complete' : '');
+                if (rank === 'Primary') el.classList.add('primary');
+
+                let html = `<div class="game-obj-name">${this._escapeHtml(name)}`;
+                if (done) html += '<span class="game-obj-check"> &#10003;</span>';
+                html += '</div>';
+
+                if (desc) {
+                    html += `<div class="game-obj-desc">${this._escapeHtml(desc)}</div>`;
+                }
+
+                if (count !== null && count > 0) {
+                    const pct = Math.min(100, Math.round((current / count) * 100));
+                    html += `<div class="game-obj-progress">`;
+                    html += `<div class="game-obj-progress-bar"><div class="game-obj-progress-fill" style="width:${pct}%"></div></div>`;
+                    html += `<span class="game-obj-progress-text">${current}/${count}</span>`;
+                    html += `</div>`;
+                }
+
+                el.innerHTML = html;
+            }
+
+            list.appendChild(el);
+        }
+    }
+
+    _updateLiveTranscript(newSegments, allSegments) {
+        const content = document.getElementById('dashboard-transcript-content');
+        if (!content) return;
+
+        // Clear previous "new" highlights
+        content.querySelectorAll('.new-segment').forEach(el => {
+            el.classList.remove('new-segment');
+        });
+
+        for (const seg of newSegments) {
+            const el = document.createElement('div');
+            el.className = 'live-segment new-segment';
+            const timestamp = this._formatTimestamp(seg.start);
+            el.innerHTML = `<span class="live-segment-time">${timestamp}</span> ${this._escapeHtml(seg.text)}`;
+            content.appendChild(el);
+
+            // Fade the cyan border after a delay
+            setTimeout(() => el.classList.remove('new-segment'), 4000);
+        }
+
+        // Auto-scroll to bottom
+        content.scrollTop = content.scrollHeight;
+
+        // Update segment count in header
+        const count = document.getElementById('dashboard-segments');
+        if (count) count.textContent = `(${allSegments.length})`;
+    }
+
+    _formatTimestamp(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    _escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // ===== Live Mission Dashboard Methods =====
+
+    _showDashboard() {
+        const dash = document.getElementById('live-dashboard');
+        if (!dash) return;
+        dash.classList.remove('hidden');
+
+        // Reset content
+        const transcriptContent = document.getElementById('dashboard-transcript-content');
+        if (transcriptContent) transcriptContent.innerHTML = '';
+        const segCount = document.getElementById('dashboard-segments');
+        if (segCount) segCount.textContent = '';
+        const dur = document.getElementById('dashboard-duration');
+        if (dur) dur.textContent = '00:00';
+
+        // Side columns always shown — metrics come from transcript
+        const body = dash.querySelector('.live-dashboard-body');
+        if (body) body.classList.remove('transcript-only');
+
+        // Reset live metrics to defaults
+        this._resetLiveMetrics();
+    }
+
+    _hideDashboard() {
+        const dash = document.getElementById('live-dashboard');
+        if (dash) dash.classList.add('hidden');
+        this._stopClientMetricsInterval();
+    }
+
+    _updateGauge(type, value) {
+        const fill = document.getElementById(`gauge-${type}-fill`);
+        const val = document.getElementById(`gauge-${type}-val`);
+        if (!fill) return;
+
+        const pct = Math.max(0, Math.min(100, Math.round(value)));
+        fill.style.width = pct + '%';
+        if (val) val.textContent = pct + '%';
+
+        // Color class
+        fill.classList.remove('normal', 'caution', 'critical');
+        if (pct > 60) {
+            fill.classList.add('normal');
+        } else if (pct > 30) {
+            fill.classList.add('caution');
+        } else {
+            fill.classList.add('critical');
+        }
+    }
+
+    // Short habit names for the compact dashboard column
+    _HABIT_SHORT_NAMES = {
+        1: 'Initiative',
+        2: 'Goals',
+        3: 'Prioritize',
+        4: 'Win-Win',
+        5: 'Listen First',
+        6: 'Synergize',
+        7: 'Grow',
+    };
+
+    _resetLiveMetrics() {
+        this._prevHabitScores = {};
+        this._prevTeamsteppsScores = {};
+        this._prevNasa4dScores = {};
+        this._prevMetricValues = {};
+        // Reset CES arc gauge
+        this._updateCESArc(0);
+        const cesBadge = document.getElementById('ces-badge');
+        if (cesBadge) {
+            cesBadge.textContent = '—';
+            cesBadge.classList.remove('ces-excellent', 'ces-effective', 'ces-developing', 'ces-struggling');
+        }
+        const cesTrend = document.getElementById('ces-arc-trend');
+        if (cesTrend) {
+            cesTrend.textContent = '';
+            cesTrend.classList.remove('trend-up', 'trend-stable', 'trend-down');
+        }
+        // Reset stress gauge
+        this._updateGauge('stress', 0);
+        const badge = document.getElementById('dashboard-stress-badge');
+        if (badge) {
+            badge.textContent = 'CALM';
+            badge.classList.remove('alert-green', 'alert-yellow', 'alert-red');
+            badge.classList.add('alert-green');
+        }
+        for (const id of ['lm-effective', 'lm-improvement']) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = '0';
+        }
+        const proto = document.getElementById('lm-protocol');
+        if (proto) proto.textContent = '0%';
+        const wps = document.getElementById('lm-wps');
+        if (wps) wps.textContent = '0.0';
+        const habits = document.getElementById('lm-habits-list');
+        if (habits) habits.innerHTML = '';
+        const teamstepps = document.getElementById('lm-teamstepps-list');
+        if (teamstepps) teamstepps.innerHTML = '';
+        const nasa4d = document.getElementById('lm-nasa4d-list');
+        if (nasa4d) nasa4d.innerHTML = '';
+        const bloom = document.getElementById('lm-bloom-list');
+        if (bloom) bloom.innerHTML = '';
+        const notable = document.getElementById('lm-notable-patterns');
+        if (notable) notable.innerHTML = '';
+        const noData = document.getElementById('lm-no-data');
+        if (noData) noData.style.display = '';
+        // Reset GM timeline
+        const gmTimeline = document.getElementById('gm-timeline');
+        if (gmTimeline) {
+            gmTimeline.innerHTML = '<div id="gm-timeline-placeholder" class="gm-timeline-placeholder">AI insights will appear here after ~30s of dialogue</div>';
+        }
+        // Reset mission summary
+        const summaryEl = document.getElementById('mission-summary-text');
+        if (summaryEl) {
+            summaryEl.textContent = 'Waiting for crew dialogue...';
+            summaryEl.classList.remove('has-summary');
+        }
+
+        // Start client-side metrics interval for near real-time WPS
+        this._stopClientMetricsInterval();
+        this._clientMetricsInterval = setInterval(() => {
+            this._computeClientSideMetrics();
+        }, 3000);
+    }
+
+    _stopClientMetricsInterval() {
+        if (this._clientMetricsInterval) {
+            clearInterval(this._clientMetricsInterval);
+            this._clientMetricsInterval = null;
+        }
+    }
+
+    _computeClientSideMetrics() {
+        // Compute WPS from client-side segment data for near real-time feel
+        const segs = this.recorder?.liveSegments;
+        if (!segs || segs.length === 0) return;
+
+        let totalWords = 0;
+        let totalDuration = 0;
+        for (const seg of segs) {
+            const text = seg.text || '';
+            totalWords += text.split(/\s+/).filter(w => w).length;
+            const dur = Math.max(0, (seg.end || 0) - (seg.start || 0));
+            totalDuration += dur;
+        }
+
+        const wps = totalDuration > 0 ? (totalWords / totalDuration).toFixed(2) : '0.00';
+        this._animateValue('lm-wps', wps);
+    }
+
+    _animateValue(elementId, newValue) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        const oldValue = el.textContent;
+        if (oldValue === String(newValue)) return;
+
+        el.textContent = newValue;
+        el.classList.remove('lm-value-flash');
+        // Force reflow to restart animation
+        void el.offsetWidth;
+        el.classList.add('lm-value-flash');
+    }
+
+    _updateLiveMetrics(metrics) {
+        if (!metrics) return;
+
+        // Hide "Listening..." placeholder
+        const noData = document.getElementById('lm-no-data');
+        if (noData) noData.style.display = 'none';
+
+        // Stress gauge (smooth CSS transition handles animation)
+        if (metrics.stress) {
+            const stressPct = Math.round((metrics.stress.avg || 0) * 100);
+            this._updateGauge('stress', stressPct);
+
+            const badge = document.getElementById('dashboard-stress-badge');
+            if (badge) {
+                const label = (metrics.stress.label || 'calm').toUpperCase();
+                badge.textContent = label;
+                badge.classList.remove('alert-green', 'alert-yellow', 'alert-red');
+                if (label === 'CALM') badge.classList.add('alert-green');
+                else if (label === 'TENSE') badge.classList.add('alert-yellow');
+                else badge.classList.add('alert-red');
+            }
+        }
+
+        // Communication counts with flash animation
+        if (metrics.communication) {
+            this._animateValue('lm-effective', metrics.communication.effective_count || 0);
+            this._animateValue('lm-improvement', metrics.communication.improvement_count || 0);
+            this._animateValue('lm-protocol', (metrics.communication.effective_pct || 0) + '%');
+
+            // Notable patterns — prepend new items, keep last 5
+            const notable = document.getElementById('lm-notable-patterns');
+            if (notable && metrics.communication.recent_patterns) {
+                notable.innerHTML = '';
+                for (const p of metrics.communication.recent_patterns) {
+                    const el = document.createElement('div');
+                    el.className = 'lm-notable-item';
+                    const catClass = p.category === 'effective' ? 'effective' : 'improvement';
+                    const prefix = p.category === 'effective' ? '+' : '!';
+                    el.innerHTML = `<span class="lm-notable-category ${catClass}">${prefix} ${this._escapeHtml(p.name)}</span><span class="lm-notable-text">${this._escapeHtml(p.text)}</span>`;
+                    notable.appendChild(el);
+                }
+            }
+        }
+
+        // Speech WPS with flash
+        if (metrics.speech) {
+            this._animateValue('lm-wps', metrics.speech.avg_wps || '0.0');
+        }
+
+        // 7 Habits — render as button bar
+        if (metrics.habits && metrics.habits.length > 0) {
+            const list = document.getElementById('lm-habits-list');
+            if (list) {
+                const prevScores = this._prevHabitScores || {};
+                const existingBtns = list.querySelectorAll('.habit-btn');
+
+                if (existingBtns.length === 0) {
+                    // First render — build all buttons
+                    for (const h of metrics.habits) {
+                        const btn = document.createElement('div');
+                        btn.className = 'habit-btn';
+                        btn.dataset.habit = h.habit_num;
+                        const score = Math.max(1, Math.min(5, h.score || 1));
+                        const shortName = this._HABIT_SHORT_NAMES[h.habit_num] || h.name;
+                        btn.classList.add(`score-${score}`);
+                        btn.title = h.name;
+                        btn.innerHTML = `<span class="habit-btn-name">${this._escapeHtml(shortName)}</span><span class="habit-btn-count">${score}</span>`;
+                        list.appendChild(btn);
+                        prevScores[h.habit_num] = score;
+                    }
+                } else {
+                    // Update existing buttons in-place
+                    for (const h of metrics.habits) {
+                        const score = Math.max(1, Math.min(5, h.score || 1));
+                        const btn = list.querySelector(`[data-habit="${h.habit_num}"]`);
+                        if (!btn) continue;
+
+                        const countEl = btn.querySelector('.habit-btn-count');
+                        if (countEl) countEl.textContent = score;
+
+                        const prevScore = prevScores[h.habit_num] || 1;
+                        if (score !== prevScore) {
+                            // Update score class
+                            for (let i = 1; i <= 5; i++) btn.classList.remove(`score-${i}`);
+                            btn.classList.add(`score-${score}`);
+                            // Trigger upgrade animation
+                            btn.classList.remove('score-changed');
+                            void btn.offsetWidth;
+                            btn.classList.add('score-changed');
+                            btn.addEventListener('animationend', () => {
+                                btn.classList.remove('score-changed');
+                            }, { once: true });
+                        }
+
+                        prevScores[h.habit_num] = score;
+                    }
+                }
+                this._prevHabitScores = prevScores;
+            }
+        }
+
+        // TeamSTEPPS — render as button bar
+        if (metrics.teamstepps && metrics.teamstepps.length > 0) {
+            this._updateFrameworkButtons('lm-teamstepps-list', metrics.teamstepps, '_prevTeamsteppsScores', 'key');
+        }
+
+        // NASA 4-D — render as button bar
+        if (metrics.nasa4d && metrics.nasa4d.length > 0) {
+            this._updateFrameworkButtons('lm-nasa4d-list', metrics.nasa4d, '_prevNasa4dScores', 'key');
+        }
+
+        // Bloom's Taxonomy — render as button bar (uses level for color)
+        if (metrics.bloom && metrics.bloom.levels && metrics.bloom.levels.length > 0) {
+            this._updateBloomButtons(metrics.bloom);
+        }
+
+        // CES arc gauge (Crew Effectiveness Score)
+        if (metrics.crew_effectiveness) {
+            const ces = metrics.crew_effectiveness;
+            const score = Math.round(ces.score || 0);
+
+            this._updateCESArc(score);
+
+            // Update badge label and class
+            const badge = document.getElementById('ces-badge');
+            if (badge) {
+                const label = ces.label || '—';
+                badge.textContent = label;
+                badge.classList.remove('ces-excellent', 'ces-effective', 'ces-developing', 'ces-struggling');
+                if (score >= 75) badge.classList.add('ces-excellent');
+                else if (score >= 50) badge.classList.add('ces-effective');
+                else if (score >= 25) badge.classList.add('ces-developing');
+                else badge.classList.add('ces-struggling');
+            }
+
+            // Update trend arrow in SVG
+            const trendEl = document.getElementById('ces-arc-trend');
+            if (trendEl) {
+                const trend = ces.trend || '→';
+                trendEl.textContent = trend;
+                trendEl.classList.remove('trend-up', 'trend-stable', 'trend-down');
+                if (trend === '↑') trendEl.classList.add('trend-up');
+                else if (trend === '↓') trendEl.classList.add('trend-down');
+                else trendEl.classList.add('trend-stable');
+            }
+        }
+    }
+
+    // CES arc gauge constants
+    _CES_RADIUS = 42;
+    _CES_CIRCUMFERENCE = 2 * Math.PI * 42; // ~263.89
+    _CES_ARC_LENGTH = 2 * Math.PI * 42 * 270 / 360; // ~197.92
+
+    _updateCESArc(score) {
+        const arc = document.getElementById('ces-arc-fill');
+        const scoreText = document.getElementById('ces-arc-score');
+        if (!arc) return;
+
+        const pct = Math.max(0, Math.min(100, score));
+        const fillLen = this._CES_ARC_LENGTH * (pct / 100);
+        const gapLen = this._CES_CIRCUMFERENCE - fillLen;
+        arc.setAttribute('stroke-dasharray', `${fillLen} ${gapLen}`);
+
+        // Update score text
+        if (scoreText) scoreText.textContent = Math.round(pct);
+
+        // Update arc color gradient
+        if (pct >= 75) arc.setAttribute('stroke', 'url(#ces-grad-green)');
+        else if (pct >= 50) arc.setAttribute('stroke', 'url(#ces-grad-cyan)');
+        else if (pct >= 25) arc.setAttribute('stroke', 'url(#ces-grad-orange)');
+        else arc.setAttribute('stroke', 'url(#ces-grad-red)');
+    }
+
+    /**
+     * Generic framework button updater for score-based frameworks (1-5).
+     * Works for TeamSTEPPS, NASA 4-D, and 7 Habits-style data.
+     */
+    _updateFrameworkButtons(containerId, items, prevScoresProp, keyField) {
+        const list = document.getElementById(containerId);
+        if (!list) return;
+
+        const prevScores = this[prevScoresProp] || {};
+        const existingBtns = list.querySelectorAll('.habit-btn');
+
+        if (existingBtns.length === 0) {
+            for (const item of items) {
+                const btn = document.createElement('div');
+                btn.className = 'habit-btn';
+                btn.dataset.key = item[keyField];
+                const score = Math.max(1, Math.min(5, item.score || 1));
+                btn.classList.add(`score-${score}`);
+                btn.title = `${item.name}: ${item.count || 0} matches`;
+                btn.innerHTML = `<span class="habit-btn-name">${this._escapeHtml(item.name)}</span><span class="habit-btn-count">${score}</span>`;
+                list.appendChild(btn);
+                prevScores[item[keyField]] = score;
+            }
+        } else {
+            for (const item of items) {
+                const score = Math.max(1, Math.min(5, item.score || 1));
+                const btn = list.querySelector(`[data-key="${item[keyField]}"]`);
+                if (!btn) continue;
+                const countEl = btn.querySelector('.habit-btn-count');
+                if (countEl) countEl.textContent = score;
+                btn.title = `${item.name}: ${item.count || 0} matches`;
+                const prev = prevScores[item[keyField]] || 1;
+                if (score !== prev) {
+                    for (let i = 1; i <= 5; i++) btn.classList.remove(`score-${i}`);
+                    btn.classList.add(`score-${score}`);
+                    btn.classList.remove('score-changed');
+                    void btn.offsetWidth;
+                    btn.classList.add('score-changed');
+                    btn.addEventListener('animationend', () => btn.classList.remove('score-changed'), { once: true });
+                }
+                prevScores[item[keyField]] = score;
+            }
+        }
+        this[prevScoresProp] = prevScores;
+    }
+
+    /**
+     * Bloom's Taxonomy button updater — shows count per cognitive level.
+     * Color mapped from level: 1-2 → red/orange, 3 → yellow, 4 → cyan, 5-6 → green.
+     */
+    _updateBloomButtons(bloom) {
+        const list = document.getElementById('lm-bloom-list');
+        if (!list) return;
+
+        const levels = bloom.levels;
+        const existingBtns = list.querySelectorAll('.habit-btn');
+
+        // Map bloom level (1-6) to score class (1-5)
+        const levelToScore = (lvl) => {
+            if (lvl <= 1) return 1;
+            if (lvl <= 2) return 2;
+            if (lvl <= 3) return 3;
+            if (lvl <= 4) return 4;
+            return 5;
+        };
+
+        if (existingBtns.length === 0) {
+            for (const lvl of levels) {
+                const btn = document.createElement('div');
+                btn.className = 'habit-btn';
+                btn.dataset.key = lvl.name.toLowerCase();
+                const sc = levelToScore(lvl.level);
+                btn.classList.add(`score-${sc}`);
+                btn.title = `${lvl.name} (Level ${lvl.level}): ${lvl.count} utterances`;
+                btn.innerHTML = `<span class="habit-btn-name">${this._escapeHtml(lvl.name)}</span><span class="habit-btn-count">${lvl.count}</span>`;
+                list.appendChild(btn);
+            }
+        } else {
+            for (const lvl of levels) {
+                const btn = list.querySelector(`[data-key="${lvl.name.toLowerCase()}"]`);
+                if (!btn) continue;
+                const countEl = btn.querySelector('.habit-btn-count');
+                if (countEl) {
+                    const oldVal = countEl.textContent;
+                    countEl.textContent = lvl.count;
+                    if (oldVal !== String(lvl.count)) {
+                        btn.classList.remove('score-changed');
+                        void btn.offsetWidth;
+                        btn.classList.add('score-changed');
+                        btn.addEventListener('animationend', () => btn.classList.remove('score-changed'), { once: true });
+                    }
+                }
+                btn.title = `${lvl.name} (Level ${lvl.level}): ${lvl.count} utterances`;
+            }
+        }
+    }
+
+    _updateGMInsights(analysis) {
+        if (!analysis) return;
+
+        const timeline = document.getElementById('gm-timeline');
+        if (!timeline) return;
+
+        // Remove placeholder on first entry
+        const placeholder = document.getElementById('gm-timeline-placeholder');
+        if (placeholder) placeholder.remove();
+
+        // Get current mission time
+        const elapsed = this.recorder ? this.recorder.getElapsedTime() : 0;
+        const mins = Math.floor(elapsed / 60);
+        const secs = elapsed % 60;
+        const timeStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+        // Build timeline entry
+        const entry = document.createElement('div');
+        entry.className = 'gm-timeline-entry';
+
+        if (!analysis.needs_help) {
+            entry.classList.add('gm-ok');
+            entry.innerHTML = `<div class="gm-entry-time">${timeStr}</div><div class="gm-entry-ok">Crew operating normally</div>`;
+        } else {
+            const urgency = analysis.urgency || 'low';
+            entry.classList.add(`urgency-${urgency}`);
+
+            let html = `<div class="gm-entry-time">${timeStr}</div>`;
+
+            if (analysis.insights && analysis.insights.length > 0) {
+                html += '<ul class="gm-entry-insights">';
+                for (const insight of analysis.insights) {
+                    html += `<li>${this._escapeHtml(insight)}</li>`;
+                }
+                html += '</ul>';
+            }
+
+            if (analysis.suggestion) {
+                html += `<div class="gm-entry-suggestion">${this._escapeHtml(analysis.suggestion)}</div>`;
+            }
+
+            entry.innerHTML = html;
+        }
+
+        timeline.appendChild(entry);
+
+        // Auto-scroll to latest entry
+        timeline.scrollTop = timeline.scrollHeight;
+
+        // Update mission summary if provided
+        if (analysis.mission_summary) {
+            const summaryEl = document.getElementById('mission-summary-text');
+            if (summaryEl) {
+                summaryEl.textContent = analysis.mission_summary;
+                summaryEl.classList.add('has-summary');
+            }
         }
     }
 
@@ -3502,11 +4278,16 @@ class App {
             // Include telemetry session ID if available
             const telemetrySessionId = this.telemetrySessionId;
 
+            // Include streaming session ID if available (from live recording)
+            const streamingSessionId = this.streamingSessionId_forAnalysis || null;
+            this.streamingSessionId_forAnalysis = null;
+
             // Use streaming endpoint with progress updates
             const results = await this.api.analyzeWithProgress(file, {
                 includeNarrative,
                 includeStory,
-                telemetrySessionId
+                telemetrySessionId,
+                streamingSessionId
             }, (step, label, progress) => {
                 this.updateProgress(step, label, progress);
             });
@@ -3519,6 +4300,9 @@ class App {
             this.currentFilename = results.saved_analysis_path?.split('/').pop() || null;
 
             this.renderer.render(results);
+
+            // Hide live dashboard now that full results are available
+            this._hideDashboard();
 
             // Show results section and expand it
             this.collapsedSections.delete('results-section');

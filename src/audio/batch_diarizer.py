@@ -850,8 +850,11 @@ class BatchSpeakerDiarizer:
         if not segments:
             return segments
 
-        # Sort by start time
-        sorted_segments = sorted(segments, key=lambda s: s.get('start_time', 0))
+        # Sort by start time (check 'start' first, fall back to 'start_time')
+        sorted_segments = sorted(
+            segments,
+            key=lambda s: s.get('start', s.get('start_time', 0))
+        )
 
         # Count segments per speaker
         speaker_counts = Counter(s.get('speaker_id') for s in sorted_segments if s.get('speaker_id'))
@@ -888,9 +891,17 @@ class BatchSpeakerDiarizer:
                 return True
             return False
 
+        def _seg_start(s: Dict) -> float:
+            """Get segment start time, checking both key conventions."""
+            return s.get('start', s.get('start_time', 0))
+
+        def _seg_end(s: Dict) -> float:
+            """Get segment end time, checking both key conventions."""
+            return s.get('end', s.get('end_time', 0))
+
         def get_nearby_major_speaker(idx: int, segments: List[Dict], major_speakers: set) -> Optional[str]:
             """Find the nearest major speaker to this segment."""
-            current_time = segments[idx].get('start_time', 0)
+            current_time = _seg_start(segments[idx])
 
             # Look at previous and next segments
             prev_speaker = None
@@ -903,7 +914,7 @@ class BatchSpeakerDiarizer:
                 spk = segments[i].get('speaker_id')
                 if spk in major_speakers:
                     prev_speaker = spk
-                    prev_time_gap = current_time - segments[i].get('end_time', segments[i].get('start_time', 0))
+                    prev_time_gap = current_time - _seg_end(segments[i])
                     break
 
             # Check next segments
@@ -911,7 +922,7 @@ class BatchSpeakerDiarizer:
                 spk = segments[i].get('speaker_id')
                 if spk in major_speakers:
                     next_speaker = spk
-                    next_time_gap = segments[i].get('start_time', 0) - current_time
+                    next_time_gap = _seg_start(segments[i]) - current_time
                     break
 
             # Return the closer one if within time gap
@@ -952,13 +963,13 @@ class BatchSpeakerDiarizer:
                 merge_reason = "sentence fragment"
             elif nearby_major:
                 # Check if very close temporally
-                current_time = seg.get('start_time', 0)
+                current_time = _seg_start(seg)
                 for i in range(max(0, idx - 1), min(len(sorted_segments), idx + 2)):
                     if i == idx:
                         continue
                     other = sorted_segments[i]
                     if other.get('speaker_id') == nearby_major:
-                        time_gap = abs(other.get('start_time', 0) - current_time)
+                        time_gap = abs(_seg_start(other) - current_time)
                         if time_gap < 1.5:
                             should_merge = True
                             merge_reason = f"temporal proximity ({time_gap:.1f}s)"

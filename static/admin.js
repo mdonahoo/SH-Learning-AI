@@ -99,6 +99,12 @@ class AdminApiClient {
         }
         return data;
     }
+
+    async getGpuLlmConfig() {
+        const resp = await fetch('/api/admin/gpu-llm-config');
+        if (!resp.ok) throw new Error(`GPU/LLM config failed: ${resp.status}`);
+        return resp.json();
+    }
 }
 
 
@@ -143,6 +149,11 @@ function escapeHtml(str) {
     return div.innerHTML;
 }
 
+function formatMB(mb) {
+    if (mb >= 1024) return `${(mb / 1024).toFixed(1)} GB`;
+    return `${mb} MB`;
+}
+
 
 // ============================================================================
 // Admin App
@@ -162,6 +173,7 @@ class AdminApp {
             this.loadWorkspaces(),
             this.loadSharedData(),
             this.loadGameConfig(),
+            this.loadGpuLlmConfig(),
         ]);
     }
 
@@ -192,13 +204,13 @@ class AdminApp {
     showView(view) {
         this.currentView = view;
         const sections = {
-            workspaces: ['stats-section', 'game-config-section', 'workspaces-section', 'shared-section'],
+            workspaces: ['stats-section', 'game-config-section', 'gpu-llm-section', 'workspaces-section', 'shared-section'],
             detail: ['stats-section', 'workspace-detail-section'],
             analysis: ['analysis-viewer-section'],
         };
 
         // Hide all
-        ['stats-section', 'game-config-section', 'workspaces-section', 'shared-section',
+        ['stats-section', 'game-config-section', 'gpu-llm-section', 'workspaces-section', 'shared-section',
          'workspace-detail-section', 'analysis-viewer-section'
         ].forEach(id => {
             document.getElementById(id).classList.add('hidden');
@@ -575,6 +587,130 @@ class AdminApp {
                 <div class="test-result-detail">${escapeHtml(result.api_detail)}</div>
             </div>
         `;
+    }
+
+    // --- GPU & LLM Configuration ---
+
+    async loadGpuLlmConfig() {
+        try {
+            const data = await this.api.getGpuLlmConfig();
+            this.renderGpuLlmConfig(data);
+        } catch (err) {
+            console.error('Failed to load GPU/LLM config:', err);
+            document.getElementById('gpu-llm-content').innerHTML =
+                '<p class="empty-state">Failed to load GPU/LLM configuration</p>';
+        }
+    }
+
+    renderGpuLlmConfig(data) {
+        const container = document.getElementById('gpu-llm-content');
+        const llm = data.llm || {};
+        const vllm = data.vllm || {};
+        const gpus = data.gpus || [];
+
+        // Backend label
+        const backendLabel = (llm.backend || 'unknown').toUpperCase();
+
+        // vLLM status
+        const vllmRunning = vllm.running === true;
+        const statusDot = vllmRunning
+            ? '<span class="status-indicator running"></span> Running'
+            : '<span class="status-indicator stopped"></span> Stopped';
+
+        // LLM Backend section
+        let html = '<div class="gpu-llm-grid">';
+        html += '<div class="gpu-llm-subsection">';
+        html += '<h3>LLM Backend</h3>';
+        html += '<div class="config-row">';
+        html += `<span class="config-label">Backend</span><span class="meta-value">${escapeHtml(backendLabel)}</span>`;
+        html += '</div>';
+        html += '<div class="config-row">';
+        html += `<span class="config-label">Base URL</span><span class="meta-value mono">${escapeHtml(llm.base_url || '--')}</span>`;
+        html += '</div>';
+        html += '<div class="config-row">';
+        html += `<span class="config-label">Model</span><span class="meta-value">${escapeHtml(llm.model || '--')}</span>`;
+        html += '</div>';
+        html += '<div class="config-row">';
+        html += `<span class="config-label">Timeout</span><span class="meta-value">${llm.timeout || '--'}s</span>`;
+        html += '</div>';
+        html += '</div>';
+
+        // vLLM Status section
+        html += '<div class="gpu-llm-subsection">';
+        html += '<h3>vLLM Status</h3>';
+        html += '<div class="config-row">';
+        html += `<span class="config-label">Status</span><span class="meta-value">${statusDot}</span>`;
+        html += '</div>';
+        html += '<div class="config-row">';
+        html += `<span class="config-label">Port</span><span class="meta-value mono">${escapeHtml(vllm.port || '--')}</span>`;
+        html += '</div>';
+        html += '<div class="config-row">';
+        html += `<span class="config-label">Quantization</span><span class="meta-value">${escapeHtml(vllm.quantization || '--')}</span>`;
+        html += '</div>';
+        html += '<div class="config-row">';
+        html += `<span class="config-label">Max Model Len</span><span class="meta-value">${escapeHtml(vllm.max_model_len || '--')}</span>`;
+        html += '</div>';
+
+        // Show parallelism settings
+        const tp = parseInt(vllm.tensor_parallel_size) || 1;
+        const pp = parseInt(vllm.pipeline_parallel_size) || 1;
+        const dp = parseInt(vllm.data_parallel_size) || 1;
+        if (tp > 1 || pp > 1 || dp > 1) {
+            html += '<div class="config-row">';
+            html += `<span class="config-label">Parallelism</span><span class="meta-value">TP=${tp} PP=${pp} DP=${dp}</span>`;
+            html += '</div>';
+        }
+
+        html += '<div class="config-row">';
+        html += `<span class="config-label">GPU Mem Util</span><span class="meta-value">${escapeHtml(vllm.gpu_memory_utilization || '--')}</span>`;
+        html += '</div>';
+
+        if (vllm.served_models && vllm.served_models.length > 0) {
+            html += '<div class="config-row">';
+            html += `<span class="config-label">Served Models</span><span class="meta-value">${vllm.served_models.map(m => escapeHtml(m)).join(', ')}</span>`;
+            html += '</div>';
+        }
+        html += '</div>';
+        html += '</div>';
+
+        // GPU Cards
+        if (gpus.length > 0) {
+            html += '<div class="gpu-cards-row">';
+            for (const gpu of gpus) {
+                const usedMb = gpu.total_memory_mb - gpu.free_memory_mb;
+                const pct = gpu.total_memory_mb > 0
+                    ? Math.round((usedMb / gpu.total_memory_mb) * 100)
+                    : 0;
+                html += `
+                    <div class="gpu-card">
+                        <div class="gpu-card-header">
+                            <span class="gpu-card-name">${escapeHtml(gpu.name)}</span>
+                            <span class="gpu-card-idx">GPU ${gpu.index}</span>
+                        </div>
+                        <div class="gpu-vram-bar">
+                            <div class="gpu-vram-fill" style="width: ${pct}%"></div>
+                        </div>
+                        <div class="gpu-vram-label">${formatMB(usedMb)} / ${formatMB(gpu.total_memory_mb)} (${pct}%)</div>
+                    </div>
+                `;
+            }
+            html += '</div>';
+        } else {
+            html += '<p class="empty-state">No GPUs detected</p>';
+        }
+
+        // System Memory
+        const ramTotal = data.ram_total_mb || 0;
+        const ramAvail = data.ram_available_mb || 0;
+        const ramUsed = ramTotal - ramAvail;
+        const ramPct = ramTotal > 0 ? Math.round((ramUsed / ramTotal) * 100) : 0;
+        html += '<div class="gpu-llm-subsection gpu-llm-ram">';
+        html += '<h3>System Memory</h3>';
+        html += `<div class="gpu-vram-bar ram-bar"><div class="gpu-vram-fill ram-fill" style="width: ${ramPct}%"></div></div>`;
+        html += `<div class="gpu-vram-label">${formatMB(ramUsed)} / ${formatMB(ramTotal)} (${ramPct}%)</div>`;
+        html += '</div>';
+
+        container.innerHTML = html;
     }
 
     // --- Actions ---

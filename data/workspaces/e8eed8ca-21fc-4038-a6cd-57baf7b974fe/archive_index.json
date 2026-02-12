@@ -1,5 +1,48 @@
 {
   "version": 1,
-  "updated_at": "2026-02-09T23:30:26.883827",
-  "analyses": {}
+  "updated_at": "2026-02-11T05:52:06.216672",
+  "analyses": {
+    "analysis_20260209_233311": {
+      "filename": "analysis_20260209_233311.json",
+      "recording_filename": "recording_20260209_233312.wav",
+      "auto_title": "Bridge Communication Assessment Training",
+      "user_title": "Perfect AI Crew",
+      "created_at": "2026-02-09T23:35:08.188325",
+      "duration_seconds": 665.431,
+      "speaker_count": 5,
+      "segment_count": 175,
+      "tags": [],
+      "notes": "",
+      "starred": true,
+      "display_title": "Perfect AI Crew"
+    },
+    "analysis_20260211_053302": {
+      "filename": "analysis_20260211_053302.json",
+      "recording_filename": "recording_20260211_053302.wav",
+      "auto_title": "Ready captain, all maneuvering thrusters online",
+      "user_title": null,
+      "created_at": "2026-02-11T05:33:13.831830",
+      "duration_seconds": 125.22,
+      "speaker_count": 4,
+      "segment_count": 13,
+      "tags": [],
+      "notes": "",
+      "starred": false,
+      "display_title": "Ready captain, all maneuvering thrusters online"
+    },
+    "analysis_20260211_054614": {
+      "filename": "analysis_20260211_054614.json",
+      "recording_filename": "recording_20260211_054614.wav",
+      "auto_title": "All stations report readiness",
+      "user_title": null,
+      "created_at": "2026-02-11T05:52:06.213305",
+      "duration_seconds": 11.34,
+      "speaker_count": 4,
+      "segment_count": 5,
+      "tags": [],
+      "notes": "",
+      "starred": false,
+      "display_title": "All stations report readiness"
+    }
+  }
 }

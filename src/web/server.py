@@ -10,6 +10,7 @@ import logging
 import os
 import re
 import socket
+import sys
 import tempfile
 import threading
 import queue
@@ -18,7 +19,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Generator
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, UploadFile, HTTPException, Query, Body, Request, Depends
+from fastapi import FastAPI, File, UploadFile, HTTPException, Query, Body, Request, Depends, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -58,6 +59,34 @@ try:
 except ImportError:
     HALLUCINATION_PREVENTION_AVAILABLE = False
     clean_hallucinations = None
+
+# Streaming transcription support
+try:
+    from src.web.streaming_transcriber import (
+        StreamingTranscriptionManager,
+        STREAMING_ENABLED
+    )
+    STREAMING_TRANSCRIPTION_AVAILABLE = True
+except ImportError:
+    STREAMING_TRANSCRIPTION_AVAILABLE = False
+    StreamingTranscriptionManager = None
+    STREAMING_ENABLED = False
+
+# Live metrics for real-time dashboard
+try:
+    from src.metrics.live_metrics import LiveMetricsComputer
+    LIVE_METRICS_AVAILABLE = True
+except ImportError:
+    LIVE_METRICS_AVAILABLE = False
+    LiveMetricsComputer = None
+
+# Live GM analysis for real-time crew support
+try:
+    from src.llm.live_analysis import LiveGMAnalyzer
+    LIVE_ANALYSIS_AVAILABLE = True
+except ImportError:
+    LIVE_ANALYSIS_AVAILABLE = False
+    LiveGMAnalyzer = None
 
 load_dotenv()
 
@@ -198,6 +227,20 @@ def get_workspace_manager() -> WorkspaceManager:
     return _workspace_manager
 
 
+# Global streaming transcription manager
+_streaming_manager: Optional['StreamingTranscriptionManager'] = None
+
+
+def get_streaming_manager() -> Optional['StreamingTranscriptionManager']:
+    """Get or create the streaming transcription manager."""
+    global _streaming_manager
+    if not STREAMING_TRANSCRIPTION_AVAILABLE or not STREAMING_ENABLED:
+        return None
+    if _streaming_manager is None:
+        _streaming_manager = StreamingTranscriptionManager()
+    return _streaming_manager
+
+
 async def get_workspace_id(request: Request) -> str:
     """
     Extract and validate workspace ID from request header.
@@ -331,6 +374,40 @@ async def _telemetry_snapshot_loop() -> None:
                 await asyncio.to_thread(_save_telemetry_snapshot, sid, session)
 
 
+async def _warmup_llm() -> None:
+    """
+    Warm up the Ollama/LLM model by sending a tiny generation request.
+
+    This loads the model into GPU memory so the first real request
+    doesn't suffer a cold-start delay. Runs in a background thread
+    to avoid blocking the event loop.
+    """
+    try:
+        from src.llm.llm_client import get_default_client
+        llm = get_default_client()
+        model_name = llm.model
+        logger.info(f"Warming up LLM model: {model_name}...")
+
+        def _do_warmup() -> None:
+            response = llm.generate(
+                prompt="Say OK.",
+                system="Respond with just OK.",
+                temperature=0.0,
+                max_tokens=4,
+            )
+            if response and response.text:
+                logger.info(
+                    f"LLM model warmed up: {model_name} "
+                    f"({response.tokens_per_second} tok/s)"
+                )
+            else:
+                logger.warning("LLM warmup returned empty response")
+
+        await asyncio.to_thread(_do_warmup)
+    except Exception as e:
+        logger.warning(f"LLM warmup failed (non-fatal): {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler for model loading."""
@@ -341,6 +418,10 @@ async def lifespan(app: FastAPI):
     if os.getenv('PRELOAD_WHISPER', 'true').lower() == 'true':
         logger.info("Preloading Whisper model...")
         processor.load_model()
+
+    # Warm up Ollama/LLM model (disable with PRELOAD_LLM=false)
+    if os.getenv('PRELOAD_LLM', 'true').lower() == 'true':
+        asyncio.create_task(_warmup_llm())
 
     # Start periodic telemetry snapshot task
     snapshot_task = asyncio.create_task(_telemetry_snapshot_loop())
@@ -907,6 +988,30 @@ async def get_telemetry_status(
     if client and hasattr(client, 'connection_health'):
         response['connection_health'] = client.connection_health
 
+    # Include live game state for dashboard
+    if client:
+        try:
+            ship = client.get_ship_status_summary()
+            tracked = client.get_tracked_events()
+            alert_level_names = {1: "Docked", 2: "Green", 3: "Yellow", 4: "Red", 5: "Red Alert"}
+            alert_val = ship.get('alert_level', 2)
+            response['game_state'] = {
+                'hull': ship.get('hull', 100),
+                'shields': ship.get('shields', 100),
+                'alert_level': alert_val,
+                'alert_name': alert_level_names.get(alert_val, 'Unknown'),
+                'weapons_armed': ship.get('combat_readiness', {}).get('weapons_armed', False),
+                'speed': ship.get('navigation', {}).get('speed', 0),
+                'vessel_name': client.vessel_data.get('vessel_name'),
+                'mission_name': client.mission_data.get('current_mission'),
+                'objectives': client.mission_data.get('player_objectives', []),
+                'gm_objectives': client.mission_data.get('gm_objectives', []),
+                'recent_events': tracked[-10:] if tracked else [],
+                'total_events': len(tracked),
+            }
+        except Exception as e:
+            logger.warning(f"Failed to get game state for dashboard: {e}")
+
     return response
 
 
@@ -1065,6 +1170,7 @@ async def analyze_audio_stream(
     include_narrative: bool = Query(True, description="Include LLM team analysis"),
     include_story: bool = Query(True, description="Include LLM mission story"),
     telemetry_session_id: Optional[str] = Query(None, description="Telemetry recording session ID"),
+    streaming_session_id: Optional[str] = Query(None, description="Streaming transcription session ID"),
     workspace_id: str = Depends(get_workspace_id)
 ):
     """
@@ -1079,6 +1185,7 @@ async def analyze_audio_stream(
     - include_narrative: Include LLM team analysis (default: True)
     - include_story: Include LLM mission story generation (default: True)
     - telemetry_session_id: If provided, include game telemetry from this session
+    - streaming_session_id: If provided, use pre-computed streaming transcription
     """
     # Check if audio uploads are disabled
     if DISABLE_AUDIO_FILES:
@@ -1115,8 +1222,24 @@ async def analyze_audio_stream(
     _include_narrative = include_narrative
     _include_story = include_story
     _telemetry_session_id = telemetry_session_id
+    _streaming_session_id = streaming_session_id
 
-    logger.info(f"Analysis options: include_narrative={_include_narrative}, include_story={_include_story}, telemetry_session_id={_telemetry_session_id}")
+    # Retrieve pre-computed streaming transcription if available
+    _precomputed_segments = None
+    _precomputed_info = None
+    if _streaming_session_id:
+        streaming_mgr = get_streaming_manager()
+        if streaming_mgr:
+            streaming_result = streaming_mgr.finalize_session(_streaming_session_id)
+            if streaming_result and streaming_result.get('segments'):
+                _precomputed_segments = streaming_result['segments']
+                _precomputed_info = streaming_result.get('info')
+                logger.info(
+                    f"Using streaming transcription: {len(_precomputed_segments)} "
+                    f"pre-computed segments from session {_streaming_session_id}"
+                )
+
+    logger.info(f"Analysis options: include_narrative={_include_narrative}, include_story={_include_story}, telemetry_session_id={_telemetry_session_id}, streaming_session_id={_streaming_session_id}")
 
     # Resolve workspace directories before spawning thread
     ws_mgr = get_workspace_manager()
@@ -1139,7 +1262,9 @@ async def analyze_audio_stream(
                 recordings_dir=str(dirs['recordings']),
                 analyses_dir=str(dirs['analyses']),
                 archive_manager=archive_mgr,
-                telemetry_dir=str(dirs['telemetry'])
+                telemetry_dir=str(dirs['telemetry']),
+                precomputed_segments=_precomputed_segments,
+                precomputed_info=_precomputed_info
             )
             progress_queue.put({'type': 'result', 'data': results})
         except Exception as e:
@@ -1206,6 +1331,277 @@ async def analyze_audio_stream(
             "X-Accel-Buffering": "no",
         }
     )
+
+
+@app.websocket("/ws/transcribe-stream")
+async def websocket_transcribe_stream(websocket: WebSocket):
+    """
+    WebSocket endpoint for streaming audio transcription.
+
+    The client sends binary audio frames during recording. The server
+    accumulates chunks and periodically runs Whisper on new audio,
+    sending transcript segments back as JSON.
+
+    Protocol:
+        Client -> Server:
+            - Binary frames: raw audio chunk data
+            - JSON text: {"type": "stop"} to end session
+        Server -> Client:
+            - JSON: {"type": "session_start", "session_id": "..."}
+            - JSON: {"type": "transcript", "segments": [...]}
+            - JSON: {"type": "info", "message": "..."}
+            - JSON: {"type": "error", "message": "..."}
+    """
+    streaming_mgr = get_streaming_manager()
+    if streaming_mgr is None:
+        await websocket.accept()
+        await websocket.send_json({
+            'type': 'error',
+            'message': 'Streaming transcription is not available'
+        })
+        await websocket.close()
+        return
+
+    await websocket.accept()
+
+    # Extract workspace ID from query params or headers
+    workspace_id = websocket.query_params.get(
+        'workspace_id',
+        websocket.headers.get('x-workspace-id', 'default')
+    )
+
+    session_id = streaming_mgr.create_session(workspace_id)
+    await websocket.send_json({
+        'type': 'session_start',
+        'session_id': session_id
+    })
+
+    # Create live metrics computer if available
+    metrics_computer = None
+    if LIVE_METRICS_AVAILABLE and LiveMetricsComputer:
+        try:
+            metrics_computer = LiveMetricsComputer()
+        except Exception as e:
+            logger.warning(f"Failed to create LiveMetricsComputer: {e}")
+
+    # Create live GM analyzer if available
+    gm_analyzer = None
+    if LIVE_ANALYSIS_AVAILABLE and LiveGMAnalyzer:
+        try:
+            gm_analyzer = LiveGMAnalyzer()
+        except Exception as e:
+            logger.warning(f"Failed to create LiveGMAnalyzer: {e}")
+
+    # Cache latest metrics for GM analysis prompt context
+    latest_metrics = None
+    # Background task handle for non-blocking GM analysis
+    gm_analysis_task: Optional[asyncio.Task] = None
+
+    logger.info(f"WebSocket streaming session started: {session_id}")
+
+    # Track accumulated new audio duration for periodic transcription
+    import time as _time
+    last_process_time = _time.monotonic()
+
+    try:
+        while True:
+            try:
+                message = await websocket.receive()
+            except WebSocketDisconnect:
+                logger.info(f"WebSocket disconnected: session {session_id}")
+                break
+
+            if message.get('type') == 'websocket.disconnect':
+                break
+
+            # Handle binary audio data
+            if 'bytes' in message and message['bytes']:
+                streaming_mgr.add_audio_chunk(session_id, message['bytes'])
+
+                # Check if we should process new audio
+                now = _time.monotonic()
+                if now - last_process_time >= 10:
+                    last_process_time = now
+
+                    # Run transcription in thread executor to avoid blocking
+                    loop = asyncio.get_event_loop()
+                    try:
+                        processor = get_processor()
+                        new_segments = await loop.run_in_executor(
+                            None,
+                            streaming_mgr.process_new_audio,
+                            session_id,
+                            processor
+                        )
+                        if new_segments:
+                            await websocket.send_json({
+                                'type': 'transcript',
+                                'segments': new_segments
+                            })
+                            # Compute and send live metrics
+                            if metrics_computer:
+                                try:
+                                    session = streaming_mgr.get_session(
+                                        session_id
+                                    )
+                                    if session:
+                                        all_segs = session.get_segments()
+                                        metrics = await loop.run_in_executor(
+                                            None,
+                                            metrics_computer.compute,
+                                            all_segs
+                                        )
+                                        latest_metrics = metrics
+                                        await websocket.send_json({
+                                            'type': 'live_metrics',
+                                            'metrics': metrics
+                                        })
+                                except Exception as e:
+                                    logger.warning(
+                                        f"Live metrics error: {e}"
+                                    )
+
+                            # Run GM analysis as background task
+                            # (non-blocking so it doesn't stall
+                            # the audio receive loop)
+                            if gm_analyzer:
+                                task_running = (
+                                    gm_analysis_task is not None
+                                    and not gm_analysis_task.done()
+                                )
+                                if (
+                                    not task_running
+                                    and gm_analyzer.should_analyze()
+                                ):
+                                    session = streaming_mgr.get_session(
+                                        session_id
+                                    )
+                                    if session:
+                                        _segs = session.get_segments()
+                                        _mets = latest_metrics
+
+                                        async def _bg_gm_analysis(
+                                            segs, mets
+                                        ):
+                                            try:
+                                                _loop = asyncio.get_event_loop()
+                                                res = await _loop.run_in_executor(
+                                                    None,
+                                                    gm_analyzer.analyze,
+                                                    segs,
+                                                    mets,
+                                                )
+                                                if res is not None:
+                                                    await websocket.send_json({
+                                                        'type': 'live_analysis',
+                                                        'analysis': res,
+                                                    })
+                                            except Exception as exc:
+                                                logger.warning(
+                                                    f"Live GM analysis "
+                                                    f"error: {exc}"
+                                                )
+
+                                        gm_analysis_task = (
+                                            asyncio.create_task(
+                                                _bg_gm_analysis(
+                                                    _segs, _mets
+                                                )
+                                            )
+                                        )
+                    except Exception as e:
+                        logger.warning(
+                            f"Streaming transcription error: {e}"
+                        )
+                        await websocket.send_json({
+                            'type': 'info',
+                            'message': f'Transcription processing: {e}'
+                        })
+
+            # Handle text messages (control commands)
+            elif 'text' in message and message['text']:
+                try:
+                    data = json.loads(message['text'])
+                    if data.get('type') == 'stop':
+                        logger.info(
+                            f"Stop command received for session {session_id}"
+                        )
+                        # Do a final transcription pass (force=True
+                        # to capture any trailing audio shorter than
+                        # the minimum chunk threshold)
+                        loop = asyncio.get_event_loop()
+                        try:
+                            processor = get_processor()
+
+                            def _final_transcribe():
+                                return streaming_mgr.process_new_audio(
+                                    session_id, processor, force=True
+                                )
+
+                            new_segments = await loop.run_in_executor(
+                                None, _final_transcribe
+                            )
+                            if new_segments:
+                                await websocket.send_json({
+                                    'type': 'transcript',
+                                    'segments': new_segments
+                                })
+                            # Send final live metrics
+                            if metrics_computer:
+                                try:
+                                    session = streaming_mgr.get_session(
+                                        session_id
+                                    )
+                                    if session:
+                                        all_segs = session.get_segments()
+                                        metrics = await loop.run_in_executor(
+                                            None,
+                                            metrics_computer.compute,
+                                            all_segs
+                                        )
+                                        await websocket.send_json({
+                                            'type': 'live_metrics',
+                                            'metrics': metrics
+                                        })
+                                except Exception as e:
+                                    logger.warning(
+                                        f"Final live metrics error: {e}"
+                                    )
+                        except Exception as e:
+                            logger.warning(
+                                f"Final transcription pass error: {e}"
+                            )
+
+                        await websocket.send_json({
+                            'type': 'session_end',
+                            'session_id': session_id
+                        })
+                        break
+                except json.JSONDecodeError:
+                    pass
+
+    except Exception as e:
+        logger.error(
+            f"WebSocket error for session {session_id}: {e}",
+            exc_info=True
+        )
+        try:
+            await websocket.send_json({
+                'type': 'error',
+                'message': str(e)
+            })
+        except Exception:
+            pass
+
+    # Cancel any in-flight GM analysis background task
+    if gm_analysis_task is not None and not gm_analysis_task.done():
+        gm_analysis_task.cancel()
+        try:
+            await gm_analysis_task
+        except (asyncio.CancelledError, Exception):
+            pass
+
+    logger.info(f"WebSocket streaming session ended: {session_id}")
 
 
 @app.get("/api/analysis-steps")
@@ -2548,6 +2944,97 @@ async def test_game_connection(request: ConnectionTestRequest):
         ws_detail=ws_detail,
         api_detail=api_detail,
     )
+
+
+# ============================================================================
+# GPU & LLM Configuration Endpoint
+# ============================================================================
+
+@app.get("/api/admin/gpu-llm-config")
+async def get_gpu_llm_config():
+    """
+    Get current LLM backend configuration, vLLM status, and GPU info.
+
+    Returns:
+        JSON with llm, vllm, gpus, gpu_count, ram_total_mb, ram_available_mb.
+    """
+    def _collect() -> dict:
+        """Collect hardware and LLM config (may block on probes)."""
+        from src.hardware.detector import HardwareDetector
+        from src.llm.llm_client import _resolve_base_url, _resolve_model, _resolve_timeout
+
+        # Hardware detection
+        detector = HardwareDetector()
+        profile = detector.detect()
+
+        # LLM config
+        base_url = _resolve_base_url()
+        model = _resolve_model()
+        timeout = _resolve_timeout()
+
+        vllm_port = os.getenv('VLLM_PORT', '8100')
+        if os.getenv('LLM_BASE_URL'):
+            backend = "vllm" if vllm_port in os.getenv('LLM_BASE_URL', '') else "custom"
+        else:
+            backend = "ollama"
+
+        llm_section = {
+            "base_url": base_url,
+            "model": model,
+            "timeout": timeout,
+            "backend": backend,
+        }
+
+        # vLLM config
+        try:
+            sys.path.insert(0, str(_PROJECT_ROOT / 'scripts'))
+            from vllm_setup import _get_config, is_vllm_running, _probe_endpoint
+            cfg = _get_config()
+            running = is_vllm_running()
+            _, served = _probe_endpoint(cfg['port'])
+            vllm_section = {
+                "running": running,
+                "port": cfg['port'],
+                "model": cfg['model'],
+                "quantization": cfg['quantization'],
+                "enforce_eager": cfg['enforce_eager'],
+                "gpu_memory_utilization": cfg['gpu_memory_utilization'],
+                "max_model_len": cfg['max_model_len'],
+                "tensor_parallel_size": cfg['tensor_parallel_size'],
+                "pipeline_parallel_size": cfg['pipeline_parallel_size'],
+                "data_parallel_size": cfg['data_parallel_size'],
+                "auto_start": os.getenv('VLLM_AUTO_START', 'false').lower() == 'true',
+                "served_models": served,
+            }
+        except Exception as e:
+            logger.warning(f"Failed to read vLLM config: {e}")
+            vllm_section = {"running": False, "error": str(e)}
+
+        gpus = [
+            {
+                "index": g.index,
+                "name": g.name,
+                "total_memory_mb": g.total_memory_mb,
+                "free_memory_mb": g.free_memory_mb,
+            }
+            for g in profile.gpus
+        ]
+
+        return {
+            "llm": llm_section,
+            "vllm": vllm_section,
+            "gpus": gpus,
+            "gpu_count": profile.gpu_count,
+            "ram_total_mb": profile.ram_total_mb,
+            "ram_available_mb": profile.ram_available_mb,
+        }
+
+    try:
+        result = await asyncio.get_event_loop().run_in_executor(None, _collect)
+        return result
+    except Exception as e:
+        logger.error(f"GPU/LLM config collection failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # Error handlers
